@@ -87,7 +87,7 @@ func TestCgoExternalThreadSIGPROF(t *testing.T) {
 	if runtime.GOARCH == "ppc64" || runtime.GOARCH == "ppc64le" {
 		// TODO(austin) External linking not implemented on
 		// ppc64 (issue #8912)
-		t.Skipf("no external linking on ppc64")
+		t.Skipf("no external linking on %s", runtime.GOARCH)
 	}
 	got := executeTest(t, cgoExternalThreadSIGPROFSource, nil)
 	want := "OK\n"

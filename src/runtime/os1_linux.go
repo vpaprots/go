@@ -6,7 +6,7 @@ package runtime
 
 import "unsafe"
 
-var sigset_all sigset = sigset{^uint32(0), ^uint32(0)}
+var sigset_all sigset = sigset(^uint64(0))
 
 // Linux futex.
 //
@@ -86,6 +86,9 @@ func getproccount() int32 {
 	const maxCPUs = 64*1024*(1-goarch_arm) + 1024*goarch_arm
 	var buf [maxCPUs / (ptrSize * 8)]uintptr
 	r := sched_getaffinity(0, unsafe.Sizeof(buf), &buf[0])
+	if r < 0 {
+		return 1
+	}
 	n := int32(0)
 	for _, v := range buf[:r/ptrSize] {
 		for v != 0 {
@@ -234,7 +237,7 @@ func minit() {
 	nmask := *(*sigset)(unsafe.Pointer(&_g_.m.sigmask))
 	for i := range sigtable {
 		if sigtable[i].flags&_SigUnblock != 0 {
-			nmask[(i-1)/32] &^= 1 << ((uint32(i) - 1) & 31)
+			nmask &^= 1 << (uint(i) - 1)
 		}
 	}
 	rtsigprocmask(_SIG_SETMASK, &nmask, nil, int32(unsafe.Sizeof(nmask)))
@@ -350,13 +353,14 @@ func signalstack(s *stack) {
 }
 
 func updatesigmask(m sigmask) {
-	var mask sigset
-	copy(mask[:], m[:])
+	mask := sigset(m)
 	rtsigprocmask(_SIG_SETMASK, &mask, nil, int32(unsafe.Sizeof(mask)))
 }
 
 func unblocksig(sig int32) {
-	var mask sigset
-	mask[(sig-1)/32] |= 1 << ((uint32(sig) - 1) & 31)
+	if sig > 64 {
+		throw("signal > 64")
+	}
+	mask := sigset(1 << ((uint(sig) - 1)))
 	rtsigprocmask(_SIG_UNBLOCK, &mask, nil, int32(unsafe.Sizeof(mask)))
 }

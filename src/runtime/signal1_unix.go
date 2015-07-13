@@ -22,7 +22,7 @@ var fwdSig [_NSIG]uintptr
 // sigmask represents a general signal mask compatible with the GOOS
 // specific sigset types: the signal numbered x is represented by bit x-1
 // to match the representation expected by sigprocmask.
-type sigmask [(_NSIG + 31) / 32]uint32
+type sigmask uint64
 
 // channels for synchronizing signal mask updates with the signal mask
 // thread
@@ -190,7 +190,7 @@ func crash() {
 		}
 	}
 
-	updatesigmask(sigmask{})
+	updatesigmask(0)
 	setsig(_SIGABRT, _SIG_DFL, false)
 	raise(_SIGABRT)
 }
@@ -213,13 +213,10 @@ func ensureSigM() {
 		// initially all signals except the essential. When signal.Notify()/Stop is called,
 		// sigenable/sigdisable in turn notify this thread to update its signal
 		// mask accordingly.
-		var sigBlocked sigmask
-		for i := range sigBlocked {
-			sigBlocked[i] = ^uint32(0)
-		}
+		sigBlocked := sigmask(^uint64(0))
 		for i := range sigtable {
 			if sigtable[i].flags&_SigUnblock != 0 {
-				sigBlocked[(i-1)/32] &^= 1 << ((uint32(i) - 1) & 31)
+				sigBlocked &^= 1 << (uint(i) - 1)
 			}
 		}
 		updatesigmask(sigBlocked)
@@ -227,11 +224,11 @@ func ensureSigM() {
 			select {
 			case sig := <-enableSigChan:
 				if b := sig - 1; b >= 0 {
-					sigBlocked[b/32] &^= (1 << (b & 31))
+					sigBlocked &^= (1 << b)
 				}
 			case sig := <-disableSigChan:
 				if b := sig - 1; b >= 0 {
-					sigBlocked[b/32] |= (1 << (b & 31))
+					sigBlocked |= (1 << b)
 				}
 			}
 			updatesigmask(sigBlocked)

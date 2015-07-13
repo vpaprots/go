@@ -11,6 +11,7 @@ import (
 	"cmd/link/internal/arm64"
 	"cmd/link/internal/ppc64"
 	"cmd/link/internal/x86"
+	"cmd/link/internal/s390x"
 	"fmt"
 	"os"
 )
@@ -30,5 +31,7 @@ func main() {
 		arm64.Main()
 	case "ppc64", "ppc64le":
 		ppc64.Main()
+	case "s390x":
+		s390x.Main()
 	}
 }

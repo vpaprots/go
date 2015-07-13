@@ -1,7 +1,7 @@
 // errorcheck -0 -d=nil
-// Fails on ppc64x because of incomplete optimization.
+// Fails on ppc64x and s390x because of incomplete optimization.
 // See issues 9058.
-// +build !ppc64,!ppc64le
+// +build !ppc64,!ppc64le,!s390x
 
 // Copyright 2013 The Go Authors.  All rights reserved.
 // Use of this source code is governed by a BSD-style

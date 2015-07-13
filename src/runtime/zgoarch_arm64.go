@@ -11,3 +11,4 @@ const goarch_arm = 0
 const goarch_arm64 = 1
 const goarch_ppc64 = 0
 const goarch_ppc64le = 0
+const goarch_s390x = 0

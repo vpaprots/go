@@ -253,7 +253,7 @@ func cgen_wb(n, res *Node, wb bool) {
 		return
 	}
 
-	if Ctxt.Arch.Thechar == '7' || Ctxt.Arch.Thechar == '9' {
+	if Ctxt.Arch.Thechar == '7' || Ctxt.Arch.Thechar == '9' || Ctxt.Arch.Thechar == 'z' {
 		// if both are addressable, move
 		if n.Addable {
 			if n.Op == OREGISTER || res.Op == OREGISTER {
@@ -757,14 +757,14 @@ abop: // asymmetric binary
 		Regalloc(&n1, nl.Type, res)
 		Cgen(nl, &n1)
 
-		if Smallintconst(nr) && Ctxt.Arch.Thechar != '5' && Ctxt.Arch.Thechar != '7' && Ctxt.Arch.Thechar != '9' { // TODO(rsc): Check opcode for arm
+		if Smallintconst(nr) && Ctxt.Arch.Thechar != '5' && Ctxt.Arch.Thechar != '7' && Ctxt.Arch.Thechar != '9' && Ctxt.Arch.Thechar != 'z' { // TODO(rsc): Check opcode for arm
 			n2 = *nr
 		} else {
 			Regalloc(&n2, nr.Type, nil)
 			Cgen(nr, &n2)
 		}
 	} else {
-		if Smallintconst(nr) && Ctxt.Arch.Thechar != '5' && Ctxt.Arch.Thechar != '7' && Ctxt.Arch.Thechar != '9' { // TODO(rsc): Check opcode for arm
+		if Smallintconst(nr) && Ctxt.Arch.Thechar != '5' && Ctxt.Arch.Thechar != '7' && Ctxt.Arch.Thechar != '9' && Ctxt.Arch.Thechar != 'z' { // TODO(rsc): Check opcode for arm
 			n2 = *nr
 		} else {
 			Regalloc(&n2, nr.Type, res)
@@ -1840,8 +1840,8 @@ func bgenx(n, res *Node, wantTrue bool, likely int, to *obj.Prog) {
 			// but they don't support direct generation of a bool value yet.
 			// We can fix that as we go.
 			switch Ctxt.Arch.Thechar {
-			case '5', '7', '9':
-				Fatal("genval 5g, 7g, 9g ONAMES not fully implemented")
+			case '5', '7', '9', 'z':
+				Fatal("genval 5g, 7g, 9g, z ONAMES not fully implemented")
 			}
 			Cgen(n, res)
 			if !wantTrue {
@@ -1850,7 +1850,7 @@ func bgenx(n, res *Node, wantTrue bool, likely int, to *obj.Prog) {
 			return
 		}
 
-		if n.Addable && Ctxt.Arch.Thechar != '5' && Ctxt.Arch.Thechar != '7' && Ctxt.Arch.Thechar != '9' {
+		if n.Addable && Ctxt.Arch.Thechar != '5' && Ctxt.Arch.Thechar != '7' && Ctxt.Arch.Thechar != '9' && Ctxt.Arch.Thechar != 'z' {
 			// no need for a temporary
 			bgenNonZero(n, nil, wantTrue, likely, to)
 			return
@@ -2034,7 +2034,7 @@ func bgenx(n, res *Node, wantTrue bool, likely int, to *obj.Prog) {
 		Cgen(nl, &n1)
 		nl = &n1
 
-		if Smallintconst(nr) && Ctxt.Arch.Thechar != '9' {
+		if Smallintconst(nr) && Ctxt.Arch.Thechar != '9' && Ctxt.Arch.Thechar != 'z' {
 			Thearch.Gins(Thearch.Optoas(OCMP, nr.Type), nl, nr)
 			bins(nr.Type, res, a, likely, to)
 			return
@@ -2648,7 +2648,7 @@ func cgen_div(op int, nl *Node, nr *Node, res *Node) {
 	// in peep and optoas in order to enable this.
 	// TODO(rsc): ppc64 needs to support the relevant instructions
 	// in peep and optoas in order to enable this.
-	if nr.Op != OLITERAL || Ctxt.Arch.Thechar == '7' || Ctxt.Arch.Thechar == '9' {
+	if nr.Op != OLITERAL || Ctxt.Arch.Thechar == '7' || Ctxt.Arch.Thechar == '9' || Ctxt.Arch.Thechar == 'z' {
 		goto longdiv
 	}
 	w = int(nl.Type.Width * 8)

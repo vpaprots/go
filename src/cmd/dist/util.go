@@ -443,6 +443,8 @@ func main() {
 			gohostarch = "ppc64le"
 		case strings.Contains(out, "ppc64"):
 			gohostarch = "ppc64"
+		case strings.Contains(out, "s390x"):
+			gohostarch = "s390x"
 		case gohostos == "darwin":
 			if strings.Contains(run("", CheckExit, "uname", "-v"), "RELEASE_ARM_") {
 				gohostarch = "arm"

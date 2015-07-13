@@ -241,6 +241,11 @@ func cgocallbackg1() {
 		// saved LR between SP and the stack frame and between
 		// the stack frame and the arguments.
 		cb = (*args)(unsafe.Pointer(sp + 4*ptrSize))
+	case "s390x":
+		// On s390x, stack frame is two words and there's a
+		// saved LR between SP and the stack frame and between
+		// the stack frame and the arguments.
+		cb = (*args)(unsafe.Pointer(sp + 4*ptrSize))
 	}
 
 	// Invoke callback.
@@ -277,7 +282,7 @@ func unwindm(restore *bool) {
 		sched.sp = *(*uintptr)(unsafe.Pointer(sched.sp + 4))
 	case "arm64":
 		sched.sp = *(*uintptr)(unsafe.Pointer(sched.sp + 16))
-	case "ppc64", "ppc64le":
+	case "ppc64", "ppc64le", "s390x":
 		sched.sp = *(*uintptr)(unsafe.Pointer(sched.sp + 8))
 	}
 	releasem(mp)

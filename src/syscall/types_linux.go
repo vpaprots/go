@@ -91,8 +91,20 @@ typedef struct user_regs PtraceRegs;
 typedef struct user_pt_regs PtraceRegs;
 #elif defined(__powerpc64__)
 typedef struct pt_regs PtraceRegs;
+#elif defined(__s390x__)
+typedef struct _user_regs_struct PtraceRegs;
 #else
 typedef struct user_regs_struct PtraceRegs;
+#endif
+
+#if defined(__s390x__)
+typedef struct _user_psw_struct PtraceRegsPsw;
+typedef struct _user_fpregs_struct PtraceRegsFp;
+typedef struct _user_per_struct PtraceRegsPer;
+#else
+typedef struct {} PtraceRegsPsw;
+typedef struct {} PtraceRegsFp;
+typedef struct {} PtraceRegsPer;
 #endif
 
 // The real epoll_event is a union, and godefs doesn't handle it well.
@@ -363,6 +375,12 @@ const SizeofInotifyEvent = C.sizeof_struct_inotify_event
 // Ptrace
 
 // Register structures
+type PtraceRegsPsw C.PtraceRegsPsw
+
+type PtraceRegsFp C.PtraceRegsFp
+
+type PtraceRegsPer C.PtraceRegsPer
+
 type PtraceRegs C.PtraceRegs
 
 // Misc

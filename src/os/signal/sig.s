@@ -4,7 +4,7 @@
 
 // Assembly to get into package runtime without using exported symbols.
 
-// +build amd64 amd64p32 arm arm64 386 ppc64 ppc64le
+// +build amd64 amd64p32 arm arm64 386 ppc64 ppc64le s390x
 
 #include "textflag.h"
 
@@ -17,6 +17,10 @@
 #ifdef GOARCH_ppc64le
 #define JMP BR
 #endif
+#ifdef GOARCH_s390x
+#define JMP BR
+#endif
+
 
 TEXT ·signal_disable(SB),NOSPLIT,$0
 	JMP runtime·signal_disable(SB)

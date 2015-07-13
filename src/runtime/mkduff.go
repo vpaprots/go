@@ -37,6 +37,7 @@ func main() {
 	gen("arm", notags, zeroARM, copyARM)
 	gen("arm64", notags, zeroARM64, copyARM64)
 	gen("ppc64x", tagsPPC64x, zeroPPC64x, copyPPC64x)
+	gen("s390x", tagsS390x, zeroS390x, copyS390x)
 }
 
 func gen(arch string, tags, zero, copy func(io.Writer)) {
@@ -185,4 +186,36 @@ func zeroPPC64x(w io.Writer) {
 
 func copyPPC64x(w io.Writer) {
 	fmt.Fprintln(w, "// TODO: Implement runtime·duffcopy.")
+}
+
+func tagsS390xx(w io.Writer) {
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "// +build s390x")
+	fmt.Fprintln(w)
+}
+
+func zeroS390x(w io.Writer) {
+	// R0: always zero
+	// R3 (aka REGRT1): ptr to memory to be zeroed - 8
+	// On return, R3 points to the last zeroed dword.
+	fmt.Fprintln(w, "TEXT runtime·duffzero(SB), NOSPLIT, $-8-0")
+	for i := 0; i < 128; i++ {
+		fmt.Fprintln(w, "\tMOVDU\tR0, 8(R3)")
+	}
+	fmt.Fprintln(w, "\tRETURN")
+}
+
+func copyS390x(w io.Writer) {
+	// R0: scratch space
+	// R1: ptr to source memory
+	// R2: ptr to destination memory
+	// R1 and R2 are updated as a side effect
+	fmt.Fprintln(w, "TEXT runtime·duffcopy(SB), NOSPLIT, $0-0")
+	for i := 0; i < 128; i++ {
+		fmt.Fprintln(w, "\tMOVDU.P\t8(R1), R3")
+		fmt.Fprintln(w, "\tMOVDU.P\tR3, 8(R2)")
+	}
+	fmt.Fprintln(w, "\tRET")
+
+	//fmt.Fprintln(w, "// TODO: Implement runtime·duffcopy.")
 }

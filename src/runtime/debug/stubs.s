@@ -16,6 +16,9 @@
 #ifdef GOARCH_ppc64le
 #define JMP BR
 #endif
+#ifdef GOARCH_s390x
+#define JMP BR
+#endif
 
 TEXT ·setMaxStack(SB),NOSPLIT,$0-0
   JMP runtime·setMaxStack(SB)

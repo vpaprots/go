@@ -536,6 +536,15 @@ func (p *Parser) asmInstruction(op int, cond string, a []obj.Addr) {
 			default:
 				p.errorf("invalid addressing modes for %s instruction", obj.Aconv(op))
 			}
+		case 'z':
+			if arch.IsS390xStorageAndStorage(op) {
+				prog.From = a[1]
+				prog.From3 = newAddr(a[0])
+			} else {
+				prog.Reg = p.getRegister(prog, op, &a[1])
+				prog.From = a[0]
+			}
+			prog.To = a[2]
 		default:
 			p.errorf("TODO: implement three-operand instructions for this architecture")
 		}

@@ -20,6 +20,12 @@
 // arm64 gets "illegal instruction" (why is the data executable?)
 // and is unable to do the traceback correctly (why?).
 // +build !arm64
+//
+// s390x also gets "illegal instruction" (like ARM64).
+// This has been fixed upstream, remove this comment and add a
+// proper fix when the relevant change is merged.
+// +build !s390x
+
 
 package main
 

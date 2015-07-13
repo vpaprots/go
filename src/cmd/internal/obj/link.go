@@ -418,6 +418,8 @@ const (
 	R_USEFIELD
 	R_POWER_TOC
 	R_GOTPCREL
+	// R_PCRELDBL is for S390x (z) 2-byte aligned addresses (e.g. R_390_PLT32DBL)
+	R_PCRELDBL
 )
 
 type Auto struct {
