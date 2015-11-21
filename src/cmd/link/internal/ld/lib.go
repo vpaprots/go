@@ -1471,7 +1471,7 @@ var morestack *LSym
 // allow stack checks here.
 
 func haslinkregister() bool {
-	return Thearch.Thechar == '5' || Thearch.Thechar == '9' || Thearch.Thechar == '7'
+	return Thearch.Thechar == '5' || Thearch.Thechar == '9' || Thearch.Thechar == '7' || Thearch.Thechar == 'z'
 }
 
 func callsize() int {
