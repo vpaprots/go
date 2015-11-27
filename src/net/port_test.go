@@ -50,8 +50,31 @@ func TestLookupPort(t *testing.T) {
 	}
 
 	for _, tt := range portTests {
+		if skip(tt.name) {
+			continue
+		}
 		if port, err := LookupPort(tt.network, tt.name); port != tt.port || (err == nil) != tt.ok {
 			t.Errorf("LookupPort(%q, %q) = %v, %v; want %v", tt.network, tt.name, port, err, tt.port)
 		}
 	}
+}
+
+func skip(name string) bool {
+	// Linux on s390x does not have ports for some of the services.
+	if runtime.GOARCH == "s390x" {
+		switch name {
+		case "echo",
+			"discard",
+			"systat",
+			"daytime",
+			"chargen",
+			"finger",
+			"tftp",
+			"bootps":
+			return true
+		default:
+			return false
+		}
+	}
+	return false
 }
