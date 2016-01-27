@@ -1137,6 +1137,45 @@ eq:
 	MOVD	$0, R7
 	RET
 
+// This is called from .init_array and follows the platform, not Go, ABI.
+// We are overly conservative. We could only save the registers we use.
+// However, since this function is only called once per loaded module
+// performance is unimportant.
+TEXT runtime·addmoduledata(SB),NOSPLIT|NOFRAME,$0-0
+	// Save R6-R15, F0, F2, F4 and F6 in the
+	// register save area of the calling function
+	// stmg %r6, %r15, 48(%r15)
+	BYTE	$0xeb;
+	BYTE	$0x6f;
+	BYTE	$0xf0;
+	BYTE	$0x30;
+	BYTE	$0x00;
+	BYTE	$0x24;
+	FMOVD	F0, 128(R15)
+	FMOVD	F2, 136(R15)
+	FMOVD	F4, 144(R15)
+	FMOVD	F6, 152(R15)
+
+	// append the argument (passed in R2, as per the ELF ABI) to the
+	// moduledata linked list.
+	MOVD	runtime·lastmoduledatap(SB), R1
+	MOVD	R2, moduledata_next(R1)
+	MOVD	R2, runtime·lastmoduledatap(SB)
+
+	// Restore R6-R15, F0, F2, F4 and F6
+	// lmg %r6, %r15, 48(%r15)
+	BYTE	$0xeb;
+	BYTE	$0x6f;
+	BYTE	$0xf0;
+	BYTE	$0x30;
+	BYTE	$0x00;
+	BYTE	$0x04;
+	FMOVD	F0, 128(R15)
+	FMOVD	F2, 136(R15)
+	FMOVD	F4, 144(R15)
+	FMOVD	F6, 152(R15)
+	RET
+
 TEXT ·checkASM(SB),NOSPLIT,$0-1
 	MOVW	$1, R3
 	MOVB	R3, ret+0(FP)

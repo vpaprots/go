@@ -23,23 +23,11 @@
 TEXT runtime·save_g(SB),NOSPLIT|NOFRAME,$0-0
 	MOVB	runtime·iscgo(SB),  R10
 	CMPBEQ	R10, $0, nocgo
-
-	// Rematerialize the C TLS base pointer from AR0:AR1;
-	// "MOVW ARx, Rx" is translated to EAR.
 	MOVW	AR0, R11
 	SLD	$32, R11
 	MOVW	AR1, R11
-
-	// $runtime.tlsg(SB) is a special linker symbol.
-	// It is the offset from the start of TLS to our
-	// thread-local storage for g.
-	// Note: on s390x the offset should be less than 0
-	MOVD	$runtime·tlsg(SB), R10
-	ADD	R11, R10
-
-	// Store g in TLS
-	MOVD	g, 0(R10)
-
+	MOVD	runtime·tls_g(SB), R10
+	MOVD	g, 0(R10)(R11*1)
 nocgo:
 	RET
 
@@ -56,12 +44,8 @@ TEXT runtime·load_g(SB),NOSPLIT|NOFRAME,$0-0
 	MOVW	AR0, R11
 	SLD	$32, R11
 	MOVW	AR1, R11
-
-	MOVD	$runtime·tlsg(SB), R10
-	ADD	R11, R10
-
-	// Load g from TLS
-	MOVD	0(R10), g
+	MOVD	runtime·tls_g(SB), R10
+	MOVD	0(R10)(R11*1), g
 	RET
 
-GLOBL runtime·tlsg_offset+0(SB),RODATA,$8
+GLOBL runtime·tls_g+0(SB),TLSBSS,$8

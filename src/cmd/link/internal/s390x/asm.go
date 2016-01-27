@@ -38,7 +38,70 @@ import (
 	"log"
 )
 
+// gentext generates assembly to append the local moduledata to the global
+// moduledata linked list at initialization time. This is only done if the runtime
+// is in a different module.
+//
+// <go.link.addmoduledata>:
+// 	larl  %r2, <local.moduledata>
+// 	jg    <runtime.addmoduledata@plt>
+//	undef
+//
+// The job of appending the moduledata is delegated to runtime.addmoduledata.
 func gentext() {
+	if !ld.DynlinkingGo() {
+		return
+	}
+	addmoduledata := ld.Linklookup(ld.Ctxt, "runtime.addmoduledata", 0)
+	if addmoduledata.Type == obj.STEXT {
+		// we're linking a module containing the runtime -> no need for
+		// an init function
+		return
+	}
+	addmoduledata.Reachable = true
+	initfunc := ld.Linklookup(ld.Ctxt, "go.link.addmoduledata", 0)
+	initfunc.Type = obj.STEXT
+	initfunc.Local = true
+	initfunc.Reachable = true
+
+	// larl %r2, <local.moduledata>
+	ld.Adduint8(ld.Ctxt, initfunc, 0xc0)
+	ld.Adduint8(ld.Ctxt, initfunc, 0x20)
+	lmd := ld.Addrel(initfunc)
+	lmd.Off = int32(initfunc.Size)
+	lmd.Siz = 4
+	lmd.Sym = ld.Ctxt.Moduledata
+	lmd.Type = obj.R_PCREL
+	lmd.Variant = ld.RV_390_DBL
+	lmd.Add = 2 + int64(lmd.Siz)
+	ld.Adduint32(ld.Ctxt, initfunc, 0)
+
+	// jg <runtime.addmoduledata[@plt]>
+	ld.Adduint8(ld.Ctxt, initfunc, 0xc0)
+	ld.Adduint8(ld.Ctxt, initfunc, 0xf4)
+	rel := ld.Addrel(initfunc)
+	rel.Off = int32(initfunc.Size)
+	rel.Siz = 4
+	rel.Sym = ld.Linklookup(ld.Ctxt, "runtime.addmoduledata", 0)
+	rel.Type = obj.R_CALL
+	rel.Variant = ld.RV_390_DBL
+	rel.Add = 2 + int64(rel.Siz)
+	ld.Adduint32(ld.Ctxt, initfunc, 0)
+
+	// undef (for debugging)
+	ld.Adduint32(ld.Ctxt, initfunc, 0)
+
+	if ld.Ctxt.Etextp != nil {
+		ld.Ctxt.Etextp.Next = initfunc
+	} else {
+		ld.Ctxt.Textp = initfunc
+	}
+	ld.Ctxt.Etextp = initfunc
+	initarray_entry := ld.Linklookup(ld.Ctxt, "go.link.addmoduledatainit", 0)
+	initarray_entry.Reachable = true
+	initarray_entry.Local = true
+	initarray_entry.Type = obj.SINITARR
+	ld.Addaddr(ld.Ctxt, initarray_entry, initfunc)
 }
 
 func adddynrela(rel *ld.LSym, s *ld.LSym, r *ld.Reloc) {
@@ -168,7 +231,6 @@ func adddynrel(s *ld.LSym, r *ld.Reloc) {
 		r.Add += int64(targ.Got)
 		r.Add += int64(r.Siz)
 		return
-
 	}
 	// Handle references to ELF symbols from our own object files.
 	if targ.Type != obj.SDYNIMPORT {
@@ -181,7 +243,7 @@ func adddynrel(s *ld.LSym, r *ld.Reloc) {
 func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	ld.Thearch.Vput(uint64(sectoff))
 
-	elfsym := r.Xsym.Elfsym
+	elfsym := r.Xsym.ElfsymForReloc()
 	switch r.Type {
 	default:
 		return -1
@@ -191,9 +253,19 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 		default:
 			return -1
 		case 4:
+			// WARNING - silently ignored by linker in ELF64
 			ld.Thearch.Vput(ld.R_390_TLS_LE32 | uint64(elfsym)<<32)
 		case 8:
+			// WARNING - silently ignored by linker in ELF32
 			ld.Thearch.Vput(ld.R_390_TLS_LE64 | uint64(elfsym)<<32)
+		}
+
+	case obj.R_TLS_IE:
+		switch r.Siz {
+		default:
+			return -1
+		case 4:
+			ld.Thearch.Vput(ld.R_390_TLS_IEENT | uint64(elfsym)<<32)
 		}
 
 	case obj.R_ADDR:
@@ -204,6 +276,13 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 			ld.Thearch.Vput(ld.R_390_32 | uint64(elfsym)<<32)
 		case 8:
 			ld.Thearch.Vput(ld.R_390_64 | uint64(elfsym)<<32)
+		}
+
+	case obj.R_GOTPCREL:
+		if r.Siz == 4 {
+			ld.Thearch.Vput(ld.R_390_GOTENT | uint64(elfsym)<<32)
+		} else {
+			return -1
 		}
 
 	case obj.R_PCREL, obj.R_PCRELDBL, obj.R_CALL:

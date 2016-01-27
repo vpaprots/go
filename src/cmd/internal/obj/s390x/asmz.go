@@ -259,6 +259,10 @@ var optab = []Optab{
 	Optab{AMOVHBR, C_REG, C_REG, C_NONE, C_ZOREG, 44, 0},
 	Optab{AMOVHBR, C_REG, C_NONE, C_NONE, C_ZOREG, 44, 0},
 
+	Optab{AMOVD, C_GOTADDR, C_NONE, C_NONE, C_REG, 93, 0},
+	Optab{AMOVD, C_TLS_LE, C_NONE, C_NONE, C_REG, 94, 0},
+	Optab{AMOVD, C_TLS_IE, C_NONE, C_NONE, C_REG, 95, 0},
+
 	Optab{ASYSCALL, C_NONE, C_NONE, C_NONE, C_NONE, 5, 0},
 	Optab{ASYSCALL, C_SCON, C_NONE, C_NONE, C_NONE, 77, 0},
 	Optab{ABEQ, C_NONE, C_NONE, C_NONE, C_SBRA, 16, 0},
@@ -412,10 +416,21 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 		switch a.Name {
 		case obj.NAME_EXTERN,
 			obj.NAME_STATIC:
-			if a.Sym != nil { // use relocation
-				ctxt.Instoffset = a.Offset
-				return C_ADDR
+			if a.Sym == nil {
+				// must have a symbol
+				break
 			}
+			ctxt.Instoffset = a.Offset
+			if a.Sym.Type == obj.STLSBSS {
+				if ctxt.Flag_shared != 0 {
+					return C_TLS_IE // initial exec model
+				}
+				return C_TLS_LE // local exec model
+			}
+			return C_ADDR
+
+		case obj.NAME_GOTREF:
+			return C_GOTADDR
 
 		case obj.NAME_AUTO:
 			ctxt.Instoffset = int64(ctxt.Autosize) + a.Offset
@@ -2515,36 +2530,6 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 
 		if p.From.Sym == nil {
 			RIL(a, OP_LGFI, uint32(p.To.Reg), uint32(d), asm)
-		} else if p.From.Sym.Name == "runtime.tlsg" {
-			// This is a hack to get the right offset for g from the TLS block.
-			// It would be nice to have some syntax to do this properly.
-			// This will NOT work when generating a shared object.
-			switch p.As {
-			default:
-				ctxt.Diag("can only place TLS variable offset into a 8-byte register (i.e. need MOVD)")
-			case AMOVD:
-				// The R_390_TLS_LE32 relocation isn't actually implemented for ELF64,
-				// we therefore need to use the 64-bit equivalent, which means using .rodata.
-				var sym *obj.LSym
-				sym = obj.Linklookup(ctxt, "runtime.tlsg_offset", 0)
-				sym.Type = obj.SRODATA
-				sym.Size = 8
-				obj.Symgrow(ctxt, sym, sym.Size) // needed for relocation to apply
-				sym.R = make([]obj.Reloc, 0)
-				offrel := obj.Addrel(sym)
-				offrel.Off = 0
-				offrel.Siz = 8
-				offrel.Sym = obj.Linklookup(ctxt, "runtime.tlsg", 0)
-				offrel.Add = 0
-				offrel.Type = obj.R_TLS_LE
-				rel := obj.Addrel(ctxt.Cursym)
-				rel.Off = int32(ctxt.Pc + 2)
-				rel.Siz = 4
-				rel.Sym = sym
-				rel.Add = int64(rel.Siz) + 2
-				rel.Type = obj.R_PCRELDBL
-				RIL(a, OP_LGRL, uint32(p.To.Reg), 0, asm)
-			}
 		} else {
 			RIL(b, OP_LARL, uint32(p.To.Reg), 0, asm)
 			if d&1 != 0 {
@@ -3488,6 +3473,55 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			SIL(opcode, uint32(p.To.Reg), uint32(d), uint32(v), asm)
 		}
 
+	case 93: // GOT lookup
+		v := vregoff(ctxt, &p.To)
+		if v != 0 {
+			ctxt.Diag("invalid offset against GOT slot %v", p)
+		}
+		RIL(b, OP_LGRL, uint32(p.To.Reg), 0, asm)
+		rel := obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc + 2)
+		rel.Siz = 4
+		rel.Sym = p.From.Sym
+		rel.Type = obj.R_GOTPCREL
+		rel.Add = 2 + int64(rel.Siz)
+
+	case 94: // TLS local exec model
+		RIL(b, OP_LARL, REGTMP, (FORMAT_RIL_size+FORMAT_RXY_size+FORMAT_RI_size)>>1, asm)
+		RXY(0, OP_LG, uint32(p.To.Reg), REGTMP, 0, 0, asm)
+		RI(OP_BRC, 0xF, (FORMAT_RI_size+8)>>1, asm)
+		*asm = append(*asm, 0, 0, 0, 0, 0, 0, 0, 0)
+		rel := obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc + FORMAT_RIL_size + FORMAT_RXY_size + FORMAT_RI_size)
+		rel.Siz = 8
+		rel.Sym = p.From.Sym
+		rel.Type = obj.R_TLS_LE
+		rel.Add = 0
+
+	case 95: // TLS initial exec model
+		// Assembly                   | Relocation symbol    | Done Here?
+		// --------------------------------------------------------------
+		// ear  %r11, %a0             |                      |
+		// sllg %r11, %r11, 32        |                      |
+		// ear  %r11, %a1             |                      |
+		// larl %r10, <var>@indntpoff | R_390_TLS_IEENT      | Y
+		// lg   %r10, 0(%r10)         | R_390_TLS_LOAD (tag) | Y
+		// la   %r10, 0(%r10, %r11)   |                      |
+		// --------------------------------------------------------------
+
+		// R_390_TLS_IEENT
+		RIL(b, OP_LARL, uint32(REGTMP), 0, asm)
+		ieent := obj.Addrel(ctxt.Cursym)
+		ieent.Off = int32(ctxt.Pc + 2)
+		ieent.Siz = 4
+		ieent.Sym = p.From.Sym
+		ieent.Type = obj.R_TLS_IE
+		ieent.Add = 2 + int64(ieent.Siz)
+
+		// R_390_TLS_LOAD
+		RXY(0, OP_LGF, uint32(p.To.Reg), REGTMP, 0, 0, asm)
+		// TODO(mundaym): add R_390_TLS_LOAD relocation here
+		// not strictly required but might allow the linker to optimize
 	}
 }
 

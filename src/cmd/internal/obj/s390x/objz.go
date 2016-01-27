@@ -63,6 +63,7 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 			s.Size = 4
 			p.From.Type = obj.TYPE_MEM
 			p.From.Sym = s
+			p.From.Sym.Local = true
 			p.From.Name = obj.NAME_EXTERN
 			p.From.Offset = 0
 		}
@@ -75,6 +76,7 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 			s.Size = 8
 			p.From.Type = obj.TYPE_MEM
 			p.From.Sym = s
+			p.From.Sym.Local = true
 			p.From.Name = obj.NAME_EXTERN
 			p.From.Offset = 0
 		}
@@ -87,6 +89,7 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 			s.Size = 8
 			p.From.Type = obj.TYPE_MEM
 			p.From.Sym = s
+			p.From.Sym.Local = true
 			p.From.Name = obj.NAME_EXTERN
 			p.From.Offset = 0
 		}
@@ -106,6 +109,93 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 			p.As = AADD
 		}
 	}
+
+	if ctxt.Flag_dynlink {
+		rewriteToUseGot(ctxt, p)
+	}
+}
+
+// Rewrite p, if necessary, to access global data via the global offset table.
+func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
+	// At the moment EXRL instructions are not emitted by the compiler and only reference local symbols in
+	// assembly code.
+	// TODO(mundaym): A better solution needs to be found.
+	if p.As == AEXRL {
+		return
+	}
+
+	// We only care about global data: NAME_EXTERN means a global
+	// symbol in the Go sense, and p.Sym.Local is true for a few
+	// internally defined symbols.
+	if p.From.Type == obj.TYPE_ADDR && p.From.Name == obj.NAME_EXTERN && !p.From.Sym.Local {
+		// MOVD $sym, Rx becomes MOVD sym@GOT, Rx
+		// MOVD $sym+<off>, Rx becomes MOVD sym@GOT, Rx; ADD <off>, Rx
+		if p.To.Type != obj.TYPE_REG || p.As != AMOVD {
+			ctxt.Diag("do not know how to handle LEA-type insn to non-register in %v with -dynlink", p)
+		}
+		p.From.Type = obj.TYPE_MEM
+		p.From.Name = obj.NAME_GOTREF
+		q := p
+		if p.From.Offset != 0 {
+			q = obj.Appendp(ctxt, p)
+			q.As = AADD // TODO(mundaym): should this be LA for performance (address gen short circuit)?
+			q.From.Type = obj.TYPE_CONST
+			q.From.Offset = p.From.Offset
+			q.To = p.To
+			p.From.Offset = 0
+		}
+	}
+	if p.From3 != nil && p.From3.Name == obj.NAME_EXTERN {
+		ctxt.Diag("don't know how to handle %v with -dynlink", p)
+	}
+	var source *obj.Addr
+	// MOVD sym, Ry becomes MOVD sym@GOT, REGTMP; MOVD (REGTMP), Ry
+	// MOVD Ry, sym becomes MOVD sym@GOT, REGTMP; MOVD Ry, (REGTMP)
+	// An addition may be inserted between the two MOVs if there is an offset.
+	if p.From.Name == obj.NAME_EXTERN && !p.From.Sym.Local {
+		if p.To.Name == obj.NAME_EXTERN && !p.To.Sym.Local {
+			ctxt.Diag("cannot handle NAME_EXTERN on both sides in %v with -dynlink", p)
+		}
+		source = &p.From
+	} else if p.To.Name == obj.NAME_EXTERN && !p.To.Sym.Local {
+		source = &p.To
+	} else {
+		return
+	}
+	if p.As == obj.ATEXT || p.As == obj.AFUNCDATA || p.As == obj.ACALL || p.As == obj.ARET || p.As == obj.AJMP {
+		return
+	}
+	if source.Sym.Type == obj.STLSBSS {
+		return
+	}
+	if source.Type != obj.TYPE_MEM {
+		ctxt.Diag("don't know how to handle %v with -dynlink", p)
+	}
+	p1 := obj.Appendp(ctxt, p)
+	p2 := obj.Appendp(ctxt, p1)
+
+	p1.As = AMOVD
+	p1.From.Type = obj.TYPE_MEM
+	p1.From.Sym = source.Sym
+	p1.From.Name = obj.NAME_GOTREF
+	p1.To.Type = obj.TYPE_REG
+	p1.To.Reg = REGTMP
+
+	p2.As = p.As
+	p2.From = p.From
+	p2.To = p.To
+	if p.From.Name == obj.NAME_EXTERN {
+		p2.From.Reg = REGTMP
+		p2.From.Name = obj.NAME_NONE
+		p2.From.Sym = nil
+	} else if p.To.Name == obj.NAME_EXTERN {
+		p2.To.Reg = REGTMP
+		p2.To.Name = obj.NAME_NONE
+		p2.To.Sym = nil
+	} else {
+		return
+	}
+	obj.Nopout(p)
 }
 
 func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
