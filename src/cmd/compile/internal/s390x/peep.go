@@ -293,6 +293,12 @@ loop1:
 		excise(r1)
 	}
 
+	// Fuse memory zeroing instructions into XC instructions
+	fuseClear(g.Start)
+	if gc.Debug['P'] != 0 && gc.Debug['v'] != 0 {
+		gc.Dumpit("merge memory clear operations", g.Start, 0)
+	}
+
 	if gc.Debug['P'] > 1 {
 		goto ret /* allow following code improvement to be suppressed */
 	}
@@ -530,6 +536,12 @@ loop1:
 		gc.Dumpit("compare and branch", g.Start, 0)
 	}
 
+	// Fuse LOAD/STORE instructions into LOAD/STORE MULTIPLE instructions
+	fuseMultiple(g.Start)
+	if gc.Debug['P'] != 0 && gc.Debug['v'] != 0 {
+		gc.Dumpit("pass 7 fuse load/store instructions", g.Start, 0)
+	}
+
 ret:
 	gc.Flowend(g)
 }
@@ -700,6 +712,27 @@ func regzer(a *obj.Addr) int {
 func regtyp(a *obj.Addr) bool {
 	// TODO(rsc): Floating point register exclusions?
 	return a.Type == obj.TYPE_REG && s390x.REG_R0 <= a.Reg && a.Reg <= s390x.REG_F15 && a.Reg != s390x.REGZERO
+}
+
+// isGPR returns true if a refers to a general purpose register (GPR).
+// R0/REGZERO is treated as a GPR.
+func isGPR(a *obj.Addr) bool {
+	return a.Type == obj.TYPE_REG &&
+		s390x.REG_R0 <= a.Reg &&
+		a.Reg <= s390x.REG_R15
+}
+
+// isIndirectMem returns true if a refers to a memory location addressable by a
+// register and an offset, such as:
+// 	x+8(R1)
+// and
+//	0(R10)
+// It returns false if the address contains an index register such as:
+// 	16(R1)(R2*1)
+func isIndirectMem(a *obj.Addr) bool {
+	return a.Type == obj.TYPE_MEM &&
+		a.Index == 0 &&
+		(a.Name == obj.NAME_NONE || a.Name == obj.NAME_AUTO || a.Name == obj.NAME_PARAM)
 }
 
 /*
@@ -1416,4 +1449,226 @@ func trymergeopmv(r *gc.Flow) bool {
 		}
 	}
 	return false
+}
+
+// fuseClear merges memory clear operations.
+//
+// Looks for this pattern (sequence of clears):
+// 	MOVD	R0, n(R15)
+// 	MOVD	R0, n+8(R15)
+// 	MOVD	R0, n+16(R15)
+// Replaces with:
+//	CLEAR	$24, n(R15)
+func fuseClear(r *gc.Flow) {
+	var clear *obj.Prog
+	for ; r != nil; r = r.Link {
+		// If there is a branch into the instruction stream then
+		// we can't fuse into previous instructions.
+		if gc.Uniqp(r) == nil {
+			clear = nil
+		}
+
+		p := r.Prog
+		if p.As == obj.ANOP {
+			continue
+		}
+		if p.As == s390x.AXC {
+			if p.From.Reg == p.To.Reg && p.From.Offset == p.To.Offset {
+				// TODO(mundaym): merge clears?
+				p.As = s390x.ACLEAR
+				p.From.Offset = p.From3.Offset
+				p.From3 = nil
+				p.From.Type = obj.TYPE_CONST
+				p.From.Reg = 0
+				clear = p
+			} else {
+				clear = nil
+			}
+			continue
+		}
+
+		// Is our source a constant zero?
+		if regzer(&p.From) == 0 {
+			clear = nil
+			continue
+		}
+
+		// Are we moving to memory?
+		if p.To.Type != obj.TYPE_MEM ||
+			p.To.Index != 0 ||
+			p.To.Offset >= 4096 ||
+			!(p.To.Name == obj.NAME_NONE || p.To.Name == obj.NAME_AUTO || p.To.Name == obj.NAME_PARAM) {
+			clear = nil
+			continue
+		}
+
+		size := int64(0)
+		switch p.As {
+		default:
+			clear = nil
+			continue
+		case s390x.AMOVB, s390x.AMOVBZ:
+			size = 1
+		case s390x.AMOVH, s390x.AMOVHZ:
+			size = 2
+		case s390x.AMOVW, s390x.AMOVWZ:
+			size = 4
+		case s390x.AMOVD:
+			size = 8
+		}
+
+		if clear != nil &&
+			clear.To.Reg == p.To.Reg &&
+			clear.To.Name == p.To.Name &&
+			clear.To.Node == p.To.Node &&
+			clear.To.Sym == p.To.Sym {
+
+			min := clear.To.Offset
+			max := clear.To.Offset + clear.From.Offset
+
+			// previous clear is already clearing this region
+			if min <= p.To.Offset && max >= p.To.Offset+size {
+				excise(r)
+				continue
+			}
+
+			// merge forwards
+			if max == p.To.Offset {
+				clear.From.Offset += size
+				excise(r)
+				continue
+			}
+
+			// merge backwards
+			if min-size == p.To.Offset {
+				clear.From.Offset += size
+				clear.To.Offset -= size
+				excise(r)
+				continue
+			}
+		}
+
+		// transform into clear
+		p.From.Type = obj.TYPE_CONST
+		p.From.Offset = size
+		p.From.Reg = 0
+		p.As = s390x.ACLEAR
+		clear = p
+	}
+}
+
+// fuseMultiple merges memory loads and stores into load multiple and
+// store multiple operations.
+//
+// Looks for this pattern (sequence of loads or stores):
+// 	MOVD	R1, 0(R15)
+//	MOVD	R2, 8(R15)
+//	MOVD	R3, 16(R15)
+// Replaces with:
+//	STMG	R1, R3, 0(R15)
+func fuseMultiple(r *gc.Flow) {
+	var fused *obj.Prog
+	for ; r != nil; r = r.Link {
+		// If there is a branch into the instruction stream then
+		// we can't fuse into previous instructions.
+		if gc.Uniqp(r) == nil {
+			fused = nil
+		}
+
+		p := r.Prog
+
+		isStore := isGPR(&p.From) && isIndirectMem(&p.To)
+		isLoad := isGPR(&p.To) && isIndirectMem(&p.From)
+
+		// are we a candidate?
+		size := int64(0)
+		switch p.As {
+		default:
+			fused = nil
+			continue
+		case obj.ANOP:
+			// skip over nops
+			continue
+		case s390x.AMOVW, s390x.AMOVWZ:
+			size = 4
+			// TODO(mundaym): 32-bit load multiple is currently not supported
+			// as it requires sign/zero extension.
+			if !isStore {
+				fused = nil
+				continue
+			}
+		case s390x.AMOVD:
+			size = 8
+			if !isLoad && !isStore {
+				fused = nil
+				continue
+			}
+		}
+
+		// If we merge two loads/stores with different source/destination Nodes
+		// then we will lose a reference the second Node which means that the
+		// compiler might mark the Node as unused and free its slot on the stack.
+		// TODO(mundaym): allow this by adding a dummy reference to the Node.
+		if fused == nil ||
+			fused.From.Node != p.From.Node ||
+			fused.From.Type != p.From.Type ||
+			fused.To.Node != p.To.Node ||
+			fused.To.Type != p.To.Type {
+			fused = p
+			continue
+		}
+
+		// check two addresses
+		ca := func(a, b *obj.Addr, offset int64) bool {
+			return a.Reg == b.Reg && a.Offset+offset == b.Offset &&
+				a.Sym == b.Sym && a.Name == b.Name
+		}
+
+		switch fused.As {
+		default:
+			fused = p
+		case s390x.AMOVW, s390x.AMOVWZ:
+			if size == 4 && fused.From.Reg+1 == p.From.Reg && ca(&fused.To, &p.To, 4) {
+				fused.As = s390x.ASTMY
+				fused.Reg = p.From.Reg
+				excise(r)
+			} else {
+				fused = p
+			}
+		case s390x.AMOVD:
+			if size == 8 && fused.From.Reg+1 == p.From.Reg && ca(&fused.To, &p.To, 8) {
+				fused.As = s390x.ASTMG
+				fused.Reg = p.From.Reg
+				excise(r)
+			} else if size == 8 && fused.To.Reg+1 == p.To.Reg && ca(&fused.From, &p.From, 8) {
+				fused.As = s390x.ALMG
+				fused.Reg = fused.To.Reg
+				fused.To.Reg = p.To.Reg
+				excise(r)
+			} else {
+				fused = p
+			}
+		case s390x.ASTMG, s390x.ASTMY:
+			if (fused.As == s390x.ASTMY && size != 4) ||
+				(fused.As == s390x.ASTMG && size != 8) {
+				fused = p
+				continue
+			}
+			offset := size * int64(fused.Reg-fused.From.Reg+1)
+			if fused.Reg+1 == p.From.Reg && ca(&fused.To, &p.To, offset) {
+				fused.Reg = p.From.Reg
+				excise(r)
+			} else {
+				fused = p
+			}
+		case s390x.ALMG:
+			offset := 8 * int64(fused.To.Reg-fused.Reg+1)
+			if size == 8 && fused.To.Reg+1 == p.To.Reg && ca(&fused.From, &p.From, offset) {
+				fused.To.Reg = p.To.Reg
+				excise(r)
+			} else {
+				fused = p
+			}
+		}
+	}
 }

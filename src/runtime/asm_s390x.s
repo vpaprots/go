@@ -1144,13 +1144,7 @@ eq:
 TEXT runtime·addmoduledata(SB),NOSPLIT|NOFRAME,$0-0
 	// Save R6-R15, F0, F2, F4 and F6 in the
 	// register save area of the calling function
-	// stmg %r6, %r15, 48(%r15)
-	BYTE	$0xeb;
-	BYTE	$0x6f;
-	BYTE	$0xf0;
-	BYTE	$0x30;
-	BYTE	$0x00;
-	BYTE	$0x24;
+	STMG	R6, R15, 48(R15)
 	FMOVD	F0, 128(R15)
 	FMOVD	F2, 136(R15)
 	FMOVD	F4, 144(R15)
@@ -1163,13 +1157,7 @@ TEXT runtime·addmoduledata(SB),NOSPLIT|NOFRAME,$0-0
 	MOVD	R2, runtime·lastmoduledatap(SB)
 
 	// Restore R6-R15, F0, F2, F4 and F6
-	// lmg %r6, %r15, 48(%r15)
-	BYTE	$0xeb;
-	BYTE	$0x6f;
-	BYTE	$0xf0;
-	BYTE	$0x30;
-	BYTE	$0x00;
-	BYTE	$0x04;
+	LMG	48(R15), R6, R15
 	FMOVD	F0, 128(R15)
 	FMOVD	F2, 136(R15)
 	FMOVD	F4, 144(R15)

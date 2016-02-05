@@ -133,9 +133,16 @@ var progtable = [s390x.ALAST]obj.ProgInfo{
 	s390x.ACMPUBGT: {Flags: gc.Cjmp},
 	s390x.ACMPUBLE: {Flags: gc.Cjmp},
 
-	obj.ARET:      {Flags: gc.Break},
-	obj.ADUFFZERO: {Flags: gc.Call},
-	obj.ADUFFCOPY: {Flags: gc.Call},
+	// Macros
+	s390x.ACLEAR: {Flags: gc.SizeQ | gc.LeftRead | gc.RightAddr | gc.RightWrite},
+
+	// Load/store multiple
+	s390x.ASTMG: {Flags: gc.SizeQ | gc.LeftRead | gc.RightAddr | gc.RightWrite},
+	s390x.ASTMY: {Flags: gc.SizeL | gc.LeftRead | gc.RightAddr | gc.RightWrite},
+	s390x.ALMG:  {Flags: gc.SizeQ | gc.LeftAddr | gc.LeftRead | gc.RightWrite},
+	s390x.ALMY:  {Flags: gc.SizeL | gc.LeftAddr | gc.LeftRead | gc.RightWrite},
+
+	obj.ARET: {Flags: gc.Break},
 }
 
 func proginfo(p *obj.Prog) {
@@ -169,15 +176,16 @@ func proginfo(p *obj.Prog) {
 		info.Flags |= gc.LeftAddr
 	}
 
-	if p.As == obj.ADUFFZERO {
-		info.Reguse |= 1<<0 | RtoB(s390x.REG_R3)
-		info.Regset |= RtoB(s390x.REG_R3)
-	}
-
-	if p.As == obj.ADUFFCOPY {
-		// TODO(austin) Revisit when duffcopy is implemented
-		info.Reguse |= RtoB(s390x.REG_R3) | RtoB(s390x.REG_R4) | RtoB(s390x.REG_R5)
-
-		info.Regset |= RtoB(s390x.REG_R3) | RtoB(s390x.REG_R4)
+	switch p.As {
+	// load multiple sets a range of registers
+	case s390x.ALMG, s390x.ALMY:
+		for r := p.Reg; r <= p.To.Reg; r++ {
+			info.Regset |= RtoB(int(r))
+		}
+	// store multiple reads a range of registers
+	case s390x.ASTMG, s390x.ASTMY:
+		for r := p.From.Reg; r <= p.Reg; r++ {
+			info.Reguse |= RtoB(int(r))
+		}
 	}
 }

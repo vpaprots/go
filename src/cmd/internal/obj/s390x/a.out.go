@@ -340,11 +340,20 @@ const (
 	ALA
 	ALAY
 
+	// load/store multiple
+	ALMY
+	ALMG
+	ASTMY
+	ASTMG
+
 	// store clock
 	ASTCK
 	ASTCKC
 	ASTCKE
 	ASTCKF
+
+	// macros
+	ACLEAR
 
 	// binary
 	ABYTE

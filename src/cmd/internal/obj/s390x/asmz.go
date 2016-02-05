@@ -323,6 +323,16 @@ var optab = []Optab{
 	Optab{AFCMPO, C_FREG, C_NONE, C_NONE, C_FREG, 70, 0},
 	Optab{AFCMPO, C_FREG, C_REG, C_NONE, C_FREG, 70, 0},
 
+	// macros
+	Optab{ACLEAR, C_LCON, C_NONE, C_NONE, C_LOREG, 96, 0},
+	Optab{ACLEAR, C_LCON, C_NONE, C_NONE, C_LAUTO, 96, REGSP},
+
+	// load/store multiple
+	Optab{ASTMG, C_REG, C_REG, C_NONE, C_LOREG, 97, 0},
+	Optab{ASTMG, C_REG, C_REG, C_NONE, C_LAUTO, 97, REGSP},
+	Optab{ALMG, C_LOREG, C_REG, C_NONE, C_REG, 98, 0},
+	Optab{ALMG, C_LAUTO, C_REG, C_NONE, C_REG, 98, REGSP},
+
 	Optab{obj.AUNDEF, C_NONE, C_NONE, C_NONE, C_NONE, 78, 0},
 	Optab{obj.APCDATA, C_LCON, C_NONE, C_NONE, C_LCON, 0, 0},
 	Optab{obj.AFUNCDATA, C_SCON, C_NONE, C_NONE, C_ADDR, 0, 0},
@@ -783,6 +793,14 @@ func buildop(ctxt *obj.Link) {
 			opset(ASTCKC, r0)
 			opset(ASTCKE, r0)
 			opset(ASTCKF, r0)
+
+		case ACLEAR:
+
+		case ASTMG:
+			opset(ASTMY, r0)
+
+		case ALMG:
+			opset(ALMY, r0)
 
 		case AAND: /* logical op Rb,Rs,Ra; no literal */
 			opset(AANDN, r0)
@@ -3522,6 +3540,103 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		RXY(0, OP_LGF, uint32(p.To.Reg), REGTMP, 0, 0, asm)
 		// TODO(mundaym): add R_390_TLS_LOAD relocation here
 		// not strictly required but might allow the linker to optimize
+
+	case 96: // CLEAR macro
+		length := vregoff(ctxt, &p.From)
+		offset := vregoff(ctxt, &p.To)
+		reg := p.To.Reg
+		if reg == 0 {
+			reg = o.param
+		}
+		if length <= 0 {
+			ctxt.Diag("cannot CLEAR %d bytes, must be greater than 0", length)
+		}
+		for length > 0 {
+			if offset < 0 || offset >= DISP12 {
+				if offset >= -DISP20/2 && offset < DISP20/2 {
+					RXY(0, OP_LAY, uint32(REGTMP), uint32(reg), 0, uint32(offset), asm)
+				} else {
+					if reg != REGTMP {
+						RRE(OP_LGR, uint32(REGTMP), uint32(reg), asm)
+					}
+					RIL(a, OP_AGFI, uint32(REGTMP), uint32(offset), asm)
+				}
+				reg = REGTMP
+				offset = 0
+			}
+			size := length
+			if size > 256 {
+				size = 256
+			}
+
+			switch size {
+			case 1:
+				SI(OP_MVI, 0, uint32(reg), uint32(offset), asm)
+			case 2:
+				SIL(OP_MVHHI, uint32(reg), uint32(offset), 0, asm)
+			case 4:
+				SIL(OP_MVHI, uint32(reg), uint32(offset), 0, asm)
+			case 8:
+				SIL(OP_MVGHI, uint32(reg), uint32(offset), 0, asm)
+			default:
+				SS(a, OP_XC, uint32(size-1), 0, uint32(reg), uint32(offset), uint32(reg), uint32(offset), asm)
+			}
+
+			length -= size
+			offset += size
+		}
+
+	case 97: // STORE MULTIPLE (STMG/STMY)
+		rstart := p.From.Reg
+		rend := p.Reg
+		offset := vregoff(ctxt, &p.To)
+		reg := p.To.Reg
+		if reg == 0 {
+			reg = o.param
+		}
+		if offset < -DISP20/2 || offset >= DISP20/2 {
+			if reg != REGTMP {
+				RRE(OP_LGR, uint32(REGTMP), uint32(reg), asm)
+			}
+			RIL(a, OP_AGFI, uint32(REGTMP), uint32(offset), asm)
+			reg = REGTMP
+		}
+		switch p.As {
+		case ASTMY:
+			if offset >= 0 && offset < DISP12 {
+				RS(OP_STM, uint32(rstart), uint32(rend), uint32(reg), uint32(offset), asm)
+			} else {
+				RSY(OP_STMY, uint32(rstart), uint32(rend), uint32(reg), uint32(offset), asm)
+			}
+		case ASTMG:
+			RSY(OP_STMG, uint32(rstart), uint32(rend), uint32(reg), uint32(offset), asm)
+		}
+
+	case 98: // LOAD MULTIPLE (LMG/LMY)
+		rstart := p.Reg
+		rend := p.To.Reg
+		offset := vregoff(ctxt, &p.From)
+		reg := p.From.Reg
+		if reg == 0 {
+			reg = o.param
+		}
+		if offset < -DISP20/2 || offset >= DISP20/2 {
+			if reg != REGTMP {
+				RRE(OP_LGR, uint32(REGTMP), uint32(reg), asm)
+			}
+			RIL(a, OP_AGFI, uint32(REGTMP), uint32(offset), asm)
+			reg = REGTMP
+		}
+		switch p.As {
+		case ALMY:
+			if offset >= 0 && offset < DISP12 {
+				RS(OP_LM, uint32(rstart), uint32(rend), uint32(reg), uint32(offset), asm)
+			} else {
+				RSY(OP_LMY, uint32(rstart), uint32(rend), uint32(reg), uint32(offset), asm)
+			}
+		case ALMG:
+			RSY(OP_LMG, uint32(rstart), uint32(rend), uint32(reg), uint32(offset), asm)
+		}
 	}
 }
 
