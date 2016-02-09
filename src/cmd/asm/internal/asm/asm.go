@@ -608,7 +608,7 @@ func (p *Parser) asmInstruction(op int, cond string, a []obj.Addr) {
 				return
 			}
 		case 'z':
-			if arch.IsS390xStorageAndStorage(op) {
+			if arch.IsS390xWithLength(op) || arch.IsS390xWithIndex(op) {
 				prog.From = a[1]
 				prog.From3 = newAddr(a[0])
 			} else {
@@ -648,6 +648,13 @@ func (p *Parser) asmInstruction(op int, cond string, a []obj.Addr) {
 			prog.From = a[0]
 			prog.Reg = p.getRegister(prog, op, &a[1])
 			prog.From3 = newAddr(a[2])
+			prog.To = a[3]
+			break
+		}
+		if p.arch.Thechar == 'z' {
+			prog.From = a[1]
+			prog.Reg = p.getRegister(prog, op, &a[2])
+			prog.From3 = newAddr(a[0])
 			prog.To = a[3]
 			break
 		}

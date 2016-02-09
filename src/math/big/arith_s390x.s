@@ -41,7 +41,7 @@ TEXT ·addVV(SB),NOSPLIT,$0
 
 	// s/JL/JMP/ below to disable the unrolled loop
 	SUB  $4, R3		// n -= 4
-	BLT V1			// if n < 0 goto V1
+	BLT v1			// if n < 0 goto v1
 
 U1:	// n >= 0
 	// regular loop body unrolled 4x
@@ -71,7 +71,7 @@ U1:	// n >= 0
 	SUB  $4,  R3		// n -= 4
 	BGE  U1			// if n >= 0 goto U1
 
-V1:	ADD  $4, R3		// n += 4
+v1:	ADD  $4, R3		// n += 4
 	BLE E1			// if n <= 0 goto E1
 
 L1:	// n > 0
@@ -107,7 +107,7 @@ TEXT ·subVV(SB),NOSPLIT,$0
 
 	// s/JL/JMP/ below to disable the unrolled loop
 	SUB  $4, R3		// n -= 4
-	BLT V1			// if n < 0 goto V1
+	BLT v1			// if n < 0 goto v1
 
 U1:	// n >= 0
 	// regular loop body unrolled 4x
@@ -137,7 +137,7 @@ U1:	// n >= 0
 	SUB  $4,  R3		// n -= 4
 	BGE  U1			// if n >= 0 goto U1
 
-V1:	ADD  $4, R3		// n += 4
+v1:	ADD  $4, R3		// n += 4
 	BLE E1			// if n <= 0 goto E1
 
 L1:	// n > 0
@@ -171,7 +171,7 @@ TEXT ·addVW(SB),NOSPLIT,$0
 
 	// s/JL/JMP/ below to disable the unrolled loop
 	SUB $4, R3		// n -= 4
-	BLT V4			// if n < 4 goto V4
+	BLT v4			// if n < 4 goto v4
 
 U4:	// n >= 0
 	// regular loop body unrolled 4x
@@ -195,7 +195,7 @@ U4:	// n >= 0
 	SUB $4, R3		// n -= 4
 	BGE U4			// if n >= 0 goto U4
 
-V4:	ADD $4, R3		// n += 4
+v4:	ADD $4, R3		// n += 4
 	BLE E4			// if n <= 0 goto E4
 
 L4:	// n > 0
@@ -227,7 +227,7 @@ TEXT ·subVW(SB),NOSPLIT,$0
 
 	// s/JL/JMP/ below to disable the unrolled loop
 	SUB $4, R3		// n -= 4
-	BLT V4			// if n < 4 goto V4
+	BLT v4			// if n < 4 goto v4
 
 U4:	// n >= 0
 	// regular loop body unrolled 4x
@@ -250,7 +250,7 @@ U4:	// n >= 0
 	SUB $4, R3		// n -= 4
 	BGE U4			// if n >= 0 goto U4
 
-V4:	ADD $4, R3		// n += 4
+v4:	ADD $4, R3		// n += 4
 	BLE E4			// if n <= 0 goto E4
 
 L4:	// n > 0

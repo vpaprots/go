@@ -442,6 +442,9 @@ func archS390x() *Arch {
 	for i := s390x.REG_F0; i <= s390x.REG_F15; i++ {
 		register[obj.Rconv(i)] = int16(i)
 	}
+	for i := s390x.REG_V0; i <= s390x.REG_V31; i++ {
+		register[obj.Rconv(i)] = int16(i)
+	}
 	for i := s390x.REG_AR0; i <= s390x.REG_AR15; i++ {
 		register[obj.Rconv(i)] = int16(i)
 	}

@@ -78,6 +78,43 @@ const (
 	REG_F14
 	REG_F15
 
+	// V0-V15 are aliases for F0-F15
+	// We keep them in a separate space to make printing etc. easier
+	// If the code generator ever emits vector instructions it will
+	// need to take into account the aliasing.
+	REG_V0
+	REG_V1
+	REG_V2
+	REG_V3
+	REG_V4
+	REG_V5
+	REG_V6
+	REG_V7
+	REG_V8
+	REG_V9
+	REG_V10
+	REG_V11
+	REG_V12
+	REG_V13
+	REG_V14
+	REG_V15
+	REG_V16
+	REG_V17
+	REG_V18
+	REG_V19
+	REG_V20
+	REG_V21
+	REG_V22
+	REG_V23
+	REG_V24
+	REG_V25
+	REG_V26
+	REG_V27
+	REG_V28
+	REG_V29
+	REG_V30
+	REG_V31
+
 	REG_AR0
 	REG_AR1
 	REG_AR2
@@ -141,37 +178,36 @@ const (
 )
 
 const ( // comments from func aclass in asmz.go
-	C_NONE   = iota
-	C_REG    // general-purpose register
-	C_FREG   // floating-point register
-	C_AREG   // access register
-	C_ZCON   // constant == 0
-	C_SCON   // 0 <= constant <= 0x7fff (positive int16)
-	C_UCON   // constant & 0xffff == 0 (int32 or uint32)
-	C_ADDCON // 0 > constant >= -0x8000 (negative int16)
-	C_ANDCON // constant <= 0xffff
-	C_LCON   // constant (int32 or uint32)
-	C_DCON   // constant (int64 or uint64)
-	C_SACON  // computed address, 16-bit displacement, possibly SP-relative
-	C_SECON  // computed address, 16-bit displacement, possibly SB-relative, unused?
-	C_LACON  // computed address, 32-bit displacement, possibly SP-relative
-	C_LECON  // computed address, 32-bit displacement, possibly SB-relative, unused?
-	C_DACON  // computed address, 64-bit displacment?
-	C_SBRA   // short branch
-	C_LBRA   // long branch
-	C_SAUTO  // short auto
-	C_LAUTO  // long auto
-	C_ZOREG  // heap address, register-based, displacement == 0
-	C_SOREG  // heap address, register-based, int16 displacement
-	C_LOREG  // heap address, register-based, int32 displacement
-	C_TLS_LE // TLS - local exec model (for executables)
-	C_TLS_IE // TLS - initial exec model (for shared libraries loaded at program startup)
-	C_ANY
+	C_NONE     = iota
+	C_REG      // general-purpose register (64-bit)
+	C_FREG     // floating-point register (64-bit)
+	C_VREG     // vector register (128-bit)
+	C_AREG     // access register (32-bit)
+	C_ZCON     // constant == 0
+	C_SCON     // 0 <= constant <= 0x7fff (positive int16)
+	C_UCON     // constant & 0xffff == 0 (int16 or uint16)
+	C_ADDCON   // 0 > constant >= -0x8000 (negative int16)
+	C_ANDCON   // constant <= 0xffff
+	C_LCON     // constant (int32 or uint32)
+	C_DCON     // constant (int64 or uint64)
+	C_SACON    // computed address, 16-bit displacement, possibly SP-relative
+	C_LACON    // computed address, 32-bit displacement, possibly SP-relative
+	C_DACON    // computed address, 64-bit displacment?
+	C_SBRA     // short branch
+	C_LBRA     // long branch
+	C_SAUTO    // short auto
+	C_LAUTO    // long auto
+	C_ZOREG    // heap address, register-based, displacement == 0
+	C_SOREG    // heap address, register-based, int16 displacement
+	C_LOREG    // heap address, register-based, int32 displacement
+	C_TLS_LE   // TLS - local exec model (for executables)
+	C_TLS_IE   // TLS - initial exec model (for shared libraries loaded at program startup)
 	C_GOK      // general address
 	C_ADDR     // relocation for extern or static symbols
 	C_GOTADDR  // GOT slot for a symbol in -dynlink mode
 	C_TEXTSIZE // text size
-	C_NCLASS   // must be the last
+	C_ANY
+	C_NCLASS // must be the last
 )
 
 const (
@@ -354,6 +390,509 @@ const (
 
 	// macros
 	ACLEAR
+
+	// vector
+	AVA
+	AVAB
+	AVAH
+	AVAF
+	AVAG
+	AVAQ
+	AVACC
+	AVACCB
+	AVACCH
+	AVACCF
+	AVACCG
+	AVACCQ
+	AVAC
+	AVACQ
+	AVACCC
+	AVACCCQ
+	AVN
+	AVNC
+	AVAVG
+	AVAVGB
+	AVAVGH
+	AVAVGF
+	AVAVGG
+	AVAVGL
+	AVAVGLB
+	AVAVGLH
+	AVAVGLF
+	AVAVGLG
+	AVCKSM
+	AVCEQ
+	AVCEQB
+	AVCEQH
+	AVCEQF
+	AVCEQG
+	AVCEQBS
+	AVCEQHS
+	AVCEQFS
+	AVCEQGS
+	AVCH
+	AVCHB
+	AVCHH
+	AVCHF
+	AVCHG
+	AVCHBS
+	AVCHHS
+	AVCHFS
+	AVCHGS
+	AVCHL
+	AVCHLB
+	AVCHLH
+	AVCHLF
+	AVCHLG
+	AVCHLBS
+	AVCHLHS
+	AVCHLFS
+	AVCHLGS
+	AVCLZ
+	AVCLZB
+	AVCLZH
+	AVCLZF
+	AVCLZG
+	AVCTZ
+	AVCTZB
+	AVCTZH
+	AVCTZF
+	AVCTZG
+	AVEC
+	AVECB
+	AVECH
+	AVECF
+	AVECG
+	AVECL
+	AVECLB
+	AVECLH
+	AVECLF
+	AVECLG
+	AVERIM
+	AVERIMB
+	AVERIMH
+	AVERIMF
+	AVERIMG
+	AVERLL
+	AVERLLB
+	AVERLLH
+	AVERLLF
+	AVERLLG
+	AVERLLV
+	AVERLLVB
+	AVERLLVH
+	AVERLLVF
+	AVERLLVG
+	AVESLV
+	AVESLVB
+	AVESLVH
+	AVESLVF
+	AVESLVG
+	AVESL
+	AVESLB
+	AVESLH
+	AVESLF
+	AVESLG
+	AVESRA
+	AVESRAB
+	AVESRAH
+	AVESRAF
+	AVESRAG
+	AVESRAV
+	AVESRAVB
+	AVESRAVH
+	AVESRAVF
+	AVESRAVG
+	AVESRL
+	AVESRLB
+	AVESRLH
+	AVESRLF
+	AVESRLG
+	AVESRLV
+	AVESRLVB
+	AVESRLVH
+	AVESRLVF
+	AVESRLVG
+	AVX
+	AVFAE
+	AVFAEB
+	AVFAEH
+	AVFAEF
+	AVFAEBS
+	AVFAEHS
+	AVFAEFS
+	AVFAEZB
+	AVFAEZH
+	AVFAEZF
+	AVFAEZBS
+	AVFAEZHS
+	AVFAEZFS
+	AVFEE
+	AVFEEB
+	AVFEEH
+	AVFEEF
+	AVFEEBS
+	AVFEEHS
+	AVFEEFS
+	AVFEEZB
+	AVFEEZH
+	AVFEEZF
+	AVFEEZBS
+	AVFEEZHS
+	AVFEEZFS
+	AVFENE
+	AVFENEB
+	AVFENEH
+	AVFENEF
+	AVFENEBS
+	AVFENEHS
+	AVFENEFS
+	AVFENEZB
+	AVFENEZH
+	AVFENEZF
+	AVFENEZBS
+	AVFENEZHS
+	AVFENEZFS
+	AVFA
+	AVFADB
+	AWFADB
+	AWFK
+	AWFKDB
+	AVFCE
+	AVFCEDB
+	AVFCEDBS
+	AWFCEDB
+	AWFCEDBS
+	AVFCH
+	AVFCHDB
+	AVFCHDBS
+	AWFCHDB
+	AWFCHDBS
+	AVFCHE
+	AVFCHEDB
+	AVFCHEDBS
+	AWFCHEDB
+	AWFCHEDBS
+	AWFC
+	AWFCDB
+	AVCDG
+	AVCDGB
+	AWCDGB
+	AVCDLG
+	AVCDLGB
+	AWCDLGB
+	AVCGD
+	AVCGDB
+	AWCGDB
+	AVCLGD
+	AVCLGDB
+	AWCLGDB
+	AVFD
+	AVFDDB
+	AWFDDB
+	AVLDE
+	AVLDEB
+	AWLDEB
+	AVLED
+	AVLEDB
+	AWLEDB
+	AVFM
+	AVFMDB
+	AWFMDB
+	AVFMA
+	AVFMADB
+	AWFMADB
+	AVFMS
+	AVFMSDB
+	AWFMSDB
+	AVFPSO
+	AVFPSODB
+	AWFPSODB
+	AVFLCDB
+	AWFLCDB
+	AVFLNDB
+	AWFLNDB
+	AVFLPDB
+	AWFLPDB
+	AVFSQ
+	AVFSQDB
+	AWFSQDB
+	AVFS
+	AVFSDB
+	AWFSDB
+	AVFTCI
+	AVFTCIDB
+	AWFTCIDB
+	AVGFM
+	AVGFMB
+	AVGFMH
+	AVGFMF
+	AVGFMG
+	AVGFMA
+	AVGFMAB
+	AVGFMAH
+	AVGFMAF
+	AVGFMAG
+	AVGEF
+	AVGEG
+	AVGBM
+	AVZERO
+	AVONE
+	AVGM
+	AVGMB
+	AVGMH
+	AVGMF
+	AVGMG
+	AVISTR
+	AVISTRB
+	AVISTRH
+	AVISTRF
+	AVISTRBS
+	AVISTRHS
+	AVISTRFS
+	AVL
+	AVLR
+	AVLREP
+	AVLREPB
+	AVLREPH
+	AVLREPF
+	AVLREPG
+	AVLC
+	AVLCB
+	AVLCH
+	AVLCF
+	AVLCG
+	AVLEH
+	AVLEF
+	AVLEG
+	AVLEB
+	AVLEIH
+	AVLEIF
+	AVLEIG
+	AVLEIB
+	AVFI
+	AVFIDB
+	AWFIDB
+	AVLGV
+	AVLGVB
+	AVLGVH
+	AVLGVF
+	AVLGVG
+	AVLLEZ
+	AVLLEZB
+	AVLLEZH
+	AVLLEZF
+	AVLLEZG
+	AVLM
+	AVLP
+	AVLPB
+	AVLPH
+	AVLPF
+	AVLPG
+	AVLBB
+	AVLVG
+	AVLVGB
+	AVLVGH
+	AVLVGF
+	AVLVGG
+	AVLVGP
+	AVLL
+	AVMX
+	AVMXB
+	AVMXH
+	AVMXF
+	AVMXG
+	AVMXL
+	AVMXLB
+	AVMXLH
+	AVMXLF
+	AVMXLG
+	AVMRH
+	AVMRHB
+	AVMRHH
+	AVMRHF
+	AVMRHG
+	AVMRL
+	AVMRLB
+	AVMRLH
+	AVMRLF
+	AVMRLG
+	AVMN
+	AVMNB
+	AVMNH
+	AVMNF
+	AVMNG
+	AVMNL
+	AVMNLB
+	AVMNLH
+	AVMNLF
+	AVMNLG
+	AVMAE
+	AVMAEB
+	AVMAEH
+	AVMAEF
+	AVMAH
+	AVMAHB
+	AVMAHH
+	AVMAHF
+	AVMALE
+	AVMALEB
+	AVMALEH
+	AVMALEF
+	AVMALH
+	AVMALHB
+	AVMALHH
+	AVMALHF
+	AVMALO
+	AVMALOB
+	AVMALOH
+	AVMALOF
+	AVMAL
+	AVMALB
+	AVMALHW
+	AVMALF
+	AVMAO
+	AVMAOB
+	AVMAOH
+	AVMAOF
+	AVME
+	AVMEB
+	AVMEH
+	AVMEF
+	AVMH
+	AVMHB
+	AVMHH
+	AVMHF
+	AVMLE
+	AVMLEB
+	AVMLEH
+	AVMLEF
+	AVMLH
+	AVMLHB
+	AVMLHH
+	AVMLHF
+	AVMLO
+	AVMLOB
+	AVMLOH
+	AVMLOF
+	AVML
+	AVMLB
+	AVMLHW
+	AVMLF
+	AVMO
+	AVMOB
+	AVMOH
+	AVMOF
+	AVNO
+	AVNOT
+	AVO
+	AVPK
+	AVPKH
+	AVPKF
+	AVPKG
+	AVPKLS
+	AVPKLSH
+	AVPKLSF
+	AVPKLSG
+	AVPKLSHS
+	AVPKLSFS
+	AVPKLSGS
+	AVPKS
+	AVPKSH
+	AVPKSF
+	AVPKSG
+	AVPKSHS
+	AVPKSFS
+	AVPKSGS
+	AVPERM
+	AVPDI
+	AVPOPCT
+	AVREP
+	AVREPB
+	AVREPH
+	AVREPF
+	AVREPG
+	AVREPI
+	AVREPIB
+	AVREPIH
+	AVREPIF
+	AVREPIG
+	AVSCEF
+	AVSCEG
+	AVSEL
+	AVSL
+	AVSLB
+	AVSLDB
+	AVSRA
+	AVSRAB
+	AVSRL
+	AVSRLB
+	AVSEG
+	AVSEGB
+	AVSEGH
+	AVSEGF
+	AVST
+	AVSTEH
+	AVSTEF
+	AVSTEG
+	AVSTEB
+	AVSTM
+	AVSTL
+	AVSTRC
+	AVSTRCB
+	AVSTRCH
+	AVSTRCF
+	AVSTRCBS
+	AVSTRCHS
+	AVSTRCFS
+	AVSTRCZB
+	AVSTRCZH
+	AVSTRCZF
+	AVSTRCZBS
+	AVSTRCZHS
+	AVSTRCZFS
+	AVS
+	AVSB
+	AVSH
+	AVSF
+	AVSG
+	AVSQ
+	AVSCBI
+	AVSCBIB
+	AVSCBIH
+	AVSCBIF
+	AVSCBIG
+	AVSCBIQ
+	AVSBCBI
+	AVSBCBIQ
+	AVSBI
+	AVSBIQ
+	AVSUMG
+	AVSUMGH
+	AVSUMGF
+	AVSUMQ
+	AVSUMQF
+	AVSUMQG
+	AVSUM
+	AVSUMB
+	AVSUMH
+	AVTM
+	AVUPH
+	AVUPHB
+	AVUPHH
+	AVUPHF
+	AVUPLH
+	AVUPLHB
+	AVUPLHH
+	AVUPLHF
+	AVUPLL
+	AVUPLLB
+	AVUPLLH
+	AVUPLLF
+	AVUPL
+	AVUPLB
+	AVUPLHW
+	AVUPLF
 
 	// binary
 	ABYTE

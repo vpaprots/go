@@ -134,13 +134,13 @@ var optab = []Optab{
 	Optab{ARLDCL, C_REG, C_REG, C_LCON, C_REG, 14, 0},
 	Optab{ARLDCL, C_REG, C_NONE, C_LCON, C_REG, 14, 0},
 	Optab{AFADD, C_FREG, C_NONE, C_NONE, C_FREG, 2, 0},
-	Optab{AFADD, C_FREG, C_REG, C_NONE, C_FREG, 2, 0},
+	Optab{AFADD, C_FREG, C_FREG, C_NONE, C_FREG, 2, 0},
 	Optab{AFABS, C_FREG, C_NONE, C_NONE, C_FREG, 33, 0},
 	Optab{AFABS, C_NONE, C_NONE, C_NONE, C_FREG, 33, 0},
 	Optab{AFMOVD, C_FREG, C_NONE, C_NONE, C_FREG, 33, 0},
-	Optab{AFMADD, C_FREG, C_REG, C_FREG, C_FREG, 34, 0},
+	Optab{AFMADD, C_FREG, C_FREG, C_FREG, C_FREG, 34, 0},
 	Optab{AFMUL, C_FREG, C_NONE, C_NONE, C_FREG, 32, 0},
-	Optab{AFMUL, C_FREG, C_REG, C_NONE, C_FREG, 32, 0},
+	Optab{AFMUL, C_FREG, C_FREG, C_NONE, C_FREG, 32, 0},
 	Optab{ACS, C_REG, C_REG, C_NONE, C_SOREG, 79, 0},
 	Optab{ACSG, C_REG, C_REG, C_NONE, C_SOREG, 79, 0},
 	Optab{ACEFBRA, C_REG, C_NONE, C_NONE, C_FREG, 82, 0},
@@ -327,6 +327,108 @@ var optab = []Optab{
 	Optab{ACLEAR, C_LCON, C_NONE, C_NONE, C_LOREG, 96, 0},
 	Optab{ACLEAR, C_LCON, C_NONE, C_NONE, C_LAUTO, 96, REGSP},
 
+	///////////////////////////////////////////////////////////////////////
+	// vector instructions
+	///////////////////////////////////////////////////////////////////////
+
+	// VRX store
+	Optab{AVST, C_VREG, C_NONE, C_NONE, C_SOREG, 100, 0},
+	Optab{AVST, C_VREG, C_NONE, C_NONE, C_SAUTO, 100, REGSP},
+	Optab{AVSTEG, C_VREG, C_NONE, C_SCON, C_SOREG, 100, 0},
+	Optab{AVSTEG, C_VREG, C_NONE, C_SCON, C_SAUTO, 100, REGSP},
+
+	// VRX load
+	Optab{AVL, C_SOREG, C_NONE, C_NONE, C_VREG, 101, 0},
+	Optab{AVL, C_SAUTO, C_NONE, C_NONE, C_VREG, 101, REGSP},
+	Optab{AVLEG, C_SOREG, C_NONE, C_SCON, C_VREG, 101, 0},
+	Optab{AVLEG, C_SAUTO, C_NONE, C_SCON, C_VREG, 101, REGSP},
+
+	// VRV scatter
+	Optab{AVSCEG, C_VREG, C_NONE, C_SCON, C_SOREG, 102, 0},
+	Optab{AVSCEG, C_VREG, C_NONE, C_SCON, C_SAUTO, 102, REGSP},
+
+	// VRV gather
+	Optab{AVGEG, C_SOREG, C_NONE, C_SCON, C_VREG, 103, 0},
+	Optab{AVGEG, C_SAUTO, C_NONE, C_SCON, C_VREG, 103, REGSP},
+
+	// VRS element shift/rotate and load gr to/from vr element
+	Optab{AVESLG, C_SCON, C_VREG, C_NONE, C_VREG, 104, 0},
+	Optab{AVESLG, C_REG, C_VREG, C_NONE, C_VREG, 104, 0},
+	Optab{AVESLG, C_SCON, C_NONE, C_NONE, C_VREG, 104, 0},
+	Optab{AVESLG, C_REG, C_NONE, C_NONE, C_VREG, 104, 0},
+	Optab{AVLGVG, C_SCON, C_VREG, C_NONE, C_REG, 104, 0},
+	Optab{AVLGVG, C_REG, C_VREG, C_NONE, C_REG, 104, 0},
+	Optab{AVLVGG, C_SCON, C_REG, C_NONE, C_VREG, 104, 0},
+	Optab{AVLVGG, C_REG, C_REG, C_NONE, C_VREG, 104, 0},
+
+	// VRS store multiple
+	Optab{AVSTM, C_VREG, C_VREG, C_NONE, C_SOREG, 105, 0},
+	Optab{AVSTM, C_VREG, C_VREG, C_NONE, C_SAUTO, 105, REGSP},
+
+	// VRS load multiple
+	Optab{AVLM, C_SOREG, C_VREG, C_NONE, C_VREG, 106, 0},
+	Optab{AVLM, C_SAUTO, C_VREG, C_NONE, C_VREG, 106, REGSP},
+
+	// VRS store with length
+	Optab{AVSTL, C_VREG, C_NONE, C_REG, C_SOREG, 107, 0},
+	Optab{AVSTL, C_VREG, C_NONE, C_REG, C_SAUTO, 107, REGSP},
+
+	// VRS load with length
+	Optab{AVLL, C_SOREG, C_NONE, C_REG, C_VREG, 108, 0},
+	Optab{AVLL, C_SAUTO, C_NONE, C_REG, C_VREG, 108, REGSP},
+
+	// VRI-a
+	Optab{AVGBM, C_ANDCON, C_NONE, C_NONE, C_VREG, 109, 0},
+	Optab{AVZERO, C_NONE, C_NONE, C_NONE, C_VREG, 109, 0},
+	Optab{AVREPIG, C_ADDCON, C_NONE, C_NONE, C_VREG, 109, 0},
+	Optab{AVREPIG, C_SCON, C_NONE, C_NONE, C_VREG, 109, 0},
+	Optab{AVLEIG, C_ADDCON, C_NONE, C_SCON, C_VREG, 109, 0},
+	Optab{AVLEIG, C_SCON, C_NONE, C_SCON, C_VREG, 109, 0},
+
+	// VRI-b generate mask
+	Optab{AVGMG, C_SCON, C_NONE, C_SCON, C_VREG, 110, 0},
+
+	// VRI-c replicate
+	Optab{AVREPG, C_UCON, C_VREG, C_NONE, C_VREG, 111, 0},
+
+	// VRI-d element rotate and insert under mask and
+	// shift left double by byte
+	Optab{AVERIMG, C_VREG, C_VREG, C_SCON, C_VREG, 112, 0},
+	Optab{AVSLDB, C_VREG, C_VREG, C_SCON, C_VREG, 112, 0},
+
+	// VRI-d fp test data class immediate
+	Optab{AVFTCIDB, C_SCON, C_VREG, C_NONE, C_VREG, 113, 0},
+
+	// VRR-a load reg
+	Optab{AVLR, C_VREG, C_NONE, C_NONE, C_VREG, 114, 0},
+
+	// VRR-a compare
+	Optab{AVECG, C_VREG, C_NONE, C_NONE, C_VREG, 115, 0},
+
+	// VRR-b
+	Optab{AVCEQG, C_VREG, C_VREG, C_NONE, C_VREG, 117, 0},
+	Optab{AVFAEF, C_VREG, C_VREG, C_NONE, C_VREG, 117, 0},
+	Optab{AVPKSG, C_VREG, C_VREG, C_NONE, C_VREG, 117, 0},
+
+	// VRR-c
+	Optab{AVAQ, C_VREG, C_VREG, C_NONE, C_VREG, 118, 0},
+	Optab{AVAQ, C_VREG, C_NONE, C_NONE, C_VREG, 118, 0},
+	Optab{AVNOT, C_VREG, C_NONE, C_NONE, C_VREG, 118, 0},
+
+	// VRR-c shifts
+	Optab{AVERLLVG, C_VREG, C_VREG, C_NONE, C_VREG, 119, 0},
+	Optab{AVERLLVG, C_VREG, C_NONE, C_NONE, C_VREG, 119, 0},
+
+	// VRR-d
+	//             2       3       1       4
+	Optab{AVACQ, C_VREG, C_VREG, C_VREG, C_VREG, 120, 0},
+
+	// VRR-e
+	Optab{AVSEL, C_VREG, C_VREG, C_VREG, C_VREG, 121, 0},
+
+	// VRR-f
+	Optab{AVLVGP, C_REG, C_REG, C_NONE, C_VREG, 122, 0},
+
 	// load/store multiple
 	Optab{ASTMG, C_REG, C_REG, C_NONE, C_LOREG, 97, 0},
 	Optab{ASTMG, C_REG, C_REG, C_NONE, C_LAUTO, 97, REGSP},
@@ -419,6 +521,9 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 		}
 		if REG_AR0 <= a.Reg && a.Reg <= REG_AR15 {
 			return C_AREG
+		}
+		if REG_V0 <= a.Reg && a.Reg <= REG_V31 {
+			return C_VREG
 		}
 		return C_GOK
 
@@ -587,7 +692,15 @@ func oplook(ctxt *obj.Link, p *obj.Prog) *Optab {
 	a4--
 	a2 := C_NONE
 	if p.Reg != 0 {
-		a2 = C_REG
+		if REG_R0 <= p.Reg && p.Reg <= REG_R15 {
+			a2 = C_REG
+		} else if REG_V0 <= p.Reg && p.Reg <= REG_V31 {
+			a2 = C_VREG
+		} else if REG_F0 <= p.Reg && p.Reg <= REG_F15 {
+			a2 = C_FREG
+		} else if REG_AR0 <= p.Reg && p.Reg <= REG_AR15 {
+			a2 = C_AREG
+		}
 	}
 
 	r0 := p.As & obj.AMask
@@ -641,7 +754,7 @@ func cmp(a int, b int) bool {
 		}
 
 	case C_UCON:
-		if b == C_ZCON {
+		if b == C_ZCON || b == C_SCON {
 			return true
 		}
 
@@ -939,6 +1052,430 @@ func buildop(ctxt *obj.Link) {
 			opset(ACMPUBLE, r0)
 			opset(ACMPUBLT, r0)
 			opset(ACMPUBNE, r0)
+
+		case AVL:
+			opset(AVLLEZB, r0)
+			opset(AVLLEZH, r0)
+			opset(AVLLEZF, r0)
+			opset(AVLLEZG, r0)
+			opset(AVLREPB, r0)
+			opset(AVLREPH, r0)
+			opset(AVLREPF, r0)
+			opset(AVLREPG, r0)
+
+		case AVST:
+
+		case AVLEG:
+			opset(AVLBB, r0)
+			opset(AVLEB, r0)
+			opset(AVLEH, r0)
+			opset(AVLEF, r0)
+			opset(AVLEG, r0)
+			opset(AVLREP, r0)
+
+		case AVSTEG:
+			opset(AVSTEB, r0)
+			opset(AVSTEH, r0)
+			opset(AVSTEF, r0)
+
+		case AVSCEG:
+			opset(AVSCEF, r0)
+
+		case AVGEG:
+			opset(AVGEF, r0)
+
+		case AVESLG:
+			opset(AVESLB, r0)
+			opset(AVESLH, r0)
+			opset(AVESLF, r0)
+			opset(AVERLLB, r0)
+			opset(AVERLLH, r0)
+			opset(AVERLLF, r0)
+			opset(AVERLLG, r0)
+			opset(AVESRAB, r0)
+			opset(AVESRAH, r0)
+			opset(AVESRAF, r0)
+			opset(AVESRAG, r0)
+			opset(AVESRLB, r0)
+			opset(AVESRLH, r0)
+			opset(AVESRLF, r0)
+			opset(AVESRLG, r0)
+
+		case AVLGVG:
+			opset(AVLGVB, r0)
+			opset(AVLGVH, r0)
+			opset(AVLGVF, r0)
+
+		case AVLVGG:
+			opset(AVLVGB, r0)
+			opset(AVLVGH, r0)
+			opset(AVLVGF, r0)
+
+		case AVLL:
+
+		case AVSTL:
+
+		case AVLM:
+
+		case AVSTM:
+
+		case AVGBM:
+
+		case AVZERO:
+			opset(AVONE, r0)
+
+		case AVREPIG:
+			opset(AVREPIB, r0)
+			opset(AVREPIH, r0)
+			opset(AVREPIF, r0)
+
+		case AVLEIG:
+			opset(AVLEIB, r0)
+			opset(AVLEIH, r0)
+			opset(AVLEIF, r0)
+
+		case AVGMG:
+			opset(AVGMB, r0)
+			opset(AVGMH, r0)
+			opset(AVGMF, r0)
+
+		case AVREPG:
+			opset(AVREPB, r0)
+			opset(AVREPH, r0)
+			opset(AVREPF, r0)
+
+		case AVERIMG:
+			opset(AVERIMB, r0)
+			opset(AVERIMH, r0)
+			opset(AVERIMF, r0)
+
+		case AVSLDB:
+
+		case AVFTCIDB:
+			opset(AWFTCIDB, r0)
+
+		case AVLR:
+			opset(AVUPHB, r0)
+			opset(AVUPHH, r0)
+			opset(AVUPHF, r0)
+			opset(AVUPLHB, r0)
+			opset(AVUPLHH, r0)
+			opset(AVUPLHF, r0)
+			opset(AVUPLB, r0)
+			opset(AVUPLHW, r0)
+			opset(AVUPLF, r0)
+			opset(AVUPLLB, r0)
+			opset(AVUPLLH, r0)
+			opset(AVUPLLF, r0)
+			opset(AVCLZB, r0)
+			opset(AVCLZH, r0)
+			opset(AVCLZF, r0)
+			opset(AVCLZG, r0)
+			opset(AVCTZB, r0)
+			opset(AVCTZH, r0)
+			opset(AVCTZF, r0)
+			opset(AVCTZG, r0)
+			opset(AVLDEB, r0)
+			opset(AWLDEB, r0)
+			opset(AVFLCDB, r0)
+			opset(AWFLCDB, r0)
+			opset(AVFLNDB, r0)
+			opset(AWFLNDB, r0)
+			opset(AVFLPDB, r0)
+			opset(AWFLPDB, r0)
+			opset(AVFSQDB, r0)
+			opset(AWFSQDB, r0)
+			opset(AVISTRB, r0)
+			opset(AVISTRH, r0)
+			opset(AVISTRF, r0)
+			opset(AVISTRBS, r0)
+			opset(AVISTRHS, r0)
+			opset(AVISTRFS, r0)
+			opset(AVLCB, r0)
+			opset(AVLCH, r0)
+			opset(AVLCF, r0)
+			opset(AVLCG, r0)
+			opset(AVLPB, r0)
+			opset(AVLPH, r0)
+			opset(AVLPF, r0)
+			opset(AVLPG, r0)
+			opset(AVPOPCT, r0)
+			opset(AVSEGB, r0)
+			opset(AVSEGH, r0)
+			opset(AVSEGF, r0)
+
+		case AVECG:
+			opset(AVECB, r0)
+			opset(AVECH, r0)
+			opset(AVECF, r0)
+			opset(AVECLB, r0)
+			opset(AVECLH, r0)
+			opset(AVECLF, r0)
+			opset(AVECLG, r0)
+			opset(AWFCDB, r0)
+			opset(AWFKDB, r0)
+
+		case AVCEQG:
+			opset(AVCEQB, r0)
+			opset(AVCEQH, r0)
+			opset(AVCEQF, r0)
+			opset(AVCEQBS, r0)
+			opset(AVCEQHS, r0)
+			opset(AVCEQFS, r0)
+			opset(AVCEQGS, r0)
+			opset(AVCHB, r0)
+			opset(AVCHH, r0)
+			opset(AVCHF, r0)
+			opset(AVCHG, r0)
+			opset(AVCHBS, r0)
+			opset(AVCHHS, r0)
+			opset(AVCHFS, r0)
+			opset(AVCHGS, r0)
+			opset(AVCHLB, r0)
+			opset(AVCHLH, r0)
+			opset(AVCHLF, r0)
+			opset(AVCHLG, r0)
+			opset(AVCHLBS, r0)
+			opset(AVCHLHS, r0)
+			opset(AVCHLFS, r0)
+			opset(AVCHLGS, r0)
+
+		case AVFAEF:
+			opset(AVFAEB, r0)
+			opset(AVFAEH, r0)
+			opset(AVFAEBS, r0)
+			opset(AVFAEHS, r0)
+			opset(AVFAEFS, r0)
+			opset(AVFAEZB, r0)
+			opset(AVFAEZH, r0)
+			opset(AVFAEZF, r0)
+			opset(AVFAEZBS, r0)
+			opset(AVFAEZHS, r0)
+			opset(AVFAEZFS, r0)
+			opset(AVFEEB, r0)
+			opset(AVFEEH, r0)
+			opset(AVFEEF, r0)
+			opset(AVFEEBS, r0)
+			opset(AVFEEHS, r0)
+			opset(AVFEEFS, r0)
+			opset(AVFEEZB, r0)
+			opset(AVFEEZH, r0)
+			opset(AVFEEZF, r0)
+			opset(AVFEEZBS, r0)
+			opset(AVFEEZHS, r0)
+			opset(AVFEEZFS, r0)
+			opset(AVFENEB, r0)
+			opset(AVFENEH, r0)
+			opset(AVFENEF, r0)
+			opset(AVFENEBS, r0)
+			opset(AVFENEHS, r0)
+			opset(AVFENEFS, r0)
+			opset(AVFENEZB, r0)
+			opset(AVFENEZH, r0)
+			opset(AVFENEZF, r0)
+			opset(AVFENEZBS, r0)
+			opset(AVFENEZHS, r0)
+			opset(AVFENEZFS, r0)
+
+		case AVPKSG:
+			opset(AVPKSH, r0)
+			opset(AVPKSF, r0)
+			opset(AVPKSHS, r0)
+			opset(AVPKSFS, r0)
+			opset(AVPKSGS, r0)
+			opset(AVPKLSH, r0)
+			opset(AVPKLSF, r0)
+			opset(AVPKLSG, r0)
+			opset(AVPKLSHS, r0)
+			opset(AVPKLSFS, r0)
+			opset(AVPKLSGS, r0)
+
+		case AVAQ:
+			opset(AVAB, r0)
+			opset(AVAH, r0)
+			opset(AVAF, r0)
+			opset(AVAG, r0)
+			opset(AVACCB, r0)
+			opset(AVACCH, r0)
+			opset(AVACCF, r0)
+			opset(AVACCG, r0)
+			opset(AVACCQ, r0)
+			opset(AVN, r0)
+			opset(AVNC, r0)
+			opset(AVAVGB, r0)
+			opset(AVAVGH, r0)
+			opset(AVAVGF, r0)
+			opset(AVAVGG, r0)
+			opset(AVAVGLB, r0)
+			opset(AVAVGLH, r0)
+			opset(AVAVGLF, r0)
+			opset(AVAVGLG, r0)
+			opset(AVCKSM, r0)
+			opset(AVX, r0)
+			opset(AVFADB, r0)
+			opset(AWFADB, r0)
+			opset(AVFCEDB, r0)
+			opset(AVFCEDBS, r0)
+			opset(AWFCEDB, r0)
+			opset(AWFCEDBS, r0)
+			opset(AVFCHDB, r0)
+			opset(AVFCHDBS, r0)
+			opset(AWFCHDB, r0)
+			opset(AWFCHDBS, r0)
+			opset(AVFCHEDB, r0)
+			opset(AVFCHEDBS, r0)
+			opset(AWFCHEDB, r0)
+			opset(AWFCHEDBS, r0)
+			opset(AVFMDB, r0)
+			opset(AWFMDB, r0)
+			opset(AVGFMB, r0)
+			opset(AVGFMH, r0)
+			opset(AVGFMF, r0)
+			opset(AVGFMG, r0)
+			opset(AVMXB, r0)
+			opset(AVMXH, r0)
+			opset(AVMXF, r0)
+			opset(AVMXG, r0)
+			opset(AVMXLB, r0)
+			opset(AVMXLH, r0)
+			opset(AVMXLF, r0)
+			opset(AVMXLG, r0)
+			opset(AVMNB, r0)
+			opset(AVMNH, r0)
+			opset(AVMNF, r0)
+			opset(AVMNG, r0)
+			opset(AVMNLB, r0)
+			opset(AVMNLH, r0)
+			opset(AVMNLF, r0)
+			opset(AVMNLG, r0)
+			opset(AVMRHB, r0)
+			opset(AVMRHH, r0)
+			opset(AVMRHF, r0)
+			opset(AVMRHG, r0)
+			opset(AVMRLB, r0)
+			opset(AVMRLH, r0)
+			opset(AVMRLF, r0)
+			opset(AVMRLG, r0)
+			opset(AVMEB, r0)
+			opset(AVMEH, r0)
+			opset(AVMEF, r0)
+			opset(AVMLEB, r0)
+			opset(AVMLEH, r0)
+			opset(AVMLEF, r0)
+			opset(AVMOB, r0)
+			opset(AVMOH, r0)
+			opset(AVMOF, r0)
+			opset(AVMLOB, r0)
+			opset(AVMLOH, r0)
+			opset(AVMLOF, r0)
+			opset(AVMHB, r0)
+			opset(AVMHH, r0)
+			opset(AVMHF, r0)
+			opset(AVMLHB, r0)
+			opset(AVMLHH, r0)
+			opset(AVMLHF, r0)
+			opset(AVMLH, r0)
+			opset(AVMLHW, r0)
+			opset(AVMLF, r0)
+			opset(AVNO, r0)
+			opset(AVO, r0)
+			opset(AVPKH, r0)
+			opset(AVPKF, r0)
+			opset(AVPKG, r0)
+			opset(AVSUMGH, r0)
+			opset(AVSUMGF, r0)
+			opset(AVSUMQF, r0)
+			opset(AVSUMQG, r0)
+			opset(AVSUMB, r0)
+			opset(AVSUMH, r0)
+
+		case AVNOT:
+
+		case AVERLLVG:
+			opset(AVERLLVB, r0)
+			opset(AVERLLVH, r0)
+			opset(AVERLLVF, r0)
+			opset(AVESLVB, r0)
+			opset(AVESLVH, r0)
+			opset(AVESLVF, r0)
+			opset(AVESLVG, r0)
+			opset(AVESRAVB, r0)
+			opset(AVESRAVH, r0)
+			opset(AVESRAVF, r0)
+			opset(AVESRAVG, r0)
+			opset(AVESRLVB, r0)
+			opset(AVESRLVH, r0)
+			opset(AVESRLVF, r0)
+			opset(AVESRLVG, r0)
+			opset(AVFDDB, r0)
+			opset(AWFDDB, r0)
+			opset(AVFSDB, r0)
+			opset(AWFSDB, r0)
+			opset(AVSL, r0)
+			opset(AVSLB, r0)
+			opset(AVSRA, r0)
+			opset(AVSRAB, r0)
+			opset(AVSRL, r0)
+			opset(AVSRLB, r0)
+			opset(AVSF, r0)
+			opset(AVSG, r0)
+			opset(AVSQ, r0)
+			opset(AVSCBIB, r0)
+			opset(AVSCBIH, r0)
+			opset(AVSCBIF, r0)
+			opset(AVSCBIG, r0)
+			opset(AVSCBIQ, r0)
+
+		case AVACQ:
+			opset(AVACCCQ, r0)
+			opset(AVGFMAB, r0)
+			opset(AVGFMAH, r0)
+			opset(AVGFMAF, r0)
+			opset(AVGFMAG, r0)
+			opset(AVMALB, r0)
+			opset(AVMALHW, r0)
+			opset(AVMALF, r0)
+			opset(AVMAHB, r0)
+			opset(AVMAHH, r0)
+			opset(AVMAHF, r0)
+			opset(AVMALHB, r0)
+			opset(AVMALHH, r0)
+			opset(AVMALHF, r0)
+			opset(AVMAEB, r0)
+			opset(AVMAEH, r0)
+			opset(AVMAEF, r0)
+			opset(AVMALEB, r0)
+			opset(AVMALEH, r0)
+			opset(AVMALEF, r0)
+			opset(AVMAOB, r0)
+			opset(AVMAOH, r0)
+			opset(AVMAOF, r0)
+			opset(AVMALOB, r0)
+			opset(AVMALOH, r0)
+			opset(AVMALOF, r0)
+			opset(AVSTRCB, r0)
+			opset(AVSTRCH, r0)
+			opset(AVSTRCF, r0)
+			opset(AVSTRCBS, r0)
+			opset(AVSTRCHS, r0)
+			opset(AVSTRCFS, r0)
+			opset(AVSTRCZB, r0)
+			opset(AVSTRCZH, r0)
+			opset(AVSTRCZF, r0)
+			opset(AVSTRCZBS, r0)
+			opset(AVSTRCZHS, r0)
+			opset(AVSTRCZFS, r0)
+			opset(AVSBCBIQ, r0)
+			opset(AVSBIQ, r0)
+
+		case AVSEL:
+			opset(AVFMADB, r0)
+			opset(AWFMADB, r0)
+			opset(AVFMSDB, r0)
+			opset(AWFMSDB, r0)
+			opset(AVPERM, r0)
+
+		case AVLVGP:
 
 		case AADD,
 			AMOVW,
@@ -1951,6 +2488,160 @@ const (
 	OP_XSCH    uint32 = 0xB276 // FORMAT_S          CANCEL SUBCHANNEL
 	OP_XY      uint32 = 0xE357 // FORMAT_RXY1       EXCLUSIVE OR (32)
 	OP_ZAP     uint32 = 0xF800 // FORMAT_SS2        ZERO AND ADD
+
+	// added in z13
+	OP_CXPT   uint32 = 0xEDAF // 	RSL-b	CONVERT FROM PACKED (to extended DFP)
+	OP_CDPT   uint32 = 0xEDAE // 	RSL-b	CONVERT FROM PACKED (to long DFP)
+	OP_CPXT   uint32 = 0xEDAD // 	RSL-b	CONVERT TO PACKED (from extended DFP)
+	OP_CPDT   uint32 = 0xEDAC // 	RSL-b	CONVERT TO PACKED (from long DFP)
+	OP_LZRF   uint32 = 0xE33B // 	RXY-a	LOAD AND ZERO RIGHTMOST BYTE (32)
+	OP_LZRG   uint32 = 0xE32A // 	RXY-a	LOAD AND ZERO RIGHTMOST BYTE (64)
+	OP_LCCB   uint32 = 0xE727 // 	RXE	LOAD COUNT TO BLOCK BOUNDARY
+	OP_LOCHHI uint32 = 0xEC4E // 	RIE-g	LOAD HALFWORD HIGH IMMEDIATE ON CONDITION (32←16)
+	OP_LOCHI  uint32 = 0xEC42 // 	RIE-g	LOAD HALFWORD IMMEDIATE ON CONDITION (32←16)
+	OP_LOCGHI uint32 = 0xEC46 // 	RIE-g	LOAD HALFWORD IMMEDIATE ON CONDITION (64←16)
+	OP_LOCFH  uint32 = 0xEBE0 // 	RSY-b	LOAD HIGH ON CONDITION (32)
+	OP_LOCFHR uint32 = 0xB9E0 // 	RRF-c	LOAD HIGH ON CONDITION (32)
+	OP_LLZRGF uint32 = 0xE33A // 	RXY-a	LOAD LOGICAL AND ZERO RIGHTMOST BYTE (64←32)
+	OP_STOCFH uint32 = 0xEBE1 // 	RSY-b	STORE HIGH ON CONDITION
+	OP_VA     uint32 = 0xE7F3 // 	VRR-c	VECTOR ADD
+	OP_VACC   uint32 = 0xE7F1 // 	VRR-c	VECTOR ADD COMPUTE CARRY
+	OP_VAC    uint32 = 0xE7BB // 	VRR-d	VECTOR ADD WITH CARRY
+	OP_VACCC  uint32 = 0xE7B9 // 	VRR-d	VECTOR ADD WITH CARRY COMPUTE CARRY
+	OP_VN     uint32 = 0xE768 // 	VRR-c	VECTOR AND
+	OP_VNC    uint32 = 0xE769 // 	VRR-c	VECTOR AND WITH COMPLEMENT
+	OP_VAVG   uint32 = 0xE7F2 // 	VRR-c	VECTOR AVERAGE
+	OP_VAVGL  uint32 = 0xE7F0 // 	VRR-c	VECTOR AVERAGE LOGICAL
+	OP_VCKSM  uint32 = 0xE766 // 	VRR-c	VECTOR CHECKSUM
+	OP_VCEQ   uint32 = 0xE7F8 // 	VRR-b	VECTOR COMPARE EQUAL
+	OP_VCH    uint32 = 0xE7FB // 	VRR-b	VECTOR COMPARE HIGH
+	OP_VCHL   uint32 = 0xE7F9 // 	VRR-b	VECTOR COMPARE HIGH LOGICAL
+	OP_VCLZ   uint32 = 0xE753 // 	VRR-a	VECTOR COUNT LEADING ZEROS
+	OP_VCTZ   uint32 = 0xE752 // 	VRR-a	VECTOR COUNT TRAILING ZEROS
+	OP_VEC    uint32 = 0xE7DB // 	VRR-a	VECTOR ELEMENT COMPARE
+	OP_VECL   uint32 = 0xE7D9 // 	VRR-a	VECTOR ELEMENT COMPARE LOGICAL
+	OP_VERIM  uint32 = 0xE772 // 	VRI-d	VECTOR ELEMENT ROTATE AND INSERT UNDER MASK
+	OP_VERLL  uint32 = 0xE733 // 	VRS-a	VECTOR ELEMENT ROTATE LEFT LOGICAL
+	OP_VERLLV uint32 = 0xE773 // 	VRR-c	VECTOR ELEMENT ROTATE LEFT LOGICAL
+	OP_VESLV  uint32 = 0xE770 // 	VRR-c	VECTOR ELEMENT SHIFT LEFT
+	OP_VESL   uint32 = 0xE730 // 	VRS-a	VECTOR ELEMENT SHIFT LEFT
+	OP_VESRA  uint32 = 0xE73A // 	VRS-a	VECTOR ELEMENT SHIFT RIGHT ARITHMETIC
+	OP_VESRAV uint32 = 0xE77A // 	VRR-c	VECTOR ELEMENT SHIFT RIGHT ARITHMETIC
+	OP_VESRL  uint32 = 0xE738 // 	VRS-a	VECTOR ELEMENT SHIFT RIGHT LOGICAL
+	OP_VESRLV uint32 = 0xE778 // 	VRR-c	VECTOR ELEMENT SHIFT RIGHT LOGICAL
+	OP_VX     uint32 = 0xE76D // 	VRR-c	VECTOR EXCLUSIVE OR
+	OP_VFAE   uint32 = 0xE782 // 	VRR-b	VECTOR FIND ANY ELEMENT EQUAL
+	OP_VFEE   uint32 = 0xE780 // 	VRR-b	VECTOR FIND ELEMENT EQUAL
+	OP_VFENE  uint32 = 0xE781 // 	VRR-b	VECTOR FIND ELEMENT NOT EQUAL
+	OP_VFA    uint32 = 0xE7E3 // 	VRR-c	VECTOR FP ADD
+	OP_WFK    uint32 = 0xE7CA // 	VRR-a	VECTOR FP COMPARE AND SIGNAL SCALAR
+	OP_VFCE   uint32 = 0xE7E8 // 	VRR-c	VECTOR FP COMPARE EQUAL
+	OP_VFCH   uint32 = 0xE7EB // 	VRR-c	VECTOR FP COMPARE HIGH
+	OP_VFCHE  uint32 = 0xE7EA // 	VRR-c	VECTOR FP COMPARE HIGH OR EQUAL
+	OP_WFC    uint32 = 0xE7CB // 	VRR-a	VECTOR FP COMPARE SCALAR
+	OP_VCDG   uint32 = 0xE7C3 // 	VRR-a	VECTOR FP CONVERT FROM FIXED 64-BIT
+	OP_VCDLG  uint32 = 0xE7C1 // 	VRR-a	VECTOR FP CONVERT FROM LOGICAL 64-BIT
+	OP_VCGD   uint32 = 0xE7C2 // 	VRR-a	VECTOR FP CONVERT TO FIXED 64-BIT
+	OP_VCLGD  uint32 = 0xE7C0 // 	VRR-a	VECTOR FP CONVERT TO LOGICAL 64-BIT
+	OP_VFD    uint32 = 0xE7E5 // 	VRR-c	VECTOR FP DIVIDE
+	OP_VLDE   uint32 = 0xE7C4 // 	VRR-a	VECTOR FP LOAD LENGTHENED
+	OP_VLED   uint32 = 0xE7C5 // 	VRR-a	VECTOR FP LOAD ROUNDED
+	OP_VFM    uint32 = 0xE7E7 // 	VRR-c	VECTOR FP MULTIPLY
+	OP_VFMA   uint32 = 0xE78F // 	VRR-e	VECTOR FP MULTIPLY AND ADD
+	OP_VFMS   uint32 = 0xE78E // 	VRR-e	VECTOR FP MULTIPLY AND SUBTRACT
+	OP_VFPSO  uint32 = 0xE7CC // 	VRR-a	VECTOR FP PERFORM SIGN OPERATION
+	OP_VFSQ   uint32 = 0xE7CE // 	VRR-a	VECTOR FP SQUARE ROOT
+	OP_VFS    uint32 = 0xE7E2 // 	VRR-c	VECTOR FP SUBTRACT
+	OP_VFTCI  uint32 = 0xE74A // 	VRI-e	VECTOR FP TEST DATA CLASS IMMEDIATE
+	OP_VGFM   uint32 = 0xE7B4 // 	VRR-c	VECTOR GALOIS FIELD MULTIPLY SUM
+	OP_VGFMA  uint32 = 0xE7BC // 	VRR-d	VECTOR GALOIS FIELD MULTIPLY SUM AND ACCUMULATE
+	OP_VGEF   uint32 = 0xE713 // 	VRV	VECTOR GATHER ELEMENT (32)
+	OP_VGEG   uint32 = 0xE712 // 	VRV	VECTOR GATHER ELEMENT (64)
+	OP_VGBM   uint32 = 0xE744 // 	VRI-a	VECTOR GENERATE BYTE MASK
+	OP_VGM    uint32 = 0xE746 // 	VRI-b	VECTOR GENERATE MASK
+	OP_VISTR  uint32 = 0xE75C // 	VRR-a	VECTOR ISOLATE STRING
+	OP_VL     uint32 = 0xE706 // 	VRX	VECTOR LOAD
+	OP_VLR    uint32 = 0xE756 // 	VRR-a	VECTOR LOAD
+	OP_VLREP  uint32 = 0xE705 // 	VRX	VECTOR LOAD AND REPLICATE
+	OP_VLC    uint32 = 0xE7DE // 	VRR-a	VECTOR LOAD COMPLEMENT
+	OP_VLEH   uint32 = 0xE701 // 	VRX	VECTOR LOAD ELEMENT (16)
+	OP_VLEF   uint32 = 0xE703 // 	VRX	VECTOR LOAD ELEMENT (32)
+	OP_VLEG   uint32 = 0xE702 // 	VRX	VECTOR LOAD ELEMENT (64)
+	OP_VLEB   uint32 = 0xE700 // 	VRX	VECTOR LOAD ELEMENT (8)
+	OP_VLEIH  uint32 = 0xE741 // 	VRI-a	VECTOR LOAD ELEMENT IMMEDIATE (16)
+	OP_VLEIF  uint32 = 0xE743 // 	VRI-a	VECTOR LOAD ELEMENT IMMEDIATE (32)
+	OP_VLEIG  uint32 = 0xE742 // 	VRI-a	VECTOR LOAD ELEMENT IMMEDIATE (64)
+	OP_VLEIB  uint32 = 0xE740 // 	VRI-a	VECTOR LOAD ELEMENT IMMEDIATE (8)
+	OP_VFI    uint32 = 0xE7C7 // 	VRR-a	VECTOR LOAD FP INTEGER
+	OP_VLGV   uint32 = 0xE721 // 	VRS-c	VECTOR LOAD GR FROM VR ELEMENT
+	OP_VLLEZ  uint32 = 0xE704 // 	VRX	VECTOR LOAD LOGICAL ELEMENT AND ZERO
+	OP_VLM    uint32 = 0xE736 // 	VRS-a	VECTOR LOAD MULTIPLE
+	OP_VLP    uint32 = 0xE7DF // 	VRR-a	VECTOR LOAD POSITIVE
+	OP_VLBB   uint32 = 0xE707 // 	VRX	VECTOR LOAD TO BLOCK BOUNDARY
+	OP_VLVG   uint32 = 0xE722 // 	VRS-b	VECTOR LOAD VR ELEMENT FROM GR
+	OP_VLVGP  uint32 = 0xE762 // 	VRR-f	VECTOR LOAD VR FROM GRS DISJOINT
+	OP_VLL    uint32 = 0xE737 // 	VRS-b	VECTOR LOAD WITH LENGTH
+	OP_VMX    uint32 = 0xE7FF // 	VRR-c	VECTOR MAXIMUM
+	OP_VMXL   uint32 = 0xE7FD // 	VRR-c	VECTOR MAXIMUM LOGICAL
+	OP_VMRH   uint32 = 0xE761 // 	VRR-c	VECTOR MERGE HIGH
+	OP_VMRL   uint32 = 0xE760 // 	VRR-c	VECTOR MERGE LOW
+	OP_VMN    uint32 = 0xE7FE // 	VRR-c	VECTOR MINIMUM
+	OP_VMNL   uint32 = 0xE7FC // 	VRR-c	VECTOR MINIMUM LOGICAL
+	OP_VMAE   uint32 = 0xE7AE // 	VRR-d	VECTOR MULTIPLY AND ADD EVEN
+	OP_VMAH   uint32 = 0xE7AB // 	VRR-d	VECTOR MULTIPLY AND ADD HIGH
+	OP_VMALE  uint32 = 0xE7AC // 	VRR-d	VECTOR MULTIPLY AND ADD LOGICAL EVEN
+	OP_VMALH  uint32 = 0xE7A9 // 	VRR-d	VECTOR MULTIPLY AND ADD LOGICAL HIGH
+	OP_VMALO  uint32 = 0xE7AD // 	VRR-d	VECTOR MULTIPLY AND ADD LOGICAL ODD
+	OP_VMAL   uint32 = 0xE7AA // 	VRR-d	VECTOR MULTIPLY AND ADD LOW
+	OP_VMAO   uint32 = 0xE7AF // 	VRR-d	VECTOR MULTIPLY AND ADD ODD
+	OP_VME    uint32 = 0xE7A6 // 	VRR-c	VECTOR MULTIPLY EVEN
+	OP_VMH    uint32 = 0xE7A3 // 	VRR-c	VECTOR MULTIPLY HIGH
+	OP_VMLE   uint32 = 0xE7A4 // 	VRR-c	VECTOR MULTIPLY EVEN LOGICAL
+	OP_VMLH   uint32 = 0xE7A1 // 	VRR-c	VECTOR MULTIPLY HIGH LOGICAL
+	OP_VMLO   uint32 = 0xE7A5 // 	VRR-c	VECTOR MULTIPLY ODD LOGICAL
+	OP_VML    uint32 = 0xE7A2 // 	VRR-c	VECTOR MULTIPLY LOW
+	OP_VMO    uint32 = 0xE7A7 // 	VRR-c	VECTOR MULTIPLY ODD
+	OP_VNO    uint32 = 0xE76B // 	VRR-c	VECTOR NOR
+	OP_VO     uint32 = 0xE76A // 	VRR-c	VECTOR OR
+	OP_VPK    uint32 = 0xE794 // 	VRR-c	VECTOR PACK
+	OP_VPKLS  uint32 = 0xE795 // 	VRR-b	VECTOR PACK LOGICAL SATURATE
+	OP_VPKS   uint32 = 0xE797 // 	VRR-b	VECTOR PACK SATURATE
+	OP_VPERM  uint32 = 0xE78C // 	VRR-e	VECTOR PERMUTE
+	OP_VPDI   uint32 = 0xE784 // 	VRR-c	VECTOR PERMUTE DOUBLEWORD IMMEDIATE
+	OP_VPOPCT uint32 = 0xE750 // 	VRR-a	VECTOR POPULATION COUNT
+	OP_VREP   uint32 = 0xE74D // 	VRI-c	VECTOR REPLICATE
+	OP_VREPI  uint32 = 0xE745 // 	VRI-a	VECTOR REPLICATE IMMEDIATE
+	OP_VSCEF  uint32 = 0xE71B // 	VRV	VECTOR SCATTER ELEMENT (32)
+	OP_VSCEG  uint32 = 0xE71A // 	VRV	VECTOR SCATTER ELEMENT (64)
+	OP_VSEL   uint32 = 0xE78D // 	VRR-e	VECTOR SELECT
+	OP_VSL    uint32 = 0xE774 // 	VRR-c	VECTOR SHIFT LEFT
+	OP_VSLB   uint32 = 0xE775 // 	VRR-c	VECTOR SHIFT LEFT BY BYTE
+	OP_VSLDB  uint32 = 0xE777 // 	VRI-d	VECTOR SHIFT LEFT DOUBLE BY BYTE
+	OP_VSRA   uint32 = 0xE77E // 	VRR-c	VECTOR SHIFT RIGHT ARITHMETIC
+	OP_VSRAB  uint32 = 0xE77F // 	VRR-c	VECTOR SHIFT RIGHT ARITHMETIC BY BYTE
+	OP_VSRL   uint32 = 0xE77C // 	VRR-c	VECTOR SHIFT RIGHT LOGICAL
+	OP_VSRLB  uint32 = 0xE77D // 	VRR-c	VECTOR SHIFT RIGHT LOGICAL BY BYTE
+	OP_VSEG   uint32 = 0xE75F // 	VRR-a	VECTOR SIGN EXTEND TO DOUBLEWORD
+	OP_VST    uint32 = 0xE70E // 	VRX	VECTOR STORE
+	OP_VSTEH  uint32 = 0xE709 // 	VRX	VECTOR STORE ELEMENT (16)
+	OP_VSTEF  uint32 = 0xE70B // 	VRX	VECTOR STORE ELEMENT (32)
+	OP_VSTEG  uint32 = 0xE70A // 	VRX	VECTOR STORE ELEMENT (64)
+	OP_VSTEB  uint32 = 0xE708 // 	VRX	VECTOR STORE ELEMENT (8)
+	OP_VSTM   uint32 = 0xE73E // 	VRS-a	VECTOR STORE MULTIPLE
+	OP_VSTL   uint32 = 0xE73F // 	VRS-b	VECTOR STORE WITH LENGTH
+	OP_VSTRC  uint32 = 0xE78A // 	VRR-d	VECTOR STRING RANGE COMPARE
+	OP_VS     uint32 = 0xE7F7 // 	VRR-c	VECTOR SUBTRACT
+	OP_VSCBI  uint32 = 0xE7F5 // 	VRR-c	VECTOR SUBTRACT COMPUTE BORROW INDICATION
+	OP_VSBCBI uint32 = 0xE7BD // 	VRR-d	VECTOR SUBTRACT WITH BORROW COMPUTE BORROW INDICATION
+	OP_VSBI   uint32 = 0xE7BF // 	VRR-d	VECTOR SUBTRACT WITH BORROW INDICATION
+	OP_VSUMG  uint32 = 0xE765 // 	VRR-c	VECTOR SUM ACROSS DOUBLEWORD
+	OP_VSUMQ  uint32 = 0xE767 // 	VRR-c	VECTOR SUM ACROSS QUADWORD
+	OP_VSUM   uint32 = 0xE764 // 	VRR-c	VECTOR SUM ACROSS WORD
+	OP_VTM    uint32 = 0xE7D8 // 	VRR-a	VECTOR TEST UNDER MASK
+	OP_VUPH   uint32 = 0xE7D7 // 	VRR-a	VECTOR UNPACK HIGH
+	OP_VUPLH  uint32 = 0xE7D5 // 	VRR-a	VECTOR UNPACK LOGICAL HIGH
+	OP_VUPLL  uint32 = 0xE7D4 // 	VRR-a	VECTOR UNPACK LOGICAL LOW
+	OP_VUPL   uint32 = 0xE7D6 // 	VRR-a	VECTOR UNPACK LOW
 )
 
 func oclass(a *obj.Addr) int {
@@ -3637,6 +4328,192 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		case ALMG:
 			RSY(OP_LMG, uint32(rstart), uint32(rend), uint32(reg), uint32(offset), asm)
 		}
+
+	case 100: // VRX STORE
+		op, m3, _ := vop(p.As)
+		if p.From3 != nil {
+			m3 = uint32(vregoff(ctxt, p.From3))
+		}
+		b2 := p.To.Reg
+		if b2 == 0 {
+			b2 = o.param
+		}
+		d2 := uint32(vregoff(ctxt, &p.To))
+		vrx(op, uint32(p.From.Reg), uint32(p.To.Index), uint32(b2), d2, m3, asm)
+
+	case 101: // VRX LOAD
+		op, m3, _ := vop(p.As)
+		if p.From3 != nil {
+			m3 = uint32(vregoff(ctxt, p.From3))
+		}
+		b2 := p.From.Reg
+		if b2 == 0 {
+			b2 = o.param
+		}
+		d2 := uint32(vregoff(ctxt, &p.From))
+		vrx(op, uint32(p.To.Reg), uint32(p.From.Index), uint32(b2), d2, m3, asm)
+
+	case 102: // VRV SCATTER
+		op, m3, _ := vop(p.As)
+		if p.From3 != nil {
+			m3 = uint32(vregoff(ctxt, p.From3))
+		}
+		b2 := p.To.Reg
+		if b2 == 0 {
+			b2 = o.param
+		}
+		d2 := uint32(vregoff(ctxt, &p.To))
+		vrv(op, uint32(p.From.Reg), uint32(p.To.Index), uint32(b2), d2, m3, asm)
+
+	case 103: // VRV GATHER
+		op, m3, _ := vop(p.As)
+		if p.From3 != nil {
+			m3 = uint32(vregoff(ctxt, p.From3))
+		}
+		b2 := p.From.Reg
+		if b2 == 0 {
+			b2 = o.param
+		}
+		d2 := uint32(vregoff(ctxt, &p.From))
+		vrv(op, uint32(p.To.Reg), uint32(p.From.Index), uint32(b2), d2, m3, asm)
+
+	case 104: // VRS SHIFT/ROTATE and LOAD GR FROM VR ELEMENT
+		op, m4, _ := vop(p.As)
+		fr := p.Reg
+		if fr == 0 {
+			fr = p.To.Reg
+		}
+		bits := uint32(vregoff(ctxt, &p.From))
+		vrs(op, uint32(p.To.Reg), uint32(fr), uint32(p.From.Reg), bits, m4, asm)
+
+	case 105: // VRS STORE MULTIPLE
+		op, _, _ := vop(p.As)
+		offset := uint32(vregoff(ctxt, &p.To))
+		reg := p.To.Reg
+		if reg == 0 {
+			reg = o.param
+		}
+		vrs(op, uint32(p.From.Reg), uint32(p.Reg), uint32(reg), offset, 0, asm)
+
+	case 106: // VRS LOAD MULTIPLE
+		op, _, _ := vop(p.As)
+		offset := uint32(vregoff(ctxt, &p.From))
+		reg := p.From.Reg
+		if reg == 0 {
+			reg = o.param
+		}
+		vrs(op, uint32(p.Reg), uint32(p.To.Reg), uint32(reg), offset, 0, asm)
+
+	case 107: // VRS STORE WITH LENGTH
+		op, _, _ := vop(p.As)
+		offset := uint32(vregoff(ctxt, &p.To))
+		reg := p.To.Reg
+		if reg == 0 {
+			reg = o.param
+		}
+		vrs(op, uint32(p.From.Reg), uint32(p.From3.Reg), uint32(reg), offset, 0, asm)
+
+	case 108: // VRS LOAD WITH LENGTH
+		op, _, _ := vop(p.As)
+		offset := uint32(vregoff(ctxt, &p.From))
+		reg := p.From.Reg
+		if reg == 0 {
+			reg = o.param
+		}
+		vrs(op, uint32(p.To.Reg), uint32(p.From3.Reg), uint32(reg), offset, 0, asm)
+
+	case 109: // VRI-a instructions
+		op, _, _ := vop(p.As)
+		i2 := uint32(vregoff(ctxt, &p.From))
+		switch p.As {
+		case AVZERO:
+			i2 = 0
+		case AVONE:
+			i2 = 0xffff
+		}
+		m3 := uint32(0)
+		if p.From3 != nil {
+			m3 = uint32(vregoff(ctxt, p.From3))
+		}
+		vria(op, uint32(p.To.Reg), i2, m3, asm)
+
+	case 110:
+		op, m4, _ := vop(p.As)
+		i2 := uint32(vregoff(ctxt, p.From3))
+		i3 := uint32(vregoff(ctxt, &p.From))
+		vrib(op, uint32(p.To.Reg), i2, i3, m4, asm)
+
+	case 111:
+		op, m4, _ := vop(p.As)
+		i2 := uint32(vregoff(ctxt, &p.From))
+		vric(op, uint32(p.To.Reg), uint32(p.Reg), i2, m4, asm)
+
+	case 112:
+		op, m5, _ := vop(p.As)
+		i4 := uint32(vregoff(ctxt, p.From3))
+		vrid(op, uint32(p.To.Reg), uint32(p.From.Reg), uint32(p.Reg), i4, m5, asm)
+
+	case 113:
+		op, m4, _ := vop(p.As)
+		m5 := singleElementMask(p.As)
+		i3 := uint32(vregoff(ctxt, &p.From))
+		vrie(op, uint32(p.To.Reg), uint32(p.Reg), i3, m5, m4, asm)
+
+	case 114: // VRR-a
+		op, m3, m5 := vop(p.As)
+		m4 := singleElementMask(p.As)
+		vrra(op, uint32(p.To.Reg), uint32(p.From.Reg), m5, m4, m3, asm)
+
+	case 115: // VRR-a COMPARE
+		op, m3, m5 := vop(p.As)
+		m4 := singleElementMask(p.As)
+		vrra(op, uint32(p.From.Reg), uint32(p.To.Reg), m5, m4, m3, asm)
+
+	case 116: // VRR-a
+
+	case 117: // VRR-b
+		op, m4, m5 := vop(p.As)
+		vrrb(op, uint32(p.To.Reg), uint32(p.From.Reg), uint32(p.Reg), m5, m4, asm)
+
+	case 118: // VRR-c
+		op, m4, m6 := vop(p.As)
+		m5 := singleElementMask(p.As)
+		v3 := p.Reg
+		if v3 == 0 {
+			v3 = p.To.Reg
+		}
+		vrrc(op, uint32(p.To.Reg), uint32(p.From.Reg), uint32(v3), m6, m5, m4, asm)
+
+	case 119: // VRR-c SHIFT/ROTATE/DIVIDE/SUB (rhs value on the left, like SLD, DIV etc.)
+		op, m4, m6 := vop(p.As)
+		m5 := singleElementMask(p.As)
+		v2 := p.Reg
+		if v2 == 0 {
+			v2 = p.To.Reg
+		}
+		vrrc(op, uint32(p.To.Reg), uint32(v2), uint32(p.From.Reg), m6, m5, m4, asm)
+
+	case 120: // VRR-d
+		op, m6, _ := vop(p.As)
+		m5 := singleElementMask(p.As)
+		v1 := uint32(p.To.Reg)
+		v2 := uint32(p.From3.Reg)
+		v3 := uint32(p.From.Reg)
+		v4 := uint32(p.Reg)
+		vrrd(op, v1, v2, v3, m6, m5, v4, asm)
+
+	case 121: // VRR-e
+		op, m6, _ := vop(p.As)
+		m5 := singleElementMask(p.As)
+		v1 := uint32(p.To.Reg)
+		v2 := uint32(p.From3.Reg)
+		v3 := uint32(p.From.Reg)
+		v4 := uint32(p.Reg)
+		vrre(op, v1, v2, v3, m5, m6, v4, asm)
+
+	case 122: // VRR-f LOAD VRS FROM GRS DISJOINT
+		op, _, _ := vop(p.As)
+		vrrf(op, uint32(p.To.Reg), uint32(p.From.Reg), uint32(p.Reg), asm)
 	}
 }
 
@@ -4129,4 +5006,161 @@ func SSF(op, r3, b1, d1, b2, d2 uint32, asm *[]byte) {
 		uint8(d1),
 		(uint8(b2)<<4)|uint8((d2>>8)&0x0F),
 		uint8(d2))
+}
+
+func rxb(va, vb, vc, vd uint32) uint8 {
+	mask := uint8(0)
+	if va >= REG_V16 && va <= REG_V31 {
+		mask |= 0x8
+	}
+	if vb >= REG_V16 && vb <= REG_V31 {
+		mask |= 0x4
+	}
+	if vc >= REG_V16 && vc <= REG_V31 {
+		mask |= 0x2
+	}
+	if vd >= REG_V16 && vd <= REG_V31 {
+		mask |= 0x1
+	}
+	return mask
+}
+
+func vrx(op, v1, x2, b2, d2, m3 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		(uint8(v1)<<4)|(uint8(x2)&0xf),
+		(uint8(b2)<<4)|(uint8(d2>>8)&0xf),
+		uint8(d2),
+		(uint8(m3)<<4)|rxb(v1, 0, 0, 0),
+		uint8(op))
+}
+
+func vrv(op, v1, v2, b2, d2, m3 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		(uint8(v1)<<4)|(uint8(v2)&0xf),
+		(uint8(b2)<<4)|(uint8(d2>>8)&0xf),
+		uint8(d2),
+		(uint8(m3)<<4)|rxb(v1, v2, 0, 0),
+		uint8(op))
+}
+
+func vrs(op, v1, v3_r3, b2, d2, m4 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		(uint8(v1)<<4)|(uint8(v3_r3)&0xf),
+		(uint8(b2)<<4)|(uint8(d2>>8)&0xf),
+		uint8(d2),
+		(uint8(m4)<<4)|rxb(v1, v3_r3, 0, 0),
+		uint8(op))
+}
+
+func vrra(op, v1, v2, m5, m4, m3 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		(uint8(v1)<<4)|(uint8(v2)&0xf),
+		0,
+		(uint8(m5)<<4)|(uint8(m4)&0xf),
+		(uint8(m3)<<4)|rxb(v1, v2, 0, 0),
+		uint8(op))
+}
+
+func vrrb(op, v1, v2, v3, m5, m4 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		(uint8(v1)<<4)|(uint8(v2)&0xf),
+		uint8(v3)<<4,
+		uint8(m5)<<4,
+		(uint8(m4)<<4)|rxb(v1, v2, v3, 0),
+		uint8(op))
+}
+
+func vrrc(op, v1, v2, v3, m6, m5, m4 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		(uint8(v1)<<4)|(uint8(v2)&0xf),
+		uint8(v3)<<4,
+		(uint8(m6)<<4)|(uint8(m5)&0xf),
+		(uint8(m4)<<4)|rxb(v1, v2, v3, 0),
+		uint8(op))
+}
+
+func vrrd(op, v1, v2, v3, m5, m6, v4 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		(uint8(v1)<<4)|(uint8(v2)&0xf),
+		(uint8(v3)<<4)|(uint8(m5)&0xf),
+		uint8(m6)<<4,
+		(uint8(v4)<<4)|rxb(v1, v2, v3, v4),
+		uint8(op))
+}
+
+func vrre(op, v1, v2, v3, m6, m5, v4 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		(uint8(v1)<<4)|(uint8(v2)&0xf),
+		(uint8(v3)<<4)|(uint8(m6)&0xf),
+		uint8(m5),
+		(uint8(v4)<<4)|rxb(v1, v2, v3, v4),
+		uint8(op))
+}
+
+func vrrf(op, v1, r2, r3 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		(uint8(v1)<<4)|(uint8(r2)&0xf),
+		uint8(r3)<<4,
+		0,
+		rxb(v1, 0, 0, 0),
+		uint8(op))
+}
+
+func vria(op, v1, i2, m3 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		uint8(v1)<<4,
+		uint8(i2>>8),
+		uint8(i2),
+		(uint8(m3)<<4)|rxb(v1, 0, 0, 0),
+		uint8(op))
+}
+
+func vrib(op, v1, i2, i3, m4 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		uint8(v1)<<4,
+		uint8(i2),
+		uint8(i3),
+		(uint8(m4)<<4)|rxb(v1, 0, 0, 0),
+		uint8(op))
+}
+
+func vric(op, v1, v3, i2, m4 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		(uint8(v1)<<4)|(uint8(v3)&0xf),
+		uint8(i2>>8),
+		uint8(i2),
+		(uint8(m4)<<4)|rxb(v1, v3, 0, 0),
+		uint8(op))
+}
+
+func vrid(op, v1, v2, v3, i4, m5 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		(uint8(v1)<<4)|(uint8(v2)&0xf),
+		uint8(v3)<<4,
+		uint8(i4),
+		(uint8(m5)<<4)|rxb(v1, v2, v3, 0),
+		uint8(op))
+}
+
+func vrie(op, v1, v2, i3, m5, m4 uint32, asm *[]byte) {
+	*asm = append(*asm,
+		uint8(op>>8),
+		(uint8(v1)<<4)|(uint8(v2)&0xf),
+		uint8(i3>>4),
+		(uint8(i3)<<4)|(uint8(m5)&0xf),
+		(uint8(m4)<<4)|rxb(v1, v2, 0, 0),
+		uint8(op))
 }

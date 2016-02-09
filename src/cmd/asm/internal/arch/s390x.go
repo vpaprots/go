@@ -87,11 +87,27 @@ func IsS390xNEG(op int) bool {
 	return false
 }
 
-// IsS390xStorageAndStorage reports whether the op (as defined by an s390x.A* constant) refers
-// to an storage-and-storage format instruction such as mvc, clc, xc, oc or nc.
-func IsS390xStorageAndStorage(op int) bool {
+// IsS390xWithLength reports whether the op (as defined by an s390x.A* constant)
+// refers to an instruction which takes a length as its first argument.
+func IsS390xWithLength(op int) bool {
 	switch op {
 	case s390x.AMVC, s390x.ACLC, s390x.AXC, s390x.AOC, s390x.ANC:
+		return true
+	case s390x.AVLL, s390x.AVSTL:
+		return true
+	}
+	return false
+}
+
+// IsS390xWithIndex reports whether the op (as defined by an s390x.A* constant)
+// refers to an instruction which takes an index as its first argument.
+func IsS390xWithIndex(op int) bool {
+	switch op {
+	case s390x.AVSCEG, s390x.AVSCEF, s390x.AVGEG, s390x.AVGEF:
+		return true
+	case s390x.AVGMG, s390x.AVGMF, s390x.AVGMH, s390x.AVGMB:
+		return true
+	case s390x.AVLEIG, s390x.AVLEIF, s390x.AVLEIH, s390x.AVLEIB:
 		return true
 	}
 	return false
@@ -110,6 +126,10 @@ func s390xRegisterNumber(name string, n int16) (int16, bool) {
 	case "R":
 		if 0 <= n && n <= 15 {
 			return s390x.REG_R0 + n, true
+		}
+	case "V":
+		if 0 <= n && n <= 31 {
+			return s390x.REG_V0 + n, true
 		}
 	}
 	return 0, false

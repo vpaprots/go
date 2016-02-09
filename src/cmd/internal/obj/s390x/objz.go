@@ -974,6 +974,8 @@ var unaryDst = map[int]bool{
 	ASTCKC: true,
 	ASTCKE: true,
 	ASTCKF: true,
+	AVONE:  true,
+	AVZERO: true,
 }
 
 var Links390x = obj.LinkArch{
