@@ -148,6 +148,7 @@ var optab = []Optab{
 	Optab{AMVC, C_SOREG, C_NONE, C_SCON, C_SOREG, 84, 0},
 	Optab{ALARL, C_LCON, C_NONE, C_NONE, C_REG, 85, 0},
 	Optab{ALA, C_SOREG, C_NONE, C_NONE, C_REG, 86, 0},
+	Optab{ALA, C_SAUTO, C_NONE, C_NONE, C_REG, 86, REGSP},
 	Optab{AEXRL, C_LCON, C_NONE, C_NONE, C_REG, 87, 0},
 	Optab{ASTCK, C_NONE, C_NONE, C_NONE, C_SAUTO, 88, REGSP},
 	Optab{ASTCK, C_NONE, C_NONE, C_NONE, C_SOREG, 88, 0},
@@ -231,6 +232,16 @@ var optab = []Optab{
 	Optab{AMOVWZ, C_ADDCON, C_NONE, C_NONE, C_SOREG, 92, 0},
 	Optab{AMOVB, C_ADDCON, C_NONE, C_NONE, C_SOREG, 92, 0},
 	Optab{AMOVBZ, C_ADDCON, C_NONE, C_NONE, C_SOREG, 92, 0},
+	Optab{AMOVD, C_SCON, C_NONE, C_NONE, C_SAUTO, 92, REGSP},
+	Optab{AMOVW, C_SCON, C_NONE, C_NONE, C_SAUTO, 92, REGSP},
+	Optab{AMOVWZ, C_SCON, C_NONE, C_NONE, C_SAUTO, 92, REGSP},
+	Optab{AMOVB, C_SCON, C_NONE, C_NONE, C_SAUTO, 92, REGSP},
+	Optab{AMOVBZ, C_SCON, C_NONE, C_NONE, C_SAUTO, 92, REGSP},
+	Optab{AMOVD, C_ADDCON, C_NONE, C_NONE, C_SAUTO, 92, REGSP},
+	Optab{AMOVW, C_ADDCON, C_NONE, C_NONE, C_SAUTO, 92, REGSP},
+	Optab{AMOVWZ, C_ADDCON, C_NONE, C_NONE, C_SAUTO, 92, REGSP},
+	Optab{AMOVB, C_ADDCON, C_NONE, C_NONE, C_SAUTO, 92, REGSP},
+	Optab{AMOVBZ, C_ADDCON, C_NONE, C_NONE, C_SAUTO, 92, REGSP},
 
 	/* load constant */
 	Optab{AMOVD, C_SACON, C_NONE, C_NONE, C_REG, 3, REGSP},
@@ -4041,11 +4052,13 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 
 	case 84: /* storage-and-storage operations (mvc, clc, xc, oc, nc) */
 		l := regoff(ctxt, p.From3)
-		d2 := regoff(ctxt, &p.From)
 		d1 := regoff(ctxt, &p.To)
+		d2 := regoff(ctxt, &p.From)
 		if l < 1 || l > 256 {
 			ctxt.Diag("number of bytes (%v) not in range [1,256]", l)
 		}
+		b1 := p.To.Reg
+		b2 := p.From.Reg
 		var opcode uint32
 		switch p.As {
 		default:
@@ -4054,6 +4067,9 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			opcode = OP_MVC
 		case ACLC:
 			opcode = OP_CLC
+			// swap operand order for CLC so that it matches CMP
+			b1, b2 = b2, b1
+			d1, d2 = d2, d1
 		case AXC:
 			opcode = OP_XC
 		case AOC:
@@ -4061,7 +4077,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		case ANC:
 			opcode = OP_NC
 		}
-		SS(a, opcode, uint32(l-1), 0, uint32(p.To.Reg), uint32(d1), uint32(p.From.Reg), uint32(d2), asm)
+		SS(a, opcode, uint32(l-1), 0, uint32(b1), uint32(d1), uint32(b2), uint32(d2), asm)
 
 	case 85: /* larl: load address relative long */
 		// When using larl directly, don't add a nop
@@ -4077,12 +4093,17 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		RIL(b, OP_LARL, uint32(p.To.Reg), uint32(v>>1), asm)
 
 	case 86: /* lay?: load address */
-		v := vregoff(ctxt, &p.From)
+		d := vregoff(ctxt, &p.From)
+		x := p.From.Index
+		b := p.From.Reg
+		if b == 0 {
+			b = o.param
+		}
 		switch p.As {
 		case ALA:
-			RX(OP_LA, uint32(p.To.Reg), uint32(p.From.Reg), 0, uint32(v), asm)
+			RX(OP_LA, uint32(p.To.Reg), uint32(x), uint32(b), uint32(d), asm)
 		case ALAY:
-			RXY(0, OP_LAY, uint32(p.To.Reg), uint32(p.From.Reg), 0, uint32(v), asm)
+			RXY(0, OP_LAY, uint32(p.To.Reg), uint32(x), uint32(b), uint32(d), asm)
 		}
 
 	case 87: /* exrl: execute relative long */
@@ -4176,10 +4197,14 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		}
 		v := regoff(ctxt, &p.From)
 		d := regoff(ctxt, &p.To)
+		b := p.To.Reg
+		if b == 0 {
+			b = o.param
+		}
 		if opcode == OP_MVI {
-			SI(opcode, uint32(v), uint32(p.To.Reg), uint32(d), asm)
+			SI(opcode, uint32(v), uint32(b), uint32(d), asm)
 		} else {
-			SIL(opcode, uint32(p.To.Reg), uint32(d), uint32(v), asm)
+			SIL(opcode, uint32(b), uint32(d), uint32(v), asm)
 		}
 
 	case 93: // GOT lookup
