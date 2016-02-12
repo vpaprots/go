@@ -168,11 +168,11 @@ func gmvc(f, t *gc.Node) bool {
 		return false
 	}
 
-	if f.Xoffset < 0 || f.Xoffset >= 4096 {
+	if f.Xoffset < 0 || f.Xoffset >= 4096-8 {
 		return false
 	}
 
-	if t.Xoffset < 0 || t.Xoffset >= 4096 {
+	if t.Xoffset < 0 || t.Xoffset >= 4096-8 {
 		return false
 	}
 
@@ -247,6 +247,11 @@ func gmove(f *gc.Node, t *gc.Node) {
 				if i := con.Int(); int64(int16(i)) != i {
 					goto hard
 				}
+			}
+
+			// immediate moves to memory have a 12-bit unsigned displacement
+			if t.Xoffset < 0 || t.Xoffset >= 4096-8 {
+				goto hard
 			}
 		}
 	}
@@ -540,16 +545,18 @@ func intLiteral(n *gc.Node) (x int64, ok bool) {
 // It synthesizes some multiple-instruction sequences
 // so the front end can stay simpler.
 func gins(as int, f, t *gc.Node) *obj.Prog {
-	if as >= obj.A_ARCHSPECIFIC {
-		if x, ok := intLiteral(f); ok {
-			ginscon(as, x, t)
-			return nil // caller must not use
+	if t != nil {
+		if as >= obj.A_ARCHSPECIFIC {
+			if x, ok := intLiteral(f); ok {
+				ginscon(as, x, t)
+				return nil // caller must not use
+			}
 		}
-	}
-	if as == s390x.ACMP || as == s390x.ACMPU {
-		if x, ok := intLiteral(t); ok {
-			ginscon2(as, f, x)
-			return nil // caller must not use
+		if as == s390x.ACMP || as == s390x.ACMPU {
+			if x, ok := intLiteral(t); ok {
+				ginscon2(as, f, x)
+				return nil // caller must not use
+			}
 		}
 	}
 	return rawgins(as, f, t)
@@ -566,7 +573,7 @@ func rawgins(as int, f *gc.Node, t *gc.Node) *obj.Prog {
 
 	switch as {
 	// Bad things the front end has done to us. Crash to find call stack.
-	case s390x.AAND, s390x.AMULLD:
+	case s390x.AMULLD:
 		if p.From.Type == obj.TYPE_CONST {
 			gc.Debug['h'] = 1
 			gc.Fatalf("bad inst: %v", p)
@@ -948,27 +955,161 @@ const (
 	OAddable = 1 << 1
 )
 
-func xgen(n *gc.Node, a *gc.Node, o int) bool {
-	// TODO(mundaym)
-	return -1 != 0
-}
+var clean [20]gc.Node
+
+var cleani int = 0
 
 func sudoclean() {
-	return
+	if clean[cleani-1].Op != gc.OEMPTY {
+		gc.Regfree(&clean[cleani-1])
+	}
+	if clean[cleani-2].Op != gc.OEMPTY {
+		gc.Regfree(&clean[cleani-2])
+	}
+	cleani -= 2
 }
 
-// generate code to compute address of n,
-// a reference to a (perhaps nested) field inside
-// an array or struct.
-// return 0 on failure, 1 on success.
-// on success, leaves usable address in a.
-//
-// caller is responsible for calling sudoclean
-// after successful sudoaddable,
-// to release the register used for a.
+/*
+ * generate code to compute address of n,
+ * a reference to a (perhaps nested) field inside
+ * an array or struct.
+ * return 0 on failure, 1 on success.
+ * on success, leaves usable address in a.
+ *
+ * caller is responsible for calling sudoclean
+ * after successful sudoaddable,
+ * to release the register used for a.
+ */
 func sudoaddable(as int, n *gc.Node, a *obj.Addr) bool {
-	// TODO(mundaym)
+	if n.Type == nil {
+		return false
+	}
 
 	*a = obj.Addr{}
+
+	switch n.Op {
+	case gc.OLITERAL:
+		if !gc.Isconst(n, gc.CTINT) {
+			return false
+		}
+		v := n.Int()
+		switch as {
+		default:
+			return false
+
+		// operations that can cope with a 32-bit immediate
+		// TODO(mundaym): logical operations can work on high bits
+		case s390x.AADD,
+			s390x.AADDC,
+			s390x.ASUB,
+			s390x.AMULLW,
+			s390x.AAND,
+			s390x.AOR,
+			s390x.AXOR,
+			s390x.ASLD,
+			s390x.ASLW,
+			s390x.ASRAW,
+			s390x.ASRAD,
+			s390x.ASRW,
+			s390x.ASRD,
+			s390x.AMOVB,
+			s390x.AMOVBZ,
+			s390x.AMOVH,
+			s390x.AMOVHZ,
+			s390x.AMOVW,
+			s390x.AMOVWZ,
+			s390x.AMOVD:
+			if int64(int32(v)) != v {
+				return false
+			}
+
+		// for comparisons avoid immediates unless they can
+		// fit into a int8/uint8
+		// this favours combined compare and branch instructions
+		case s390x.ACMP:
+			if int64(int8(v)) != v {
+				return false
+			}
+		case s390x.ACMPU:
+			if int64(uint8(v)) != v {
+				return false
+			}
+		}
+
+		cleani += 2
+		reg := &clean[cleani-1]
+		reg1 := &clean[cleani-2]
+		reg.Op = gc.OEMPTY
+		reg1.Op = gc.OEMPTY
+		gc.Naddr(a, n)
+		return true
+
+	case gc.ODOT,
+		gc.ODOTPTR:
+		cleani += 2
+		reg := &clean[cleani-1]
+		reg1 := &clean[cleani-2]
+		reg.Op = gc.OEMPTY
+		reg1.Op = gc.OEMPTY
+		var nn *gc.Node
+		var oary [10]int64
+		o := gc.Dotoffset(n, oary[:], &nn)
+		if nn == nil {
+			sudoclean()
+			return false
+		}
+
+		if nn.Addable && o == 1 && oary[0] >= 0 {
+			// directly addressable set of DOTs
+			n1 := *nn
+
+			n1.Type = n.Type
+			n1.Xoffset += oary[0]
+			// check that the offset fits into a 12-bit displacement
+			if n1.Xoffset < 0 || n1.Xoffset >= (1<<12)-8 {
+				sudoclean()
+				return false
+			}
+			gc.Naddr(a, &n1)
+			return true
+		}
+
+		gc.Regalloc(reg, gc.Types[gc.Tptr], nil)
+		n1 := *reg
+		n1.Op = gc.OINDREG
+		if oary[0] >= 0 {
+			gc.Agen(nn, reg)
+			n1.Xoffset = oary[0]
+		} else {
+			gc.Cgen(nn, reg)
+			gc.Cgen_checknil(reg)
+			n1.Xoffset = -(oary[0] + 1)
+		}
+
+		for i := 1; i < o; i++ {
+			if oary[i] >= 0 {
+				gc.Fatalf("can't happen")
+			}
+			gins(s390x.AMOVD, &n1, reg)
+			gc.Cgen_checknil(reg)
+			n1.Xoffset = -(oary[i] + 1)
+		}
+
+		a.Type = obj.TYPE_NONE
+		a.Index = obj.TYPE_NONE
+		// check that the offset fits into a 12-bit displacement
+		if n1.Xoffset < 0 || n1.Xoffset >= (1<<12)-8 {
+			tmp := n1
+			tmp.Op = gc.OREGISTER
+			tmp.Type = gc.Types[gc.Tptr]
+			tmp.Xoffset = 0
+			gc.Cgen_checknil(&tmp)
+			ginscon(s390x.AADD, n1.Xoffset, &tmp)
+			n1.Xoffset = 0
+		}
+		gc.Naddr(a, &n1)
+		return true
+	}
+
 	return false
 }

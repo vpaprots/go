@@ -247,12 +247,12 @@ func cgen_wb(n, res *Node, wb bool) {
 		return
 	}
 
-	if (Ctxt.Arch.Thechar == '6' || Ctxt.Arch.Thechar == '8') && n.Addable {
+	if (Ctxt.Arch.Thechar == '6' || Ctxt.Arch.Thechar == '8' || Ctxt.Arch.Thechar == 'z') && n.Addable {
 		Thearch.Gmove(n, res)
 		return
 	}
 
-	if Ctxt.Arch.Thechar == '0' || Ctxt.Arch.Thechar == '7' || Ctxt.Arch.Thechar == '9' || Ctxt.Arch.Thechar == 'z' {
+	if Ctxt.Arch.Thechar == '0' || Ctxt.Arch.Thechar == '7' || Ctxt.Arch.Thechar == '9' {
 		// if both are addressable, move
 		if n.Addable {
 			if n.Op == OREGISTER || res.Op == OREGISTER {
@@ -752,14 +752,14 @@ abop: // asymmetric binary
 		Regalloc(&n1, nl.Type, res)
 		Cgen(nl, &n1)
 
-		if Smallintconst(nr) && Ctxt.Arch.Thechar != '0' && Ctxt.Arch.Thechar != '5' && Ctxt.Arch.Thechar != '7' && Ctxt.Arch.Thechar != '9' && Ctxt.Arch.Thechar != 'z' { // TODO(rsc): Check opcode for arm
+		if Smallintconst(nr) && Ctxt.Arch.Thechar != '0' && Ctxt.Arch.Thechar != '5' && Ctxt.Arch.Thechar != '7' && Ctxt.Arch.Thechar != '9' { // TODO(rsc): Check opcode for arm
 			n2 = *nr
 		} else {
 			Regalloc(&n2, nr.Type, nil)
 			Cgen(nr, &n2)
 		}
 	} else {
-		if Smallintconst(nr) && Ctxt.Arch.Thechar != '0' && Ctxt.Arch.Thechar != '5' && Ctxt.Arch.Thechar != '7' && Ctxt.Arch.Thechar != '9' && Ctxt.Arch.Thechar != 'z' { // TODO(rsc): Check opcode for arm
+		if Smallintconst(nr) && Ctxt.Arch.Thechar != '0' && Ctxt.Arch.Thechar != '5' && Ctxt.Arch.Thechar != '7' && Ctxt.Arch.Thechar != '9' { // TODO(rsc): Check opcode for arm
 			n2 = *nr
 		} else {
 			Regalloc(&n2, nr.Type, res)
