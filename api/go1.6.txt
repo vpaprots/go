@@ -539,7 +539,7 @@ pkg syscall (linux-s390x-cgo), const AF_LLC = 26
 pkg syscall (linux-s390x-cgo), const AF_LLC ideal-int
 pkg syscall (linux-s390x-cgo), const AF_LOCAL = 1
 pkg syscall (linux-s390x-cgo), const AF_LOCAL ideal-int
-pkg syscall (linux-s390x-cgo), const AF_MAX = 40
+pkg syscall (linux-s390x-cgo), const AF_MAX = 41
 pkg syscall (linux-s390x-cgo), const AF_MAX ideal-int
 pkg syscall (linux-s390x-cgo), const AF_NETBEUI = 13
 pkg syscall (linux-s390x-cgo), const AF_NETBEUI ideal-int
@@ -569,6 +569,8 @@ pkg syscall (linux-s390x-cgo), const AF_SNA = 22
 pkg syscall (linux-s390x-cgo), const AF_SNA ideal-int
 pkg syscall (linux-s390x-cgo), const AF_TIPC = 30
 pkg syscall (linux-s390x-cgo), const AF_TIPC ideal-int
+pkg syscall (linux-s390x-cgo), const AF_VSOCK = 40
+pkg syscall (linux-s390x-cgo), const AF_VSOCK ideal-int
 pkg syscall (linux-s390x-cgo), const AF_WANPIPE = 25
 pkg syscall (linux-s390x-cgo), const AF_WANPIPE ideal-int
 pkg syscall (linux-s390x-cgo), const AF_X25 = 9
@@ -1133,8 +1135,6 @@ pkg syscall (linux-s390x-cgo), const EPOLLIN = 1
 pkg syscall (linux-s390x-cgo), const EPOLLIN ideal-int
 pkg syscall (linux-s390x-cgo), const EPOLLMSG = 1024
 pkg syscall (linux-s390x-cgo), const EPOLLMSG ideal-int
-pkg syscall (linux-s390x-cgo), const EPOLL_NONBLOCK = 2048
-pkg syscall (linux-s390x-cgo), const EPOLL_NONBLOCK ideal-int
 pkg syscall (linux-s390x-cgo), const EPOLLONESHOT = 1073741824
 pkg syscall (linux-s390x-cgo), const EPOLLONESHOT ideal-int
 pkg syscall (linux-s390x-cgo), const EPOLLOUT = 4
@@ -1185,8 +1185,6 @@ pkg syscall (linux-s390x-cgo), const ETH_P_8021AH = 35047
 pkg syscall (linux-s390x-cgo), const ETH_P_8021AH ideal-int
 pkg syscall (linux-s390x-cgo), const ETH_P_8021Q = 33024
 pkg syscall (linux-s390x-cgo), const ETH_P_8021Q ideal-int
-pkg syscall (linux-s390x-cgo), const ETH_P_80221 = 35095
-pkg syscall (linux-s390x-cgo), const ETH_P_80221 ideal-int
 pkg syscall (linux-s390x-cgo), const ETH_P_802_2 = 4
 pkg syscall (linux-s390x-cgo), const ETH_P_802_2 ideal-int
 pkg syscall (linux-s390x-cgo), const ETH_P_802_3 = 1
@@ -1447,12 +1445,8 @@ pkg syscall (linux-s390x-cgo), const IFA_F_DEPRECATED = 32
 pkg syscall (linux-s390x-cgo), const IFA_F_DEPRECATED ideal-int
 pkg syscall (linux-s390x-cgo), const IFA_F_HOMEADDRESS = 16
 pkg syscall (linux-s390x-cgo), const IFA_F_HOMEADDRESS ideal-int
-pkg syscall (linux-s390x-cgo), const IFA_F_MANAGETEMPADDR = 256
-pkg syscall (linux-s390x-cgo), const IFA_F_MANAGETEMPADDR ideal-int
 pkg syscall (linux-s390x-cgo), const IFA_F_NODAD = 2
 pkg syscall (linux-s390x-cgo), const IFA_F_NODAD ideal-int
-pkg syscall (linux-s390x-cgo), const IFA_F_NOPREFIXROUTE = 512
-pkg syscall (linux-s390x-cgo), const IFA_F_NOPREFIXROUTE ideal-int
 pkg syscall (linux-s390x-cgo), const IFA_F_OPTIMISTIC = 4
 pkg syscall (linux-s390x-cgo), const IFA_F_OPTIMISTIC ideal-int
 pkg syscall (linux-s390x-cgo), const IFA_F_PERMANENT = 128
@@ -1467,7 +1461,7 @@ pkg syscall (linux-s390x-cgo), const IFA_LABEL = 3
 pkg syscall (linux-s390x-cgo), const IFA_LABEL ideal-int
 pkg syscall (linux-s390x-cgo), const IFA_LOCAL = 2
 pkg syscall (linux-s390x-cgo), const IFA_LOCAL ideal-int
-pkg syscall (linux-s390x-cgo), const IFA_MAX = 8
+pkg syscall (linux-s390x-cgo), const IFA_MAX = 7
 pkg syscall (linux-s390x-cgo), const IFA_MAX ideal-int
 pkg syscall (linux-s390x-cgo), const IFA_MULTICAST = 7
 pkg syscall (linux-s390x-cgo), const IFA_MULTICAST ideal-int
@@ -1523,6 +1517,8 @@ pkg syscall (linux-s390x-cgo), const IFF_MULTI_QUEUE = 256
 pkg syscall (linux-s390x-cgo), const IFF_MULTI_QUEUE ideal-int
 pkg syscall (linux-s390x-cgo), const IFF_NOARP = 128
 pkg syscall (linux-s390x-cgo), const IFF_NOARP ideal-int
+pkg syscall (linux-s390x-cgo), const IFF_NOFILTER = 4096
+pkg syscall (linux-s390x-cgo), const IFF_NOFILTER ideal-int
 pkg syscall (linux-s390x-cgo), const IFF_NO_PI = 4096
 pkg syscall (linux-s390x-cgo), const IFF_NO_PI ideal-int
 pkg syscall (linux-s390x-cgo), const IFF_NOTRAILERS = 32
@@ -1531,6 +1527,8 @@ pkg syscall (linux-s390x-cgo), const IFF_ONE_QUEUE = 8192
 pkg syscall (linux-s390x-cgo), const IFF_ONE_QUEUE ideal-int
 pkg syscall (linux-s390x-cgo), const IFF_OVS_DATAPATH = 32768
 pkg syscall (linux-s390x-cgo), const IFF_OVS_DATAPATH ideal-int
+pkg syscall (linux-s390x-cgo), const IFF_PERSIST = 2048
+pkg syscall (linux-s390x-cgo), const IFF_PERSIST ideal-int
 pkg syscall (linux-s390x-cgo), const IFF_POINTOPOINT = 16
 pkg syscall (linux-s390x-cgo), const IFF_POINTOPOINT ideal-int
 pkg syscall (linux-s390x-cgo), const IFF_PORTSEL = 8192
@@ -1767,6 +1765,8 @@ pkg syscall (linux-s390x-cgo), const IP_PMTUDISC_WANT = 1
 pkg syscall (linux-s390x-cgo), const IP_PMTUDISC_WANT ideal-int
 pkg syscall (linux-s390x-cgo), const IPPROTO_AH = 51
 pkg syscall (linux-s390x-cgo), const IPPROTO_AH ideal-int
+pkg syscall (linux-s390x-cgo), const IPPROTO_BEETPH = 94
+pkg syscall (linux-s390x-cgo), const IPPROTO_BEETPH ideal-int
 pkg syscall (linux-s390x-cgo), const IPPROTO_COMP = 108
 pkg syscall (linux-s390x-cgo), const IPPROTO_COMP ideal-int
 pkg syscall (linux-s390x-cgo), const IPPROTO_DCCP = 33
@@ -1795,6 +1795,8 @@ pkg syscall (linux-s390x-cgo), const IPPROTO_IGMP = 2
 pkg syscall (linux-s390x-cgo), const IPPROTO_IGMP ideal-int
 pkg syscall (linux-s390x-cgo), const IPPROTO_IPIP = 4
 pkg syscall (linux-s390x-cgo), const IPPROTO_IPIP ideal-int
+pkg syscall (linux-s390x-cgo), const IPPROTO_MH = 135
+pkg syscall (linux-s390x-cgo), const IPPROTO_MH ideal-int
 pkg syscall (linux-s390x-cgo), const IPPROTO_MTP = 92
 pkg syscall (linux-s390x-cgo), const IPPROTO_MTP ideal-int
 pkg syscall (linux-s390x-cgo), const IPPROTO_NONE = 59
@@ -2020,8 +2022,10 @@ pkg syscall (linux-s390x-cgo), const MAP_FIXED = 16
 pkg syscall (linux-s390x-cgo), const MAP_FIXED ideal-int
 pkg syscall (linux-s390x-cgo), const MAP_GROWSDOWN = 256
 pkg syscall (linux-s390x-cgo), const MAP_GROWSDOWN ideal-int
-pkg syscall (linux-s390x-cgo), const MAP_GROWSUP = 512
-pkg syscall (linux-s390x-cgo), const MAP_GROWSUP ideal-int
+pkg syscall (linux-s390x-cgo), const MAP_HUGE_MASK = 63
+pkg syscall (linux-s390x-cgo), const MAP_HUGE_MASK ideal-int
+pkg syscall (linux-s390x-cgo), const MAP_HUGE_SHIFT = 26
+pkg syscall (linux-s390x-cgo), const MAP_HUGE_SHIFT ideal-int
 pkg syscall (linux-s390x-cgo), const MAP_HUGETLB = 262144
 pkg syscall (linux-s390x-cgo), const MAP_HUGETLB ideal-int
 pkg syscall (linux-s390x-cgo), const MAP_LOCKED = 8192
@@ -2308,6 +2312,8 @@ pkg syscall (linux-s390x-cgo), const OPOST ideal-int
 pkg syscall (linux-s390x-cgo), const O_RSYNC = 1052672
 pkg syscall (linux-s390x-cgo), const O_RSYNC ideal-int
 pkg syscall (linux-s390x-cgo), const O_SYNC = 1052672
+pkg syscall (linux-s390x-cgo), const O_TMPFILE = 4259840
+pkg syscall (linux-s390x-cgo), const O_TMPFILE ideal-int
 pkg syscall (linux-s390x-cgo), const O_TRUNC = 512
 pkg syscall (linux-s390x-cgo), const PACKET_ADD_MEMBERSHIP = 1
 pkg syscall (linux-s390x-cgo), const PACKET_ADD_MEMBERSHIP ideal-int
@@ -2463,8 +2469,6 @@ pkg syscall (linux-s390x-cgo), const PR_GET_SECCOMP = 21
 pkg syscall (linux-s390x-cgo), const PR_GET_SECCOMP ideal-int
 pkg syscall (linux-s390x-cgo), const PR_GET_SECUREBITS = 27
 pkg syscall (linux-s390x-cgo), const PR_GET_SECUREBITS ideal-int
-pkg syscall (linux-s390x-cgo), const PR_GET_THP_DISABLE = 42
-pkg syscall (linux-s390x-cgo), const PR_GET_THP_DISABLE ideal-int
 pkg syscall (linux-s390x-cgo), const PR_GET_TID_ADDRESS = 40
 pkg syscall (linux-s390x-cgo), const PR_GET_TID_ADDRESS ideal-int
 pkg syscall (linux-s390x-cgo), const PR_GET_TIMERSLACK = 30
@@ -2561,8 +2565,6 @@ pkg syscall (linux-s390x-cgo), const PR_SET_SECCOMP = 22
 pkg syscall (linux-s390x-cgo), const PR_SET_SECCOMP ideal-int
 pkg syscall (linux-s390x-cgo), const PR_SET_SECUREBITS = 28
 pkg syscall (linux-s390x-cgo), const PR_SET_SECUREBITS ideal-int
-pkg syscall (linux-s390x-cgo), const PR_SET_THP_DISABLE = 41
-pkg syscall (linux-s390x-cgo), const PR_SET_THP_DISABLE ideal-int
 pkg syscall (linux-s390x-cgo), const PR_SET_TIMERSLACK = 29
 pkg syscall (linux-s390x-cgo), const PR_SET_TIMERSLACK ideal-int
 pkg syscall (linux-s390x-cgo), const PR_SET_TIMING = 14
@@ -2739,6 +2741,8 @@ pkg syscall (linux-s390x-cgo), const PTRACE_GETREGSET ideal-int
 pkg syscall (linux-s390x-cgo), const PTRACE_GETREGS ideal-int
 pkg syscall (linux-s390x-cgo), const PTRACE_GETSIGINFO = 16898
 pkg syscall (linux-s390x-cgo), const PTRACE_GETSIGINFO ideal-int
+pkg syscall (linux-s390x-cgo), const PTRACE_GETSIGMASK = 16906
+pkg syscall (linux-s390x-cgo), const PTRACE_GETSIGMASK ideal-int
 pkg syscall (linux-s390x-cgo), const PTRACE_INTERRUPT = 16903
 pkg syscall (linux-s390x-cgo), const PTRACE_INTERRUPT ideal-int
 pkg syscall (linux-s390x-cgo), const PTRACE_KILL = 8
@@ -2811,10 +2815,14 @@ pkg syscall (linux-s390x-cgo), const PTRACE_SETREGSET ideal-int
 pkg syscall (linux-s390x-cgo), const PTRACE_SETREGS ideal-int
 pkg syscall (linux-s390x-cgo), const PTRACE_SETSIGINFO = 16899
 pkg syscall (linux-s390x-cgo), const PTRACE_SETSIGINFO ideal-int
+pkg syscall (linux-s390x-cgo), const PTRACE_SETSIGMASK = 16907
+pkg syscall (linux-s390x-cgo), const PTRACE_SETSIGMASK ideal-int
 pkg syscall (linux-s390x-cgo), const PTRACE_SINGLESTEP = 9
 pkg syscall (linux-s390x-cgo), const PTRACE_SINGLESTEP ideal-int
 pkg syscall (linux-s390x-cgo), const PTRACE_SYSCALL = 24
 pkg syscall (linux-s390x-cgo), const PTRACE_SYSCALL ideal-int
+pkg syscall (linux-s390x-cgo), const PTRACE_TE_ABORT_RAND = 20497
+pkg syscall (linux-s390x-cgo), const PTRACE_TE_ABORT_RAND ideal-int
 pkg syscall (linux-s390x-cgo), const PTRACE_TRACEME = 0
 pkg syscall (linux-s390x-cgo), const PTRACE_TRACEME ideal-int
 pkg syscall (linux-s390x-cgo), const RLIM_INFINITY = -1
@@ -2885,7 +2893,7 @@ pkg syscall (linux-s390x-cgo), const RTAX_INITRWND = 14
 pkg syscall (linux-s390x-cgo), const RTAX_INITRWND ideal-int
 pkg syscall (linux-s390x-cgo), const RTAX_LOCK = 1
 pkg syscall (linux-s390x-cgo), const RTAX_LOCK ideal-int
-pkg syscall (linux-s390x-cgo), const RTAX_MAX = 23
+pkg syscall (linux-s390x-cgo), const RTAX_MAX = 15
 pkg syscall (linux-s390x-cgo), const RTAX_MAX ideal-int
 pkg syscall (linux-s390x-cgo), const RTAX_MTU = 2
 pkg syscall (linux-s390x-cgo), const RTAX_MTU ideal-int
@@ -3483,8 +3491,6 @@ pkg syscall (linux-s390x-cgo), const SO_ATTACH_FILTER = 26
 pkg syscall (linux-s390x-cgo), const SO_ATTACH_FILTER ideal-int
 pkg syscall (linux-s390x-cgo), const SO_BINDTODEVICE = 25
 pkg syscall (linux-s390x-cgo), const SO_BINDTODEVICE ideal-int
-pkg syscall (linux-s390x-cgo), const SO_BPF_EXTENSIONS = 48
-pkg syscall (linux-s390x-cgo), const SO_BPF_EXTENSIONS ideal-int
 pkg syscall (linux-s390x-cgo), const SO_BROADCAST = 6
 pkg syscall (linux-s390x-cgo), const SO_BSDCOMPAT = 14
 pkg syscall (linux-s390x-cgo), const SO_BSDCOMPAT ideal-int
@@ -4180,10 +4186,24 @@ pkg syscall (linux-s390x-cgo), const TCOFLUSH = 1
 pkg syscall (linux-s390x-cgo), const TCOFLUSH ideal-int
 pkg syscall (linux-s390x-cgo), const TCP_CONGESTION = 13
 pkg syscall (linux-s390x-cgo), const TCP_CONGESTION ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_COOKIE_IN_ALWAYS = 1
+pkg syscall (linux-s390x-cgo), const TCP_COOKIE_IN_ALWAYS ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_COOKIE_MAX = 16
+pkg syscall (linux-s390x-cgo), const TCP_COOKIE_MAX ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_COOKIE_MIN = 8
+pkg syscall (linux-s390x-cgo), const TCP_COOKIE_MIN ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_COOKIE_OUT_NEVER = 2
+pkg syscall (linux-s390x-cgo), const TCP_COOKIE_OUT_NEVER ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_COOKIE_PAIR_SIZE = 32
+pkg syscall (linux-s390x-cgo), const TCP_COOKIE_PAIR_SIZE ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_COOKIE_TRANSACTIONS = 15
+pkg syscall (linux-s390x-cgo), const TCP_COOKIE_TRANSACTIONS ideal-int
 pkg syscall (linux-s390x-cgo), const TCP_CORK = 3
 pkg syscall (linux-s390x-cgo), const TCP_CORK ideal-int
 pkg syscall (linux-s390x-cgo), const TCP_DEFER_ACCEPT = 9
 pkg syscall (linux-s390x-cgo), const TCP_DEFER_ACCEPT ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_FASTOPEN = 23
+pkg syscall (linux-s390x-cgo), const TCP_FASTOPEN ideal-int
 pkg syscall (linux-s390x-cgo), const TCP_INFO = 11
 pkg syscall (linux-s390x-cgo), const TCP_INFO ideal-int
 pkg syscall (linux-s390x-cgo), const TCP_KEEPCNT = 6
@@ -4205,11 +4225,35 @@ pkg syscall (linux-s390x-cgo), const TCP_MD5SIG ideal-int
 pkg syscall (linux-s390x-cgo), const TCP_MD5SIG_MAXKEYLEN = 80
 pkg syscall (linux-s390x-cgo), const TCP_MD5SIG_MAXKEYLEN ideal-int
 pkg syscall (linux-s390x-cgo), const TCP_MSS = 512
+pkg syscall (linux-s390x-cgo), const TCP_MSS_DEFAULT = 536
+pkg syscall (linux-s390x-cgo), const TCP_MSS_DEFAULT ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_MSS_DESIRED = 1220
+pkg syscall (linux-s390x-cgo), const TCP_MSS_DESIRED ideal-int
 pkg syscall (linux-s390x-cgo), const TCP_MSS ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_QUEUE_SEQ = 21
+pkg syscall (linux-s390x-cgo), const TCP_QUEUE_SEQ ideal-int
 pkg syscall (linux-s390x-cgo), const TCP_QUICKACK = 12
 pkg syscall (linux-s390x-cgo), const TCP_QUICKACK ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_REPAIR = 19
+pkg syscall (linux-s390x-cgo), const TCP_REPAIR ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_REPAIR_OPTIONS = 22
+pkg syscall (linux-s390x-cgo), const TCP_REPAIR_OPTIONS ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_REPAIR_QUEUE = 20
+pkg syscall (linux-s390x-cgo), const TCP_REPAIR_QUEUE ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_S_DATA_IN = 4
+pkg syscall (linux-s390x-cgo), const TCP_S_DATA_IN ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_S_DATA_OUT = 8
+pkg syscall (linux-s390x-cgo), const TCP_S_DATA_OUT ideal-int
 pkg syscall (linux-s390x-cgo), const TCP_SYNCNT = 7
 pkg syscall (linux-s390x-cgo), const TCP_SYNCNT ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_THIN_DUPACK = 17
+pkg syscall (linux-s390x-cgo), const TCP_THIN_DUPACK ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_THIN_LINEAR_TIMEOUTS = 16
+pkg syscall (linux-s390x-cgo), const TCP_THIN_LINEAR_TIMEOUTS ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_TIMESTAMP = 24
+pkg syscall (linux-s390x-cgo), const TCP_TIMESTAMP ideal-int
+pkg syscall (linux-s390x-cgo), const TCP_USER_TIMEOUT = 18
+pkg syscall (linux-s390x-cgo), const TCP_USER_TIMEOUT ideal-int
 pkg syscall (linux-s390x-cgo), const TCP_WINDOW_CLAMP = 10
 pkg syscall (linux-s390x-cgo), const TCP_WINDOW_CLAMP ideal-int
 pkg syscall (linux-s390x-cgo), const TCSAFLUSH = 2
@@ -4360,6 +4404,8 @@ pkg syscall (linux-s390x-cgo), const TUNDETACHFILTER = 1074812118
 pkg syscall (linux-s390x-cgo), const TUNDETACHFILTER ideal-int
 pkg syscall (linux-s390x-cgo), const TUNGETFEATURES = 2147767503
 pkg syscall (linux-s390x-cgo), const TUNGETFEATURES ideal-int
+pkg syscall (linux-s390x-cgo), const TUNGETFILTER = 2148553947
+pkg syscall (linux-s390x-cgo), const TUNGETFILTER ideal-int
 pkg syscall (linux-s390x-cgo), const TUNGETIFF = 2147767506
 pkg syscall (linux-s390x-cgo), const TUNGETIFF ideal-int
 pkg syscall (linux-s390x-cgo), const TUNGETSNDBUF = 2147767507
@@ -4372,6 +4418,8 @@ pkg syscall (linux-s390x-cgo), const TUNSETGROUP = 1074025678
 pkg syscall (linux-s390x-cgo), const TUNSETGROUP ideal-int
 pkg syscall (linux-s390x-cgo), const TUNSETIFF = 1074025674
 pkg syscall (linux-s390x-cgo), const TUNSETIFF ideal-int
+pkg syscall (linux-s390x-cgo), const TUNSETIFINDEX = 1074025690
+pkg syscall (linux-s390x-cgo), const TUNSETIFINDEX ideal-int
 pkg syscall (linux-s390x-cgo), const TUNSETLINK = 1074025677
 pkg syscall (linux-s390x-cgo), const TUNSETLINK ideal-int
 pkg syscall (linux-s390x-cgo), const TUNSETNOCSUM = 1074025672
@@ -4648,7 +4696,6 @@ pkg syscall (linux-s390x-cgo), type Cmsghdr struct
 pkg syscall (linux-s390x-cgo), type Cmsghdr struct, Len uint64
 pkg syscall (linux-s390x-cgo), type Cmsghdr struct, Level int32
 pkg syscall (linux-s390x-cgo), type Cmsghdr struct, Type int32
-pkg syscall (linux-s390x-cgo), type Cmsghdr struct, X__cmsg_data [0]uint8
 pkg syscall (linux-s390x-cgo), type Credential struct
 pkg syscall (linux-s390x-cgo), type Credential struct, Gid uint32
 pkg syscall (linux-s390x-cgo), type Credential struct, Groups []uint32
@@ -4702,7 +4749,6 @@ pkg syscall (linux-s390x-cgo), type InotifyEvent struct
 pkg syscall (linux-s390x-cgo), type InotifyEvent struct, Cookie uint32
 pkg syscall (linux-s390x-cgo), type InotifyEvent struct, Len uint32
 pkg syscall (linux-s390x-cgo), type InotifyEvent struct, Mask uint32
-pkg syscall (linux-s390x-cgo), type InotifyEvent struct, Name [0]uint8
 pkg syscall (linux-s390x-cgo), type InotifyEvent struct, Wd int32
 pkg syscall (linux-s390x-cgo), type Iovec struct
 pkg syscall (linux-s390x-cgo), type Iovec struct, Base *uint8
@@ -4792,7 +4838,7 @@ pkg syscall (linux-s390x-cgo), type RawSockaddr struct, Data [14]uint8
 pkg syscall (linux-s390x-cgo), type RawSockaddr struct, Family uint16
 pkg syscall (linux-s390x-cgo), type RawSockaddrUnix struct
 pkg syscall (linux-s390x-cgo), type RawSockaddrUnix struct, Family uint16
-pkg syscall (linux-s390x-cgo), type RawSockaddrUnix struct, Path [108]int8
+pkg syscall (linux-s390x-cgo), type RawSockaddrUnix struct, Path [108]uint8
 pkg syscall (linux-s390x-cgo), type Rlimit struct
 pkg syscall (linux-s390x-cgo), type Rlimit struct, Cur uint64
 pkg syscall (linux-s390x-cgo), type Rlimit struct, Max uint64
@@ -4885,7 +4931,7 @@ pkg syscall (linux-s390x-cgo), type Stat_t struct, Pad0 int32
 pkg syscall (linux-s390x-cgo), type Stat_t struct, Rdev uint64
 pkg syscall (linux-s390x-cgo), type Stat_t struct, Size int64
 pkg syscall (linux-s390x-cgo), type Stat_t struct, Uid uint32
-pkg syscall (linux-s390x-cgo), type Stat_t struct, X__unused [3]int64
+pkg syscall (linux-s390x-cgo), type Stat_t struct, X__glibc_reserved [3]int64
 pkg syscall (linux-s390x-cgo), type Sysinfo_t struct
 pkg syscall (linux-s390x-cgo), type Sysinfo_t struct, Bufferram uint64
 pkg syscall (linux-s390x-cgo), type Sysinfo_t struct, Freehigh uint64
@@ -5067,7 +5113,7 @@ pkg syscall (linux-s390x), const AF_LLC = 26
 pkg syscall (linux-s390x), const AF_LLC ideal-int
 pkg syscall (linux-s390x), const AF_LOCAL = 1
 pkg syscall (linux-s390x), const AF_LOCAL ideal-int
-pkg syscall (linux-s390x), const AF_MAX = 40
+pkg syscall (linux-s390x), const AF_MAX = 41
 pkg syscall (linux-s390x), const AF_MAX ideal-int
 pkg syscall (linux-s390x), const AF_NETBEUI = 13
 pkg syscall (linux-s390x), const AF_NETBEUI ideal-int
@@ -5097,6 +5143,8 @@ pkg syscall (linux-s390x), const AF_SNA = 22
 pkg syscall (linux-s390x), const AF_SNA ideal-int
 pkg syscall (linux-s390x), const AF_TIPC = 30
 pkg syscall (linux-s390x), const AF_TIPC ideal-int
+pkg syscall (linux-s390x), const AF_VSOCK = 40
+pkg syscall (linux-s390x), const AF_VSOCK ideal-int
 pkg syscall (linux-s390x), const AF_WANPIPE = 25
 pkg syscall (linux-s390x), const AF_WANPIPE ideal-int
 pkg syscall (linux-s390x), const AF_X25 = 9
@@ -5661,8 +5709,6 @@ pkg syscall (linux-s390x), const EPOLLIN = 1
 pkg syscall (linux-s390x), const EPOLLIN ideal-int
 pkg syscall (linux-s390x), const EPOLLMSG = 1024
 pkg syscall (linux-s390x), const EPOLLMSG ideal-int
-pkg syscall (linux-s390x), const EPOLL_NONBLOCK = 2048
-pkg syscall (linux-s390x), const EPOLL_NONBLOCK ideal-int
 pkg syscall (linux-s390x), const EPOLLONESHOT = 1073741824
 pkg syscall (linux-s390x), const EPOLLONESHOT ideal-int
 pkg syscall (linux-s390x), const EPOLLOUT = 4
@@ -5713,8 +5759,6 @@ pkg syscall (linux-s390x), const ETH_P_8021AH = 35047
 pkg syscall (linux-s390x), const ETH_P_8021AH ideal-int
 pkg syscall (linux-s390x), const ETH_P_8021Q = 33024
 pkg syscall (linux-s390x), const ETH_P_8021Q ideal-int
-pkg syscall (linux-s390x), const ETH_P_80221 = 35095
-pkg syscall (linux-s390x), const ETH_P_80221 ideal-int
 pkg syscall (linux-s390x), const ETH_P_802_2 = 4
 pkg syscall (linux-s390x), const ETH_P_802_2 ideal-int
 pkg syscall (linux-s390x), const ETH_P_802_3 = 1
@@ -5975,12 +6019,8 @@ pkg syscall (linux-s390x), const IFA_F_DEPRECATED = 32
 pkg syscall (linux-s390x), const IFA_F_DEPRECATED ideal-int
 pkg syscall (linux-s390x), const IFA_F_HOMEADDRESS = 16
 pkg syscall (linux-s390x), const IFA_F_HOMEADDRESS ideal-int
-pkg syscall (linux-s390x), const IFA_F_MANAGETEMPADDR = 256
-pkg syscall (linux-s390x), const IFA_F_MANAGETEMPADDR ideal-int
 pkg syscall (linux-s390x), const IFA_F_NODAD = 2
 pkg syscall (linux-s390x), const IFA_F_NODAD ideal-int
-pkg syscall (linux-s390x), const IFA_F_NOPREFIXROUTE = 512
-pkg syscall (linux-s390x), const IFA_F_NOPREFIXROUTE ideal-int
 pkg syscall (linux-s390x), const IFA_F_OPTIMISTIC = 4
 pkg syscall (linux-s390x), const IFA_F_OPTIMISTIC ideal-int
 pkg syscall (linux-s390x), const IFA_F_PERMANENT = 128
@@ -5995,7 +6035,7 @@ pkg syscall (linux-s390x), const IFA_LABEL = 3
 pkg syscall (linux-s390x), const IFA_LABEL ideal-int
 pkg syscall (linux-s390x), const IFA_LOCAL = 2
 pkg syscall (linux-s390x), const IFA_LOCAL ideal-int
-pkg syscall (linux-s390x), const IFA_MAX = 8
+pkg syscall (linux-s390x), const IFA_MAX = 7
 pkg syscall (linux-s390x), const IFA_MAX ideal-int
 pkg syscall (linux-s390x), const IFA_MULTICAST = 7
 pkg syscall (linux-s390x), const IFA_MULTICAST ideal-int
@@ -6051,6 +6091,8 @@ pkg syscall (linux-s390x), const IFF_MULTI_QUEUE = 256
 pkg syscall (linux-s390x), const IFF_MULTI_QUEUE ideal-int
 pkg syscall (linux-s390x), const IFF_NOARP = 128
 pkg syscall (linux-s390x), const IFF_NOARP ideal-int
+pkg syscall (linux-s390x), const IFF_NOFILTER = 4096
+pkg syscall (linux-s390x), const IFF_NOFILTER ideal-int
 pkg syscall (linux-s390x), const IFF_NO_PI = 4096
 pkg syscall (linux-s390x), const IFF_NO_PI ideal-int
 pkg syscall (linux-s390x), const IFF_NOTRAILERS = 32
@@ -6059,6 +6101,8 @@ pkg syscall (linux-s390x), const IFF_ONE_QUEUE = 8192
 pkg syscall (linux-s390x), const IFF_ONE_QUEUE ideal-int
 pkg syscall (linux-s390x), const IFF_OVS_DATAPATH = 32768
 pkg syscall (linux-s390x), const IFF_OVS_DATAPATH ideal-int
+pkg syscall (linux-s390x), const IFF_PERSIST = 2048
+pkg syscall (linux-s390x), const IFF_PERSIST ideal-int
 pkg syscall (linux-s390x), const IFF_POINTOPOINT = 16
 pkg syscall (linux-s390x), const IFF_POINTOPOINT ideal-int
 pkg syscall (linux-s390x), const IFF_PORTSEL = 8192
@@ -6295,6 +6339,8 @@ pkg syscall (linux-s390x), const IP_PMTUDISC_WANT = 1
 pkg syscall (linux-s390x), const IP_PMTUDISC_WANT ideal-int
 pkg syscall (linux-s390x), const IPPROTO_AH = 51
 pkg syscall (linux-s390x), const IPPROTO_AH ideal-int
+pkg syscall (linux-s390x), const IPPROTO_BEETPH = 94
+pkg syscall (linux-s390x), const IPPROTO_BEETPH ideal-int
 pkg syscall (linux-s390x), const IPPROTO_COMP = 108
 pkg syscall (linux-s390x), const IPPROTO_COMP ideal-int
 pkg syscall (linux-s390x), const IPPROTO_DCCP = 33
@@ -6323,6 +6369,8 @@ pkg syscall (linux-s390x), const IPPROTO_IGMP = 2
 pkg syscall (linux-s390x), const IPPROTO_IGMP ideal-int
 pkg syscall (linux-s390x), const IPPROTO_IPIP = 4
 pkg syscall (linux-s390x), const IPPROTO_IPIP ideal-int
+pkg syscall (linux-s390x), const IPPROTO_MH = 135
+pkg syscall (linux-s390x), const IPPROTO_MH ideal-int
 pkg syscall (linux-s390x), const IPPROTO_MTP = 92
 pkg syscall (linux-s390x), const IPPROTO_MTP ideal-int
 pkg syscall (linux-s390x), const IPPROTO_NONE = 59
@@ -6548,8 +6596,10 @@ pkg syscall (linux-s390x), const MAP_FIXED = 16
 pkg syscall (linux-s390x), const MAP_FIXED ideal-int
 pkg syscall (linux-s390x), const MAP_GROWSDOWN = 256
 pkg syscall (linux-s390x), const MAP_GROWSDOWN ideal-int
-pkg syscall (linux-s390x), const MAP_GROWSUP = 512
-pkg syscall (linux-s390x), const MAP_GROWSUP ideal-int
+pkg syscall (linux-s390x), const MAP_HUGE_MASK = 63
+pkg syscall (linux-s390x), const MAP_HUGE_MASK ideal-int
+pkg syscall (linux-s390x), const MAP_HUGE_SHIFT = 26
+pkg syscall (linux-s390x), const MAP_HUGE_SHIFT ideal-int
 pkg syscall (linux-s390x), const MAP_HUGETLB = 262144
 pkg syscall (linux-s390x), const MAP_HUGETLB ideal-int
 pkg syscall (linux-s390x), const MAP_LOCKED = 8192
@@ -6836,6 +6886,8 @@ pkg syscall (linux-s390x), const OPOST ideal-int
 pkg syscall (linux-s390x), const O_RSYNC = 1052672
 pkg syscall (linux-s390x), const O_RSYNC ideal-int
 pkg syscall (linux-s390x), const O_SYNC = 1052672
+pkg syscall (linux-s390x), const O_TMPFILE = 4259840
+pkg syscall (linux-s390x), const O_TMPFILE ideal-int
 pkg syscall (linux-s390x), const O_TRUNC = 512
 pkg syscall (linux-s390x), const PACKET_ADD_MEMBERSHIP = 1
 pkg syscall (linux-s390x), const PACKET_ADD_MEMBERSHIP ideal-int
@@ -6991,8 +7043,6 @@ pkg syscall (linux-s390x), const PR_GET_SECCOMP = 21
 pkg syscall (linux-s390x), const PR_GET_SECCOMP ideal-int
 pkg syscall (linux-s390x), const PR_GET_SECUREBITS = 27
 pkg syscall (linux-s390x), const PR_GET_SECUREBITS ideal-int
-pkg syscall (linux-s390x), const PR_GET_THP_DISABLE = 42
-pkg syscall (linux-s390x), const PR_GET_THP_DISABLE ideal-int
 pkg syscall (linux-s390x), const PR_GET_TID_ADDRESS = 40
 pkg syscall (linux-s390x), const PR_GET_TID_ADDRESS ideal-int
 pkg syscall (linux-s390x), const PR_GET_TIMERSLACK = 30
@@ -7089,8 +7139,6 @@ pkg syscall (linux-s390x), const PR_SET_SECCOMP = 22
 pkg syscall (linux-s390x), const PR_SET_SECCOMP ideal-int
 pkg syscall (linux-s390x), const PR_SET_SECUREBITS = 28
 pkg syscall (linux-s390x), const PR_SET_SECUREBITS ideal-int
-pkg syscall (linux-s390x), const PR_SET_THP_DISABLE = 41
-pkg syscall (linux-s390x), const PR_SET_THP_DISABLE ideal-int
 pkg syscall (linux-s390x), const PR_SET_TIMERSLACK = 29
 pkg syscall (linux-s390x), const PR_SET_TIMERSLACK ideal-int
 pkg syscall (linux-s390x), const PR_SET_TIMING = 14
@@ -7267,6 +7315,8 @@ pkg syscall (linux-s390x), const PTRACE_GETREGSET ideal-int
 pkg syscall (linux-s390x), const PTRACE_GETREGS ideal-int
 pkg syscall (linux-s390x), const PTRACE_GETSIGINFO = 16898
 pkg syscall (linux-s390x), const PTRACE_GETSIGINFO ideal-int
+pkg syscall (linux-s390x), const PTRACE_GETSIGMASK = 16906
+pkg syscall (linux-s390x), const PTRACE_GETSIGMASK ideal-int
 pkg syscall (linux-s390x), const PTRACE_INTERRUPT = 16903
 pkg syscall (linux-s390x), const PTRACE_INTERRUPT ideal-int
 pkg syscall (linux-s390x), const PTRACE_KILL = 8
@@ -7339,10 +7389,14 @@ pkg syscall (linux-s390x), const PTRACE_SETREGSET ideal-int
 pkg syscall (linux-s390x), const PTRACE_SETREGS ideal-int
 pkg syscall (linux-s390x), const PTRACE_SETSIGINFO = 16899
 pkg syscall (linux-s390x), const PTRACE_SETSIGINFO ideal-int
+pkg syscall (linux-s390x), const PTRACE_SETSIGMASK = 16907
+pkg syscall (linux-s390x), const PTRACE_SETSIGMASK ideal-int
 pkg syscall (linux-s390x), const PTRACE_SINGLESTEP = 9
 pkg syscall (linux-s390x), const PTRACE_SINGLESTEP ideal-int
 pkg syscall (linux-s390x), const PTRACE_SYSCALL = 24
 pkg syscall (linux-s390x), const PTRACE_SYSCALL ideal-int
+pkg syscall (linux-s390x), const PTRACE_TE_ABORT_RAND = 20497
+pkg syscall (linux-s390x), const PTRACE_TE_ABORT_RAND ideal-int
 pkg syscall (linux-s390x), const PTRACE_TRACEME = 0
 pkg syscall (linux-s390x), const PTRACE_TRACEME ideal-int
 pkg syscall (linux-s390x), const RLIM_INFINITY = -1
@@ -7413,7 +7467,7 @@ pkg syscall (linux-s390x), const RTAX_INITRWND = 14
 pkg syscall (linux-s390x), const RTAX_INITRWND ideal-int
 pkg syscall (linux-s390x), const RTAX_LOCK = 1
 pkg syscall (linux-s390x), const RTAX_LOCK ideal-int
-pkg syscall (linux-s390x), const RTAX_MAX = 23
+pkg syscall (linux-s390x), const RTAX_MAX = 15
 pkg syscall (linux-s390x), const RTAX_MAX ideal-int
 pkg syscall (linux-s390x), const RTAX_MTU = 2
 pkg syscall (linux-s390x), const RTAX_MTU ideal-int
@@ -8011,8 +8065,6 @@ pkg syscall (linux-s390x), const SO_ATTACH_FILTER = 26
 pkg syscall (linux-s390x), const SO_ATTACH_FILTER ideal-int
 pkg syscall (linux-s390x), const SO_BINDTODEVICE = 25
 pkg syscall (linux-s390x), const SO_BINDTODEVICE ideal-int
-pkg syscall (linux-s390x), const SO_BPF_EXTENSIONS = 48
-pkg syscall (linux-s390x), const SO_BPF_EXTENSIONS ideal-int
 pkg syscall (linux-s390x), const SO_BROADCAST = 6
 pkg syscall (linux-s390x), const SO_BSDCOMPAT = 14
 pkg syscall (linux-s390x), const SO_BSDCOMPAT ideal-int
@@ -8708,10 +8760,24 @@ pkg syscall (linux-s390x), const TCOFLUSH = 1
 pkg syscall (linux-s390x), const TCOFLUSH ideal-int
 pkg syscall (linux-s390x), const TCP_CONGESTION = 13
 pkg syscall (linux-s390x), const TCP_CONGESTION ideal-int
+pkg syscall (linux-s390x), const TCP_COOKIE_IN_ALWAYS = 1
+pkg syscall (linux-s390x), const TCP_COOKIE_IN_ALWAYS ideal-int
+pkg syscall (linux-s390x), const TCP_COOKIE_MAX = 16
+pkg syscall (linux-s390x), const TCP_COOKIE_MAX ideal-int
+pkg syscall (linux-s390x), const TCP_COOKIE_MIN = 8
+pkg syscall (linux-s390x), const TCP_COOKIE_MIN ideal-int
+pkg syscall (linux-s390x), const TCP_COOKIE_OUT_NEVER = 2
+pkg syscall (linux-s390x), const TCP_COOKIE_OUT_NEVER ideal-int
+pkg syscall (linux-s390x), const TCP_COOKIE_PAIR_SIZE = 32
+pkg syscall (linux-s390x), const TCP_COOKIE_PAIR_SIZE ideal-int
+pkg syscall (linux-s390x), const TCP_COOKIE_TRANSACTIONS = 15
+pkg syscall (linux-s390x), const TCP_COOKIE_TRANSACTIONS ideal-int
 pkg syscall (linux-s390x), const TCP_CORK = 3
 pkg syscall (linux-s390x), const TCP_CORK ideal-int
 pkg syscall (linux-s390x), const TCP_DEFER_ACCEPT = 9
 pkg syscall (linux-s390x), const TCP_DEFER_ACCEPT ideal-int
+pkg syscall (linux-s390x), const TCP_FASTOPEN = 23
+pkg syscall (linux-s390x), const TCP_FASTOPEN ideal-int
 pkg syscall (linux-s390x), const TCP_INFO = 11
 pkg syscall (linux-s390x), const TCP_INFO ideal-int
 pkg syscall (linux-s390x), const TCP_KEEPCNT = 6
@@ -8733,11 +8799,35 @@ pkg syscall (linux-s390x), const TCP_MD5SIG ideal-int
 pkg syscall (linux-s390x), const TCP_MD5SIG_MAXKEYLEN = 80
 pkg syscall (linux-s390x), const TCP_MD5SIG_MAXKEYLEN ideal-int
 pkg syscall (linux-s390x), const TCP_MSS = 512
+pkg syscall (linux-s390x), const TCP_MSS_DEFAULT = 536
+pkg syscall (linux-s390x), const TCP_MSS_DEFAULT ideal-int
+pkg syscall (linux-s390x), const TCP_MSS_DESIRED = 1220
+pkg syscall (linux-s390x), const TCP_MSS_DESIRED ideal-int
 pkg syscall (linux-s390x), const TCP_MSS ideal-int
+pkg syscall (linux-s390x), const TCP_QUEUE_SEQ = 21
+pkg syscall (linux-s390x), const TCP_QUEUE_SEQ ideal-int
 pkg syscall (linux-s390x), const TCP_QUICKACK = 12
 pkg syscall (linux-s390x), const TCP_QUICKACK ideal-int
+pkg syscall (linux-s390x), const TCP_REPAIR = 19
+pkg syscall (linux-s390x), const TCP_REPAIR ideal-int
+pkg syscall (linux-s390x), const TCP_REPAIR_OPTIONS = 22
+pkg syscall (linux-s390x), const TCP_REPAIR_OPTIONS ideal-int
+pkg syscall (linux-s390x), const TCP_REPAIR_QUEUE = 20
+pkg syscall (linux-s390x), const TCP_REPAIR_QUEUE ideal-int
+pkg syscall (linux-s390x), const TCP_S_DATA_IN = 4
+pkg syscall (linux-s390x), const TCP_S_DATA_IN ideal-int
+pkg syscall (linux-s390x), const TCP_S_DATA_OUT = 8
+pkg syscall (linux-s390x), const TCP_S_DATA_OUT ideal-int
 pkg syscall (linux-s390x), const TCP_SYNCNT = 7
 pkg syscall (linux-s390x), const TCP_SYNCNT ideal-int
+pkg syscall (linux-s390x), const TCP_THIN_DUPACK = 17
+pkg syscall (linux-s390x), const TCP_THIN_DUPACK ideal-int
+pkg syscall (linux-s390x), const TCP_THIN_LINEAR_TIMEOUTS = 16
+pkg syscall (linux-s390x), const TCP_THIN_LINEAR_TIMEOUTS ideal-int
+pkg syscall (linux-s390x), const TCP_TIMESTAMP = 24
+pkg syscall (linux-s390x), const TCP_TIMESTAMP ideal-int
+pkg syscall (linux-s390x), const TCP_USER_TIMEOUT = 18
+pkg syscall (linux-s390x), const TCP_USER_TIMEOUT ideal-int
 pkg syscall (linux-s390x), const TCP_WINDOW_CLAMP = 10
 pkg syscall (linux-s390x), const TCP_WINDOW_CLAMP ideal-int
 pkg syscall (linux-s390x), const TCSAFLUSH = 2
@@ -8888,6 +8978,8 @@ pkg syscall (linux-s390x), const TUNDETACHFILTER = 1074812118
 pkg syscall (linux-s390x), const TUNDETACHFILTER ideal-int
 pkg syscall (linux-s390x), const TUNGETFEATURES = 2147767503
 pkg syscall (linux-s390x), const TUNGETFEATURES ideal-int
+pkg syscall (linux-s390x), const TUNGETFILTER = 2148553947
+pkg syscall (linux-s390x), const TUNGETFILTER ideal-int
 pkg syscall (linux-s390x), const TUNGETIFF = 2147767506
 pkg syscall (linux-s390x), const TUNGETIFF ideal-int
 pkg syscall (linux-s390x), const TUNGETSNDBUF = 2147767507
@@ -8900,6 +8992,8 @@ pkg syscall (linux-s390x), const TUNSETGROUP = 1074025678
 pkg syscall (linux-s390x), const TUNSETGROUP ideal-int
 pkg syscall (linux-s390x), const TUNSETIFF = 1074025674
 pkg syscall (linux-s390x), const TUNSETIFF ideal-int
+pkg syscall (linux-s390x), const TUNSETIFINDEX = 1074025690
+pkg syscall (linux-s390x), const TUNSETIFINDEX ideal-int
 pkg syscall (linux-s390x), const TUNSETLINK = 1074025677
 pkg syscall (linux-s390x), const TUNSETLINK ideal-int
 pkg syscall (linux-s390x), const TUNSETNOCSUM = 1074025672
@@ -9176,7 +9270,6 @@ pkg syscall (linux-s390x), type Cmsghdr struct
 pkg syscall (linux-s390x), type Cmsghdr struct, Len uint64
 pkg syscall (linux-s390x), type Cmsghdr struct, Level int32
 pkg syscall (linux-s390x), type Cmsghdr struct, Type int32
-pkg syscall (linux-s390x), type Cmsghdr struct, X__cmsg_data [0]uint8
 pkg syscall (linux-s390x), type Credential struct
 pkg syscall (linux-s390x), type Credential struct, Gid uint32
 pkg syscall (linux-s390x), type Credential struct, Groups []uint32
@@ -9230,7 +9323,6 @@ pkg syscall (linux-s390x), type InotifyEvent struct
 pkg syscall (linux-s390x), type InotifyEvent struct, Cookie uint32
 pkg syscall (linux-s390x), type InotifyEvent struct, Len uint32
 pkg syscall (linux-s390x), type InotifyEvent struct, Mask uint32
-pkg syscall (linux-s390x), type InotifyEvent struct, Name [0]uint8
 pkg syscall (linux-s390x), type InotifyEvent struct, Wd int32
 pkg syscall (linux-s390x), type Iovec struct
 pkg syscall (linux-s390x), type Iovec struct, Base *uint8
@@ -9320,7 +9412,7 @@ pkg syscall (linux-s390x), type RawSockaddr struct, Data [14]uint8
 pkg syscall (linux-s390x), type RawSockaddr struct, Family uint16
 pkg syscall (linux-s390x), type RawSockaddrUnix struct
 pkg syscall (linux-s390x), type RawSockaddrUnix struct, Family uint16
-pkg syscall (linux-s390x), type RawSockaddrUnix struct, Path [108]int8
+pkg syscall (linux-s390x), type RawSockaddrUnix struct, Path [108]uint8
 pkg syscall (linux-s390x), type Rlimit struct
 pkg syscall (linux-s390x), type Rlimit struct, Cur uint64
 pkg syscall (linux-s390x), type Rlimit struct, Max uint64
@@ -9413,7 +9505,7 @@ pkg syscall (linux-s390x), type Stat_t struct, Pad0 int32
 pkg syscall (linux-s390x), type Stat_t struct, Rdev uint64
 pkg syscall (linux-s390x), type Stat_t struct, Size int64
 pkg syscall (linux-s390x), type Stat_t struct, Uid uint32
-pkg syscall (linux-s390x), type Stat_t struct, X__unused [3]int64
+pkg syscall (linux-s390x), type Stat_t struct, X__glibc_reserved [3]int64
 pkg syscall (linux-s390x), type Sysinfo_t struct
 pkg syscall (linux-s390x), type Sysinfo_t struct, Bufferram uint64
 pkg syscall (linux-s390x), type Sysinfo_t struct, Freehigh uint64

@@ -99,21 +99,21 @@ type Rlimit struct {
 type _Gid_t uint32
 
 type Stat_t struct {
-	Dev       uint64
-	Ino       uint64
-	Nlink     uint64
-	Mode      uint32
-	Uid       uint32
-	Gid       uint32
-	Pad0      int32
-	Rdev      uint64
-	Size      int64
-	Atim      Timespec
-	Mtim      Timespec
-	Ctim      Timespec
-	Blksize   int64
-	Blocks    int64
-	X__unused [3]int64
+	Dev               uint64
+	Ino               uint64
+	Nlink             uint64
+	Mode              uint32
+	Uid               uint32
+	Gid               uint32
+	Pad0              int32
+	Rdev              uint64
+	Size              int64
+	Atim              Timespec
+	Mtim              Timespec
+	Ctim              Timespec
+	Blksize           int64
+	Blocks            int64
+	X__glibc_reserved [3]int64
 }
 
 type Statfs_t struct {
@@ -172,7 +172,7 @@ type RawSockaddrInet6 struct {
 
 type RawSockaddrUnix struct {
 	Family uint16
-	Path   [108]int8
+	Path   [108]uint8
 }
 
 type RawSockaddrLinklayer struct {
@@ -243,10 +243,9 @@ type Msghdr struct {
 }
 
 type Cmsghdr struct {
-	Len          uint64
-	Level        int32
-	Type         int32
-	X__cmsg_data [0]uint8
+	Len   uint64
+	Level int32
+	Type  int32
 }
 
 type Inet4Pktinfo struct {
@@ -510,7 +509,6 @@ type InotifyEvent struct {
 	Mask   uint32
 	Cookie uint32
 	Len    uint32
-	Name   [0]uint8
 }
 
 const SizeofInotifyEvent = 0x10
