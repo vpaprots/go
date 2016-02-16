@@ -368,7 +368,12 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 	var o int
 	var p1 *obj.Prog
 	var p2 *obj.Prog
+	var pLast *obj.Prog
+	var pPre *obj.Prog
+	var pPreempt *obj.Prog
+	wasSplit := false
 	for p := cursym.Text; p != nil; p = p.Link {
+		pLast = p
 		o = int(p.As)
 		switch o {
 		case obj.ATEXT:
@@ -390,7 +395,9 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 			q = p
 
 			if p.From3.Offset&obj.NOSPLIT == 0 {
-				p = stacksplit(ctxt, p, autosize) // emit split check
+				p, pPreempt = stacksplitPre(ctxt, p, autosize) // emit pre part of split check
+				pPre = p
+				wasSplit = true //need post part of split
 			}
 
 			if autosize != 0 {
@@ -590,6 +597,9 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 			}
 		}
 	}
+	if wasSplit {
+		pLast = stacksplitPost(ctxt, pLast, pPre, pPreempt) // emit post part of split check
+	}
 }
 
 /*
@@ -637,7 +647,9 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 		q = p;
 	}
 */
-func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
+func stacksplitPre(ctxt *obj.Link, p *obj.Prog, framesize int32) (*obj.Prog, *obj.Prog) {
+	var q *obj.Prog
+
 	// MOVD	g_stackguard(g), R3
 	p = obj.Appendp(ctxt, p)
 
@@ -651,17 +663,35 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 	p.To.Type = obj.TYPE_REG
 	p.To.Reg = REG_R3
 
-	var q *obj.Prog
+	q = nil
 	if framesize <= obj.StackSmall {
 		// small stack: SP < stackguard
 		//	CMP	stackguard, SP
-		p = obj.Appendp(ctxt, p)
 
-		p.As = ACMPU
+		//p.To.Type = obj.TYPE_REG
+		//p.To.Reg = REGSP
+
+		// q1: BLT	done
+
+		p = obj.Appendp(ctxt, p)
+		//q1 = p
 		p.From.Type = obj.TYPE_REG
 		p.From.Reg = REG_R3
-		p.To.Type = obj.TYPE_REG
-		p.To.Reg = REGSP
+		p.Reg = REGSP
+		p.As = ACMPUBGE
+		p.To.Type = obj.TYPE_BRANCH
+		//p = obj.Appendp(ctxt, p)
+
+		//p.As = ACMPU
+		//p.From.Type = obj.TYPE_REG
+		//p.From.Reg = REG_R3
+		//p.To.Type = obj.TYPE_REG
+		//p.To.Reg = REGSP
+
+		//p = obj.Appendp(ctxt, p)
+		//p.As = ABGE
+		//p.To.Type = obj.TYPE_BRANCH
+
 	} else if framesize <= obj.StackBig {
 		// large stack: SP-framesize < stackguard-StackSmall
 		//	ADD $-framesize, SP, R4
@@ -676,11 +706,12 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 		p.To.Reg = REG_R4
 
 		p = obj.Appendp(ctxt, p)
-		p.As = ACMPU
 		p.From.Type = obj.TYPE_REG
 		p.From.Reg = REG_R3
-		p.To.Type = obj.TYPE_REG
-		p.To.Reg = REG_R4
+		p.Reg = REG_R4
+		p.As = ACMPUBGE
+		p.To.Type = obj.TYPE_BRANCH
+
 	} else {
 		// Such a large stack we need to protect against wraparound.
 		// If SP is close to zero:
@@ -695,8 +726,8 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 		//	BEQ	label-of-call-to-morestack
 		//	ADD	$StackGuard, SP, R4
 		//	SUB	R3, R4
-		//	MOVD	$(framesize+(StackGuard-StackSmall)), R31
-		//	CMPU	R31, R4
+		//	MOVD	$(framesize+(StackGuard-StackSmall)), TEMP
+		//	CMPUBGE	TEMP, R4
 		p = obj.Appendp(ctxt, p)
 
 		p.As = ACMP
@@ -733,30 +764,28 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 		p.To.Reg = REGTMP
 
 		p = obj.Appendp(ctxt, p)
-		p.As = ACMPU
 		p.From.Type = obj.TYPE_REG
 		p.From.Reg = REGTMP
-		p.To.Type = obj.TYPE_REG
-		p.To.Reg = REG_R4
+		p.Reg = REG_R4
+		p.As = ACMPUBGE
+		p.To.Type = obj.TYPE_BRANCH
 	}
 
-	// q1: BLT	done
-	p = obj.Appendp(ctxt, p)
-	q1 := p
+	return p, q
+}
 
-	p.As = ABLT
-	p.To.Type = obj.TYPE_BRANCH
+func stacksplitPost(ctxt *obj.Link, p *obj.Prog, pPre *obj.Prog, pPreempt *obj.Prog) *obj.Prog {
 
 	// MOVD	LR, R5
 	p = obj.Appendp(ctxt, p)
-
+	pPre.Pcond = p
 	p.As = AMOVD
 	p.From.Type = obj.TYPE_REG
 	p.From.Reg = REG_LR
 	p.To.Type = obj.TYPE_REG
 	p.To.Reg = REG_R5
-	if q != nil {
-		q.Pcond = p
+	if pPreempt != nil {
+		pPreempt.Pcond = p
 	}
 
 	// BL	runtime.morestack(SB)
@@ -778,13 +807,6 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 	p.As = ABR
 	p.To.Type = obj.TYPE_BRANCH
 	p.Pcond = ctxt.Cursym.Text.Link
-
-	// placeholder for q1's jump target
-	p = obj.Appendp(ctxt, p)
-
-	p.As = obj.ANOP // zero-width place holder
-	q1.Pcond = p
-
 	return p
 }
 
