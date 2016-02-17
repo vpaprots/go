@@ -404,10 +404,7 @@ loop1:
 
 		p1 := r1.Prog
 		switch p1.As {
-		case s390x.AMOVD,
-			s390x.AMOVW, s390x.AMOVWZ,
-			s390x.AMOVH, s390x.AMOVHZ,
-			s390x.AMOVB, s390x.AMOVBZ:
+		case s390x.AMOVD:
 			if p1.To.Type != obj.TYPE_REG {
 				continue
 			}
