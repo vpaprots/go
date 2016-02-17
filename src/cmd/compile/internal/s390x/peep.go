@@ -293,10 +293,16 @@ loop1:
 		excise(r1)
 	}
 
+	// Remove redundant moves/casts
+	fuseMoveChains(g.Start)
+	if gc.Debug['P'] != 0 && gc.Debug['v'] != 0 {
+		gc.Dumpit("fuse move chains", g.Start, 0)
+	}
+
 	// Fuse memory zeroing instructions into XC instructions
 	fuseClear(g.Start)
 	if gc.Debug['P'] != 0 && gc.Debug['v'] != 0 {
-		gc.Dumpit("merge memory clear operations", g.Start, 0)
+		gc.Dumpit("fuse clears", g.Start, 0)
 	}
 
 	if gc.Debug['P'] > 1 {
@@ -722,6 +728,12 @@ func isGPR(a *obj.Addr) bool {
 		a.Reg <= s390x.REG_R15
 }
 
+func isFPR(a *obj.Addr) bool {
+	return a.Type == obj.TYPE_REG &&
+		s390x.REG_F0 <= a.Reg &&
+		a.Reg <= s390x.REG_F15
+}
+
 // isIndirectMem returns true if a refers to a memory location addressable by a
 // register and an offset, such as:
 // 	x+8(R1)
@@ -971,7 +983,7 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 		fmt.Printf("copyu: can't find %v\n", obj.Aconv(int(p.As)))
 		return 2
 
-	case obj.ANOP, /* read p->from, write p->to */
+	case /* read p->from, write p->to */
 		s390x.AMOVH,
 		s390x.AMOVHZ,
 		s390x.AMOVB,
@@ -1183,7 +1195,7 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 		}
 		return 0
 
-	case obj.ARET:
+	case obj.ARET, obj.AUNDEF:
 		if s != nil {
 			return 0
 		}
@@ -1239,7 +1251,8 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 		obj.AVARDEF,
 		obj.AVARKILL,
 		obj.AVARLIVE,
-		obj.AUSEFIELD:
+		obj.AUSEFIELD,
+		obj.ANOP:
 		return 0
 	}
 }
@@ -1449,6 +1462,165 @@ func trymergeopmv(r *gc.Flow) bool {
 		}
 	}
 	return false
+}
+
+func isMove(p *obj.Prog) bool {
+	switch p.As {
+	case s390x.AMOVD,
+		s390x.AMOVW, s390x.AMOVWZ,
+		s390x.AMOVH, s390x.AMOVHZ,
+		s390x.AMOVB, s390x.AMOVBZ,
+		s390x.AFMOVD, s390x.AFMOVS:
+		return true
+	}
+	return false
+}
+
+// fuseMoveChains looks to see if destination register is used
+// again and if not merges the moves.
+//
+// Look for this pattern (sequence of moves):
+// 	MOVB	$17, R1
+// 	MOVBZ	R1, R1
+// Replace with:
+//	MOVBZ	$17, R1
+func fuseMoveChains(r *gc.Flow) {
+	for ; r != nil; r = r.Link {
+		p := r.Prog
+		if !isMove(p) || !isGPR(&p.To) {
+			continue
+		}
+
+		// r is a move with a destination register
+		var move *gc.Flow
+		visited := make(map[*gc.Flow]bool)
+		for rr := gc.Uniqs(r); rr != nil; rr = gc.Uniqs(rr) {
+			if visited[rr] {
+				break
+			} else {
+				visited[rr] = true
+			}
+			if gc.Uniqp(rr) == nil {
+				// branch target: leave alone
+				break
+			}
+			pp := rr.Prog
+			if isMove(pp) && isGPR(&pp.From) && isGPR(&pp.To) && pp.From.Reg == p.To.Reg {
+				move = rr
+				break
+			}
+			if pp.As == obj.ANOP {
+				continue
+			}
+			break
+		}
+
+		// we have a move that reads from our destination reg, check if any future
+		// instructions also read from the reg
+		if move != nil && move.Prog.From.Reg != move.Prog.To.Reg {
+			safe := false
+			visited := make(map[*gc.Flow]bool)
+			children := make([]*gc.Flow, 0)
+			if move.S1 != nil {
+				children = append(children, move.S1)
+			}
+			if move.S2 != nil {
+				children = append(children, move.S2)
+			}
+			if len(children) == 0 {
+				safe = true
+			} else {
+				for len(children) > 0 {
+					rr := children[0]
+					if visited[rr] {
+						children = children[1:]
+						continue
+					} else {
+						visited[rr] = true
+					}
+					pp := rr.Prog
+					t := copyu(pp, &p.To, nil)
+					if t == 0 { // not found
+						if rr.S1 != nil {
+							children = append(children, rr.S1)
+						}
+						if rr.S2 != nil {
+							children = append(children, rr.S2)
+						}
+						children = children[1:]
+						continue
+					}
+					if t == 3 { // set
+						children = children[1:]
+						if len(children) == 0 {
+							safe = true
+						}
+						continue
+					}
+					// t is 1, 2 or 4: use
+					break
+				}
+			}
+			if !safe {
+				move = nil
+			}
+		}
+
+		if move == nil {
+			continue
+		}
+
+		pp := move.Prog
+		execute := false
+		// at this point we have something like:
+		// MOV* anything, reg1
+		// MOV* reg1, reg2
+		// now check if this is a cast that cannot be forward propagated
+		if p.As == pp.As {
+			// if the operations match then we can always propagate
+			execute = true
+		}
+		if !execute && isGPR(&p.From) {
+			switch p.As {
+			case s390x.AMOVD:
+				fallthrough
+			case s390x.AMOVWZ:
+				if pp.As == s390x.AMOVWZ {
+					execute = true
+					break
+				}
+				fallthrough
+			case s390x.AMOVHZ:
+				if pp.As == s390x.AMOVHZ {
+					execute = true
+					break
+				}
+				fallthrough
+			case s390x.AMOVBZ:
+				if pp.As == s390x.AMOVBZ {
+					execute = true
+					break
+				}
+			}
+		}
+		if !execute {
+			if (p.As == s390x.AMOVB || p.As == s390x.AMOVBZ) && (pp.As == s390x.AMOVB || pp.As == s390x.AMOVBZ) {
+				execute = true
+			}
+			if (p.As == s390x.AMOVH || p.As == s390x.AMOVHZ) && (pp.As == s390x.AMOVH || pp.As == s390x.AMOVHZ) {
+				execute = true
+			}
+			if (p.As == s390x.AMOVW || p.As == s390x.AMOVWZ) && (pp.As == s390x.AMOVW || pp.As == s390x.AMOVWZ) {
+				execute = true
+			}
+		}
+
+		if execute {
+			pp.From = p.From
+			excise(r)
+		}
+	}
+	return
 }
 
 // fuseClear merges memory clear operations.

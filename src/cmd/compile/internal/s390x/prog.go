@@ -97,19 +97,17 @@ var progtable = [s390x.ALAST]obj.ProgInfo{
 	s390x.AMOVH:  {Flags: gc.SizeW | gc.LeftRead | gc.RightWrite | gc.Move | gc.Conv},
 	s390x.AMOVHZ: {Flags: gc.SizeW | gc.LeftRead | gc.RightWrite | gc.Move | gc.Conv},
 	s390x.AMOVW:  {Flags: gc.SizeL | gc.LeftRead | gc.RightWrite | gc.Move | gc.Conv},
-
-	// there is no AMOVWU.
 	s390x.AMOVWZ: {Flags: gc.SizeL | gc.LeftRead | gc.RightWrite | gc.Move | gc.Conv},
 	s390x.AMOVD:  {Flags: gc.SizeQ | gc.LeftRead | gc.RightWrite | gc.Move},
 	s390x.AFMOVS: {Flags: gc.SizeF | gc.LeftRead | gc.RightWrite | gc.Move | gc.Conv},
 	s390x.AFMOVD: {Flags: gc.SizeD | gc.LeftRead | gc.RightWrite | gc.Move},
 
 	// Storage operations
-	s390x.AMVC: {Flags: gc.SizeQ | gc.LeftRead | gc.RightRead},
-	s390x.ACLC: {Flags: gc.SizeQ | gc.LeftRead | gc.RightRead},
-	s390x.AXC:  {Flags: gc.SizeQ | gc.LeftRead | gc.RightRead},
-	s390x.AOC:  {Flags: gc.SizeQ | gc.LeftRead | gc.RightRead},
-	s390x.ANC:  {Flags: gc.SizeQ | gc.LeftRead | gc.RightRead},
+	s390x.AMVC: {Flags: gc.LeftRead | gc.LeftAddr | gc.RightWrite | gc.RightAddr},
+	s390x.ACLC: {Flags: gc.LeftRead | gc.LeftAddr | gc.RightRead | gc.RightAddr},
+	s390x.AXC:  {Flags: gc.LeftRead | gc.LeftAddr | gc.RightWrite | gc.RightAddr},
+	s390x.AOC:  {Flags: gc.LeftRead | gc.LeftAddr | gc.RightWrite | gc.RightAddr},
+	s390x.ANC:  {Flags: gc.LeftRead | gc.LeftAddr | gc.RightWrite | gc.RightAddr},
 
 	// Jumps
 	s390x.ABR:      {Flags: gc.Jump | gc.Break},
@@ -159,16 +157,10 @@ func proginfo(p *obj.Prog) {
 
 	if (p.From.Type == obj.TYPE_MEM || p.From.Type == obj.TYPE_ADDR) && p.From.Reg != 0 {
 		info.Regindex |= RtoB(int(p.From.Reg))
-		if info.Flags&gc.PostInc != 0 {
-			info.Regset |= RtoB(int(p.From.Reg))
-		}
 	}
 
 	if (p.To.Type == obj.TYPE_MEM || p.To.Type == obj.TYPE_ADDR) && p.To.Reg != 0 {
 		info.Regindex |= RtoB(int(p.To.Reg))
-		if info.Flags&gc.PostInc != 0 {
-			info.Regset |= RtoB(int(p.To.Reg))
-		}
 	}
 
 	if p.From.Type == obj.TYPE_ADDR && p.From.Sym != nil && (info.Flags&gc.LeftRead != 0) {
