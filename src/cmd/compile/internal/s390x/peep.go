@@ -58,14 +58,12 @@ func peep(firstp *obj.Prog) {
 		}
 	}
 
-	var p *obj.Prog
-
 	// constant propagation
 	// find MOV $con,R followed by
 	// another MOV $con,R without
 	// setting R in the interim
 	for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
-		p = r.Prog
+		p := r.Prog
 		switch p.As {
 		case s390x.AMOVD,
 			s390x.AMOVW, s390x.AMOVWZ,
@@ -80,59 +78,39 @@ func peep(firstp *obj.Prog) {
 		}
 	}
 
-	var r *gc.Flow
-	var t int
-loop1:
-	//	if gc.Debug['P'] != 0 && gc.Debug['v'] != 0 {
-	//		gc.Dumpit("loop1", g.Start, 0)
-	//	}
+	for {
+		changed := false
+		for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
+			p := r.Prog
 
-	t = 0
-	for r = g.Start; r != nil; r = r.Link {
-		p = r.Prog
-
-		// TODO(austin) Handle smaller moves.  arm and amd64
-		// distinguish between moves that moves that *must*
-		// sign/zero extend and moves that don't care so they
-		// can eliminate moves that don't care without
-		// breaking moves that do care.  This might let us
-		// simplify or remove the next peep loop, too.
-		if p.As == s390x.AMOVD || p.As == s390x.AFMOVD {
-			if regtyp(&p.To) {
-				// Try to eliminate reg->reg moves
-				if regtyp(&p.From) {
-					if p.From.Type == p.To.Type {
-						if copyprop(r) {
-							excise(r)
-							t++
-						} else if subprop(r) && copyprop(r) {
-							excise(r)
-							t++
-						}
-					}
-				}
-
-				// Convert uses to $0 to uses of R0 and
-				// propagate R0
-				if regzer(&p.From) != 0 {
-					if p.To.Type == obj.TYPE_REG {
+			// TODO(austin) Handle smaller moves.  arm and amd64
+			// distinguish between moves that moves that *must*
+			// sign/zero extend and moves that don't care so they
+			// can eliminate moves that don't care without
+			// breaking moves that do care.  This might let us
+			// simplify or remove the next peep loop, too.
+			if p.As == s390x.AMOVD || p.As == s390x.AFMOVD {
+				if regtyp(&p.To) {
+					// Convert uses to $0 to uses of R0 and
+					// propagate R0
+					if p.As == s390x.AMOVD && regzer(&p.From) != 0 {
 						p.From.Type = obj.TYPE_REG
 						p.From.Reg = s390x.REGZERO
-						if copyprop(r) {
+					}
+
+					// Try to eliminate reg->reg moves
+					if isGPR(&p.From) || isFPR(&p.From) {
+						if copyprop(r) || (subprop(r) && copyprop(r)) {
 							excise(r)
-							t++
-						} else if subprop(r) && copyprop(r) {
-							excise(r)
-							t++
+							changed = true
 						}
 					}
 				}
 			}
 		}
-	}
-
-	if t != 0 {
-		goto loop1
+		if !changed {
+			break
+		}
 	}
 
 	if gc.Debug['P'] != 0 && gc.Debug['v'] != 0 {
@@ -145,12 +123,11 @@ loop1:
 	 */
 
 	for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
-
 		if (gc.Debugmovprop != -1) && (movprop_cnt >= gc.Debugmovprop) {
 			break
 		}
 
-		p = r.Prog
+		p := r.Prog
 
 		switch p.As {
 		case s390x.AFMOVS,
@@ -187,7 +164,6 @@ loop1:
 
 		for ; ; r1 = gc.Uniqs(r1) {
 			var p1 *obj.Prog
-			var t int
 
 			if r1 == nil || r1 == r0 {
 				break
@@ -209,7 +185,7 @@ loop1:
 				p1.From = p0.From
 				movprop_cnt += 1
 			} else {
-				t = copyu(p1, v0, nil)
+				t := copyu(p1, v0, nil)
 				if gc.Debug['D'] != 0 {
 					fmt.Printf("try v0 mov prop t=%d\n", t)
 					fmt.Printf("%v\n", p0)
@@ -266,10 +242,8 @@ loop1:
 	/*
 	 * look for MOVB x,R; MOVB R,R (for small MOVs not handled above)
 	 */
-	var p1 *obj.Prog
-	var r1 *gc.Flow
 	for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
-		p = r.Prog
+		p := r.Prog
 		switch p.As {
 		default:
 			continue
@@ -285,11 +259,11 @@ loop1:
 			}
 		}
 
-		r1 = r.Link
+		r1 := r.Link
 		if r1 == nil {
 			continue
 		}
-		p1 = r1.Prog
+		p1 := r1.Prog
 		if p1.As != p.As {
 			continue
 		}
@@ -323,7 +297,7 @@ loop1:
 		// push any load from memory as early as possible
 		// to give it time to complete before use.
 		for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
-			p = r.Prog
+			p := r.Prog
 			switch p.As {
 			case s390x.AMOVB,
 				s390x.AMOVW,
@@ -350,7 +324,7 @@ loop1:
 			break
 		}
 
-		p = r.Prog
+		p := r.Prog
 
 		switch p.As {
 		case s390x.AADD,
@@ -448,30 +422,31 @@ loop1:
 		if (gc.Debugcnb != -1) && (cnb_cnt >= gc.Debugcnb) {
 			break
 		}
-		p = r.Prog
-		r1 = gc.Uniqs(r)
+		p := r.Prog
+		r1 := gc.Uniqs(r)
 		if r1 == nil {
 			continue
 		}
-		p1 = r1.Prog
+		p1 := r1.Prog
 
+		var ins int16
 		switch p.As {
 		case s390x.ACMP:
 			switch p1.As {
 			case s390x.ABCL, s390x.ABC:
 				continue
 			case s390x.ABEQ:
-				t = s390x.ACMPBEQ
+				ins = s390x.ACMPBEQ
 			case s390x.ABGE:
-				t = s390x.ACMPBGE
+				ins = s390x.ACMPBGE
 			case s390x.ABGT:
-				t = s390x.ACMPBGT
+				ins = s390x.ACMPBGT
 			case s390x.ABLE:
-				t = s390x.ACMPBLE
+				ins = s390x.ACMPBLE
 			case s390x.ABLT:
-				t = s390x.ACMPBLT
+				ins = s390x.ACMPBLT
 			case s390x.ABNE:
-				t = s390x.ACMPBNE
+				ins = s390x.ACMPBNE
 			default:
 				continue
 			}
@@ -481,17 +456,17 @@ loop1:
 			case s390x.ABCL, s390x.ABC:
 				continue
 			case s390x.ABEQ:
-				t = s390x.ACMPUBEQ
+				ins = s390x.ACMPUBEQ
 			case s390x.ABGE:
-				t = s390x.ACMPUBGE
+				ins = s390x.ACMPUBGE
 			case s390x.ABGT:
-				t = s390x.ACMPUBGT
+				ins = s390x.ACMPUBGT
 			case s390x.ABLE:
-				t = s390x.ACMPUBLE
+				ins = s390x.ACMPUBLE
 			case s390x.ABLT:
-				t = s390x.ACMPUBLT
+				ins = s390x.ACMPUBLT
 			case s390x.ABNE:
-				t = s390x.ACMPUBNE
+				ins = s390x.ACMPUBNE
 			default:
 				continue
 			}
@@ -512,7 +487,7 @@ loop1:
 		}
 
 		if p.To.Type == obj.TYPE_REG {
-			p1.As = int16(t)
+			p1.As = ins
 			p1.From = p.From
 			p1.Reg = p.To.Reg
 			p1.From3 = nil
@@ -528,7 +503,7 @@ loop1:
 				}
 			default:
 			}
-			p1.As = int16(t)
+			p1.As = ins
 			p1.From = p.From
 			p1.Reg = 0
 			p1.From3 = new(obj.Addr)
@@ -559,41 +534,34 @@ ret:
 }
 
 func conprop(r0 *gc.Flow) {
-	var p *obj.Prog
-	var t int
-
 	p0 := (*obj.Prog)(r0.Prog)
 	v0 := (*obj.Addr)(&p0.To)
 	r := (*gc.Flow)(r0)
+	for {
+		r = gc.Uniqs(r)
+		if r == nil || r == r0 {
+			return
+		}
+		if gc.Uniqp(r) == nil {
+			return
+		}
 
-loop:
-	r = gc.Uniqs(r)
-	if r == nil || r == r0 {
-		return
-	}
-	if gc.Uniqp(r) == nil {
-		return
-	}
-
-	p = r.Prog
-	t = copyu(p, v0, nil)
-	switch t {
-	case 0, // miss
-		1: // use
-		goto loop
-
-	case 2, // rar
-		4: // use and set
-		break
-
-	case 3: // set
-		if p.As == p0.As && p.From.Type == p0.From.Type && p.From.Reg == p0.From.Reg && p.From.Node == p0.From.Node &&
-			p.From.Offset == p0.From.Offset && p.From.Scale == p0.From.Scale && p.From.Index == p0.From.Index {
-			if p.From.Val == p0.From.Val {
-				excise(r)
-				goto loop
+		p := r.Prog
+		t := copyu(p, v0, nil)
+		switch t {
+		case 0, // miss
+			1: // use
+			continue
+		case 3: // set
+			if p.As == p0.As && p.From.Type == p0.From.Type && p.From.Reg == p0.From.Reg && p.From.Node == p0.From.Node &&
+				p.From.Offset == p0.From.Offset && p.From.Scale == p0.From.Scale && p.From.Index == p0.From.Index {
+				if p.From.Val == p0.From.Val {
+					excise(r)
+					continue
+				}
 			}
 		}
+		break
 	}
 }
 
@@ -615,12 +583,11 @@ func regconsttyp(a *obj.Addr) bool {
 
 func pushback(r0 *gc.Flow) {
 	var r *gc.Flow
-	var p *obj.Prog
 
 	var b *gc.Flow
 	p0 := (*obj.Prog)(r0.Prog)
 	for r = gc.Uniqp(r0); r != nil && gc.Uniqs(r) != nil; r = gc.Uniqp(r) {
-		p = r.Prog
+		p := r.Prog
 		if p.As != obj.ANOP {
 			if !regconsttyp(&p.From) || !regtyp(&p.To) {
 				break
@@ -660,7 +627,7 @@ func pushback(r0 *gc.Flow) {
 	t := obj.Prog(*r0.Prog)
 	for r = gc.Uniqp(r0); ; r = gc.Uniqp(r) {
 		p0 = r.Link.Prog
-		p = r.Prog
+		p := r.Prog
 		p0.As = p.As
 		p0.Lineno = p.Lineno
 		p0.From = p.From
