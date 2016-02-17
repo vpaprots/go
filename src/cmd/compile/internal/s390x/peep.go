@@ -49,6 +49,15 @@ func peep(firstp *obj.Prog) {
 	}
 	gactive = 0
 
+	// promote zero moves to MOVD so that they are more likely to
+	// be optimized in later passes
+	for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
+		p := r.Prog
+		if isMove(p) && p.As != s390x.AMOVD && regzer(&p.From) != 0 && isGPR(&p.To) {
+			p.As = s390x.AMOVD
+		}
+	}
+
 	var p *obj.Prog
 
 	// constant propagation
