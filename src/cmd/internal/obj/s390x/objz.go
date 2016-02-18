@@ -974,6 +974,7 @@ var unaryDst = map[int]bool{
 	ASTCKC: true,
 	ASTCKE: true,
 	ASTCKF: true,
+	ANEG:   true,
 	AVONE:  true,
 	AVZERO: true,
 }

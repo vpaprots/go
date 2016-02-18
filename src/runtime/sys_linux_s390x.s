@@ -246,17 +246,17 @@ TEXT runtime·sigtramp(SB),NOSPLIT,$64
 	BL	R11
 	RET
 
+// func mmap(addr unsafe.Pointer, n uintptr, prot, flags, fd int32, off uint32) unsafe.Pointer
 TEXT runtime·mmap(SB),NOSPLIT,$48-40
 	MOVD	addr+0(FP), R2
 	MOVD	n+8(FP), R3
 	MOVW	prot+16(FP), R4
 	MOVW	flags+20(FP), R5
 	MOVW	fd+24(FP), R6
-	MOVW	off+28(FP), R7 
+	MOVWZ	off+28(FP), R7
 
 	// s390x uses old_mmap, so the arguments need to be placed into
 	// a struct and a pointer to the struct passed to mmap.
-	// TODO Offset should NOT be sign extended (it is a uint32).
 	MOVD	R2, addr-48(SP)
 	MOVD	R3, n-40(SP)
 	MOVD	R4, prot-32(SP)
@@ -267,6 +267,9 @@ TEXT runtime·mmap(SB),NOSPLIT,$48-40
 	MOVD	$addr-48(SP), R2
 	MOVW	$SYS_mmap, R1
 	SYSCALL
+	MOVD	$-4095, R3
+	CMPUBLT	R2, R3, 2(PC)
+	NEG	R2
 	MOVD	R2, ret+32(FP)
 	RET
 
