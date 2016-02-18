@@ -533,8 +533,6 @@ func clearfat(nl *gc.Node) {
 // Called after regopt and peep have run.
 // Expand CHECKNIL pseudo-op into actual nil pointer check.
 func expandchecks(firstp *obj.Prog) {
-	var p1 *obj.Prog
-	var p2 *obj.Prog
 	for p := (*obj.Prog)(firstp); p != nil; p = p.Link {
 		if gc.Debug_checknil != 0 && gc.Ctxt.Debugvlog != 0 {
 			fmt.Printf("expandchecks: %v\n", p)
@@ -549,57 +547,32 @@ func expandchecks(firstp *obj.Prog) {
 			gc.Fatalf("invalid nil check %v\n", p)
 		}
 
-		/*
-			// check is
-			//	TD $4, R0, arg (R0 is always zero)
-			// eqv. to:
-			// 	tdeq r0, arg
-			// NOTE: this needs special runtime support to make SIGTRAP recoverable.
-			reg = p->from.reg;
-			p->as = ATD;
-			p->from = p->to = p->from3 = zprog.from;
-			p->from.type = TYPE_CONST;
-			p->from.offset = 4;
-			p->from.reg = 0;
-			p->reg = REGZERO;
-			p->to.type = TYPE_REG;
-			p->to.reg = reg;
-		*/
 		// check is
-		//	CMP arg, $0
-		//	BNE 2(PC) [likely]
-		//	MOVD R0, 0(R0)
-		p1 = gc.Ctxt.NewProg()
+		//	CMPBNE arg, $0, 2(PC) [likely]
+		//	MOVD   R0, 0(R0)
+		p1 := gc.Ctxt.NewProg()
 
-		p2 = gc.Ctxt.NewProg()
 		gc.Clearp(p1)
-		gc.Clearp(p2)
-		p1.Link = p2
-		p2.Link = p.Link
+		p1.Link = p.Link
 		p.Link = p1
 		p1.Lineno = p.Lineno
-		p2.Lineno = p.Lineno
 		p1.Pc = 9999
-		p2.Pc = 9999
-		p.As = s390x.ACMP
-		p.To.Type = obj.TYPE_CONST
-		p.To.Offset = 0
-		p1.As = s390x.ABNE
+		p.As = s390x.ACMPBNE
+		p.From3 = new(obj.Addr)
+		p.From3.Type = obj.TYPE_CONST
+		p.From3.Offset = 0
 
-		//p1->from.type = TYPE_CONST;
-		//p1->from.offset = 1; // likely
-		p1.To.Type = obj.TYPE_BRANCH
-
-		p1.To.Val = p2.Link
+		p.To.Type = obj.TYPE_BRANCH
+		p.To.Val = p1.Link
 
 		// crash by write to memory address 0.
-		p2.As = s390x.AMOVD
+		p1.As = s390x.AMOVD
 
-		p2.From.Type = obj.TYPE_REG
-		p2.From.Reg = s390x.REGZERO
-		p2.To.Type = obj.TYPE_MEM
-		p2.To.Reg = s390x.REGZERO
-		p2.To.Offset = 0
+		p1.From.Type = obj.TYPE_REG
+		p1.From.Reg = s390x.REGZERO
+		p1.To.Type = obj.TYPE_MEM
+		p1.To.Reg = s390x.REGZERO
+		p1.To.Offset = 0
 	}
 }
 

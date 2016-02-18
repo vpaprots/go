@@ -4150,11 +4150,10 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		S(opcode, uint32(r), uint32(v), asm)
 
 	case 89:
-		if p.Pcond == nil {
-			ctxt.Diag("no branch target")
-			break
+		var v int32
+		if p.Pcond != nil {
+			v = int32((p.Pcond.Pc - p.Pc) >> 1)
 		}
-		v := int32((p.Pcond.Pc - p.Pc) >> 1)
 		var opcode, opcode2 uint32
 		switch p.As {
 		case ACMPBEQ, ACMPBGE, ACMPBGT, ACMPBLE, ACMPBLT, ACMPBNE:
@@ -4173,9 +4172,9 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		}
 
 	case 90:
-		if p.Pcond == nil {
-			ctxt.Diag("no branch target")
-			break
+		var v int32
+		if p.Pcond != nil {
+			v = int32((p.Pcond.Pc - p.Pc) >> 1)
 		}
 		var opcode, opcode2 uint32
 		switch p.As {
@@ -4186,7 +4185,6 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			opcode = OP_CLGIJ
 			opcode2 = OP_CLGFI
 		}
-		v := int32((p.Pcond.Pc - p.Pc) >> 1)
 		mask := branchMask(ctxt, p)
 		if int32(int16(v)) != v {
 			RIL(0, opcode2, uint32(p.From.Reg), uint32(int32(regoff(ctxt, p.From3))), asm)
