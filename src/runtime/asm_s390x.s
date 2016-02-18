@@ -7,6 +7,25 @@
 #include "funcdata.h"
 #include "textflag.h"
 
+DATA runtime·vectorfacility+0x00(SB)/4, $0
+GLOBL runtime·vectorfacility(SB), NOPTR, $4
+
+TEXT runtime·checkvectorfacility(SB),NOSPLIT,$24-0
+	MOVD	$2, R0
+	MOVD	$x-24(SP), R1
+	// STFLE 0(R1)
+	WORD	$0xB2B01000
+	MOVBZ	z-8(SP), R1
+	AND	$0x40, R1
+	BNE	setvector
+	MOVD	$0, R0
+	RET
+setvector:
+	MOVD	$1, R1
+	MOVBZ	R1, runtime·vectorfacility(SB)
+	MOVD	$0, R0
+	RET
+
 TEXT runtime·rt0_go(SB),NOSPLIT,$0
 	// R2 = argc; R3 = argv; R11 = temp; R13 = g; R15 = stack pointer
 	// C TLS base pointer in AR0:AR1
@@ -67,6 +86,9 @@ nocgo:
 	BL	runtime·args(SB)
 	BL	runtime·osinit(SB)
 	BL	runtime·schedinit(SB)
+
+	// check and set the vectorfacility
+	BL	runtime·checkvectorfacility(SB)
 
 	// create a new goroutine to start program
 	MOVD	$runtime·mainPC(SB), R2		// entry
@@ -856,44 +878,104 @@ TEXT runtime·fastrand1(SB), NOSPLIT, $0-4
 	MOVW	R3, ret+0(FP)
 	RET
 
-TEXT bytes·IndexByte(SB),NOSPLIT|NOFRAME,$0-40
-	MOVD	s+0(FP), R3
-	MOVD	s_len+8(FP), R4
-	MOVBZ	c+24(FP), R5	// byte to find
-	LA	ret+32(FP), R7
-	BR	runtime·indexByte(SB)
+TEXT bytes·IndexByte(SB),NOSPLIT,$0-40
+	MOVD	s+0(FP), R3     // s => R3
+	MOVD	s_len+8(FP), R4 // s_len => R4
+	MOVBZ	c+24(FP), R5    // c => R5
+	MOVD	$ret+32(FP), R2 // &ret => R9
+	BR	runtime·indexbytebody(SB)
 
-TEXT strings·IndexByte(SB),NOSPLIT|NOFRAME,$0-32
-	MOVD	p+0(FP), R3
-	MOVD	b_len+8(FP), R4
-	MOVBZ	c+16(FP), R5	// byte to find
-	LA	ret+24(FP), R7
-	BR	runtime·indexByte(SB)
+TEXT strings·IndexByte(SB),NOSPLIT,$0-32
+	MOVD	s+0(FP), R3     // s => R3
+	MOVD	s_len+8(FP), R4 // s_len => R4
+	MOVBZ	c+16(FP), R5    // c => R5
+	MOVD	$ret+24(FP), R2 // &ret => R9
+	BR	runtime·indexbytebody(SB)
 
 // input:
-//   R3 = ptr
-//   R4 = len
-//   R5 = byte to find (c)
-//   R7 = address of output word (stores -1/0/1 here)
-TEXT runtime·indexByte(SB),NOSPLIT|NOFRAME,$0-0
-	CMP	R4, $0
-	BEQ	notfound
-	MOVD	R3, R6		// store base for later
-	ADD	R3, R4		// calculate end marker
-	MOVBZ	R5, R0		// c needs to be in R0, leave until last minute as currently R0 is expected to be 0
-loop:
-	WORD	$0xB25E0043	// srst %r4, %r3 (search the range [R3, R4))
-	BVS	loop		// interrupted - continue
-	BGT	notfound
+// R3: s
+// R4: s_len
+// R5: c -- byte sought
+// R2: &ret -- address to put index into
+TEXT runtime·indexbytebody(SB),NOSPLIT,$0
+	CMPBEQ	R4, $0, notfound
+	MOVD	R3, R6          // store base for later
+	ADD	R3, R4, R8      // the address after the end of the string
+	//if the length is small, use loop; otherwise, use vector or srst search
+	CMPBGE	R4, $16, large
+
+residual:
+	CMPBEQ	R3, R8, notfound
+	MOVBZ	0(R3), R7
+	LA	1(R3), R3
+	CMPBNE	R7, R5, residual
+
 found:
-	XOR	R0, R0		// reset R0
-	SUB	R6, R4		// remove base
-	MOVD	R4, 0(R7)
+	SUB	R6, R3
+	SUB	$1, R3
+	MOVD	R3, 0(R2)
 	RET
+
 notfound:
-	XOR	R0, R0		// reset R0
-	MOVD	$-1, 0(R7)
+	MOVD	$-1, 0(R2)
 	RET
+
+large:
+	MOVBZ	runtime·vectorfacility(SB), R1
+	CMPBEQ	R1, $1, vectorimpl      // vectorfacility = 1, vector supported
+
+srstimpl:                       // vectorfacility == 0, not support vector
+	MOVBZ	R5, R0          // c needs to be in R0, leave until last minute as currently R0 is expected to be 0
+srstloop:
+	WORD	$0xB25E0083     // srst %r8, %r3 (search the range [R3, R8))
+	BVS	srstloop        // interrupted - continue
+	BGT	notfoundr0
+foundr0:
+	XOR	R0, R0          // reset R0
+	SUB	R6, R8          // remove base
+	MOVD	R8, 0(R2)
+	RET
+notfoundr0:
+	XOR	R0, R0          // reset R0
+	MOVD	$-1, 0(R2)
+	RET
+
+vectorimpl:
+	//if the address is not 16byte aligned, use loop for the header
+	AND	$15, R3, R8
+	CMPBGT	R8, $0, notaligned
+
+aligned:
+	ADD	R6, R4, R8
+	AND	$-16, R8, R7
+	// replicate c across V17
+	VLVGB	$0, R5, V19
+	VREPB	$0, V19, V17
+
+vectorloop:
+	CMPBGE	R3, R7, residual
+	VL	0(R3), V16    // load string to be searched into V16
+	ADD	$16, R3
+	VFEEBS	V16, V17, V18 // search V17 in V16 and set conditional code accordingly
+	BVS	vectorloop
+
+	// when vector search found c in the string
+	VLGVB	$7, V18, R7   // load 7th element of V18 containing index into R7
+	SUB	$16, R3
+	SUB	R6, R3
+	ADD	R3, R7
+	MOVD	R7, 0(R2)
+	RET
+
+notaligned:
+	AND	$-16, R3, R8
+	ADD     $16, R8
+notalignedloop:
+	CMPBEQ	R3, R8, aligned
+	MOVBZ	0(R3), R7
+	LA	1(R3), R3
+	CMPBNE	R7, R5, notalignedloop
+	BR	found
 
 TEXT runtime·return0(SB), NOSPLIT, $0
 	MOVW	$0, R3
