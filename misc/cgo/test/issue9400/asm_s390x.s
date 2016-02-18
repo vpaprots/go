@@ -9,23 +9,18 @@
 TEXT ·RewindAndSetgid(SB),NOSPLIT,$0-0
 	// Rewind stack pointer so anything that happens on the stack
 	// will clobber the test pattern created by the caller
-	// TODO(mundaym): Code generator should support ADD $(1024 * 8), R15
-	MOVD	$(1024 * 8), R4
-	ADD	R4, R15
+	ADD	$(1024 * 8), R15
 
 	// Ask signaller to setgid
-	// TODO(mundaym): Code generator should support MOVW $1, ·Baton(SB)
 	MOVD	$·Baton(SB), R5
-	MOVW	$1, R6
-	MOVW	R6, 0(R5)
+	MOVW	$1, 0(R5)
 
 	// Wait for setgid completion
 loop:
 	SYNC
 	MOVW	·Baton(SB), R3
-	CMP	R3, $0
-	BNE	loop
+	CMPBNE	R3, $0, loop
 
 	// Restore stack
-	SUB	R4, R15
+	SUB	$(1024 * 8), R15
 	RET
