@@ -986,7 +986,7 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 		s390x.ASUBZE,
 		s390x.AFMOVS,
 		s390x.AFMOVD,
-		s390x.AFRSP,
+		s390x.ALEDBR,
 		s390x.AFNEG,
 		s390x.ALDEBR,
 		s390x.ACLFEBR,

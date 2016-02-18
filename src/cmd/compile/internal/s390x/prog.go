@@ -69,7 +69,7 @@ var progtable = [s390x.ALAST]obj.ProgInfo{
 	s390x.AFDIVS: {Flags: gc.SizeF | gc.LeftRead | gc.RegRead | gc.RightWrite},
 	s390x.AFCMPU: {Flags: gc.SizeD | gc.LeftRead | gc.RightRead},
 	s390x.ACEBR:  {Flags: gc.SizeF | gc.LeftRead | gc.RightRead},
-	s390x.AFRSP:  {Flags: gc.SizeD | gc.LeftRead | gc.RightWrite | gc.Conv},
+	s390x.ALEDBR: {Flags: gc.SizeD | gc.LeftRead | gc.RightWrite | gc.Conv},
 	s390x.ALDEBR: {Flags: gc.SizeD | gc.LeftRead | gc.RightWrite | gc.Conv},
 	s390x.AFSQRT: {Flags: gc.SizeD | gc.LeftRead | gc.RightWrite},
 

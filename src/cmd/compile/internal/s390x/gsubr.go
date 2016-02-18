@@ -494,7 +494,7 @@ func gmove(f *gc.Node, t *gc.Node) {
 		goto rdst
 
 	case gc.TFLOAT64<<16 | gc.TFLOAT32:
-		a = s390x.AFRSP
+		a = s390x.ALEDBR
 		goto rdst
 	}
 

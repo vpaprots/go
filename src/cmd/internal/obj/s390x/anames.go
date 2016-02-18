@@ -80,7 +80,7 @@ var Anames = []string{
 	"FNMADDS",
 	"FNMSUB",
 	"FNMSUBS",
-	"FRSP",
+	"LEDBR",
 	"LDEBR",
 	"FSUB",
 	"FSUBS",

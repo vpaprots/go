@@ -275,17 +275,15 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 			AFDIV,
 			AFMADD,
 			AFMOVD,
-			/* case AFMOVDS: */
 			AFMOVS,
-
-			/* case AFMOVSD: */
 			AFMSUB,
 			AFMUL,
 			AFNABS,
 			AFNEG,
 			AFNMADD,
 			AFNMSUB,
-			AFRSP,
+			ALEDBR,
+			ALDEBR,
 			AFSUB:
 			q = p
 
