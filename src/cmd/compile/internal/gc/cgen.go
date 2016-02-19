@@ -2026,7 +2026,7 @@ func bgenx(n, res *Node, wantTrue bool, likely int, to *obj.Prog) {
 		Cgen(nl, &n1)
 		nl = &n1
 
-		if Smallintconst(nr) && Ctxt.Arch.Thechar != '0' && Ctxt.Arch.Thechar != '9' && Ctxt.Arch.Thechar != 'z' {
+		if Smallintconst(nr) && Ctxt.Arch.Thechar != '0' && Ctxt.Arch.Thechar != '9' {
 			Thearch.Gins(Thearch.Optoas(OCMP, nr.Type), nl, nr)
 			bins(nr.Type, res, op, likely, to)
 			return
