@@ -52,12 +52,15 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		}
 	}
 
-	// Rewrite float constants to values stored in memory.
+	// Rewrite float constants to values stored in memory unless they are +0.
 	switch p.As {
 	case AFMOVS:
 		if p.From.Type == obj.TYPE_FCONST {
 			f32 := float32(p.From.Val.(float64))
 			i32 := math.Float32bits(f32)
+			if i32 == 0 { // +0
+				break
+			}
 			literal := fmt.Sprintf("$f32.%08x", i32)
 			s := obj.Linklookup(ctxt, literal, 0)
 			s.Size = 4
@@ -71,6 +74,9 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 	case AFMOVD:
 		if p.From.Type == obj.TYPE_FCONST {
 			i64 := math.Float64bits(p.From.Val.(float64))
+			if i64 == 0 { // +0
+				break
+			}
 			literal := fmt.Sprintf("$f64.%016x", i64)
 			s := obj.Linklookup(ctxt, literal, 0)
 			s.Size = 8

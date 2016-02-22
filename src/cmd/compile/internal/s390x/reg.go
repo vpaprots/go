@@ -81,10 +81,6 @@ func excludedregs() uint64 {
 	// Exclude registers with fixed functions
 	// AZHANG TODO: Should other dedicated registers be reserved here?
 	regbits := uint64(RtoB(s390x.REG_R0) | RtoB(s390x.REGSP) | RtoB(s390x.REGG) | RtoB(s390x.REGTMP) | RtoB(s390x.REGTMP2) | RtoB(s390x.REG_LR))
-
-	// Also exclude floating point registers with fixed constants
-	regbits |= RtoB(s390x.REG_F11) | RtoB(s390x.REG_F12) | RtoB(s390x.REG_F13) | RtoB(s390x.REG_F14)
-
 	return regbits
 }
 

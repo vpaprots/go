@@ -32,6 +32,7 @@ package s390x
 import (
 	"cmd/internal/obj"
 	"log"
+	"math"
 	"sort"
 )
 
@@ -278,6 +279,7 @@ var optab = []Optab{
 	Optab{AFMOVD, C_FREG, C_NONE, C_NONE, C_LAUTO, 35, REGSP},
 	Optab{AFMOVD, C_FREG, C_NONE, C_NONE, C_LOREG, 35, REGZERO},
 	Optab{AFMOVD, C_FREG, C_NONE, C_NONE, C_ADDR, 74, 0},
+	Optab{AFMOVD, C_ZCON, C_NONE, C_NONE, C_FREG, 67, 0},
 	Optab{ASYNC, C_NONE, C_NONE, C_NONE, C_NONE, 81, 0},
 	Optab{ABYTE, C_SCON, C_NONE, C_NONE, C_NONE, 40, 0},
 	Optab{AWORD, C_LCON, C_NONE, C_NONE, C_NONE, 40, 0},
@@ -566,6 +568,15 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 	case obj.TYPE_TEXTSIZE:
 		return C_TEXTSIZE
 
+	case obj.TYPE_FCONST:
+		if f32, ok := a.Val.(float32); ok && math.Float32bits(f32) == 0 {
+			return C_ZCON
+		}
+		if f64, ok := a.Val.(float64); ok && math.Float64bits(f64) == 0 {
+			return C_ZCON
+		}
+		ctxt.Diag("cannot handle the floating point constant %v", a.Val)
+
 	case obj.TYPE_CONST,
 		obj.TYPE_ADDR:
 		switch a.Name {
@@ -613,6 +624,9 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 		return C_GOK
 
 	consize:
+		if ctxt.Instoffset == 0 {
+			return C_ZCON
+		}
 		if ctxt.Instoffset >= 0 {
 			if ctxt.Instoffset <= 0x7fff {
 				return C_SCON
@@ -3779,6 +3793,16 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		default:
 
 		}
+
+	case 67: // AFMOVx $0, Fy -- move +0 into reg
+		var opcode uint32
+		switch p.As {
+		case AFMOVS:
+			opcode = OP_LZER
+		case AFMOVD:
+			opcode = OP_LZDR
+		}
+		RRE(opcode, uint32(p.To.Reg), 0, asm)
 
 	case 68: /* ear arS,rD */
 		RRE(OP_EAR, uint32(p.To.Reg), uint32(p.From.Reg-REG_AR0), asm)
