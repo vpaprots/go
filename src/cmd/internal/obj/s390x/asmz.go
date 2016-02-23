@@ -4315,7 +4315,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 	case 97: // STORE MULTIPLE (STMG/STMY)
 		rstart := p.From.Reg
 		rend := p.Reg
-		offset := vregoff(ctxt, &p.To)
+		offset := regoff(ctxt, &p.To)
 		reg := p.To.Reg
 		if reg == 0 {
 			reg = o.param
@@ -4326,6 +4326,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			}
 			RIL(a, OP_AGFI, uint32(REGTMP), uint32(offset), asm)
 			reg = REGTMP
+			offset = 0
 		}
 		switch p.As {
 		case ASTMY:
@@ -4341,7 +4342,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 	case 98: // LOAD MULTIPLE (LMG/LMY)
 		rstart := p.Reg
 		rend := p.To.Reg
-		offset := vregoff(ctxt, &p.From)
+		offset := regoff(ctxt, &p.From)
 		reg := p.From.Reg
 		if reg == 0 {
 			reg = o.param
@@ -4352,6 +4353,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			}
 			RIL(a, OP_AGFI, uint32(REGTMP), uint32(offset), asm)
 			reg = REGTMP
+			offset = 0
 		}
 		switch p.As {
 		case ALMY:
