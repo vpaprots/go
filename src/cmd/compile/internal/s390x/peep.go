@@ -263,6 +263,10 @@ func peep(firstp *obj.Prog) {
 		if r1 == nil {
 			continue
 		}
+		// If this is a branch target then the cast might be needed
+		if gc.Uniqp(r1) == nil {
+			continue
+		}
 		p1 := r1.Prog
 		if p1.As != p.As {
 			continue
