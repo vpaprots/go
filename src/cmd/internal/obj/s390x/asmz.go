@@ -41,10 +41,6 @@ const (
 	FuncAlign = 16
 )
 
-const (
-	r0iszero = 1
-)
-
 type Optab struct {
 	as    int16 // opcode
 	a1    uint8 // source
@@ -59,12 +55,16 @@ var optab = []Optab{
 	// p.Optab, p.From.Class, p.Reg, p.From3.Class, p.To.Class, type, param
 	Optab{obj.ATEXT, C_ADDR, C_NONE, C_NONE, C_TEXTSIZE, 0, 0},
 	Optab{obj.ATEXT, C_ADDR, C_NONE, C_LCON, C_TEXTSIZE, 0, 0},
+
 	/* move register */
 	Optab{AMOVD, C_REG, C_NONE, C_NONE, C_REG, 1, 0},
-	Optab{AMOVB, C_REG, C_NONE, C_NONE, C_REG, 12, 0},
-	Optab{AMOVBZ, C_REG, C_NONE, C_NONE, C_REG, 13, 0},
-	Optab{AMOVW, C_REG, C_NONE, C_NONE, C_REG, 12, 0},
-	Optab{AMOVWZ, C_REG, C_NONE, C_NONE, C_REG, 13, 0},
+	Optab{AMOVB, C_REG, C_NONE, C_NONE, C_REG, 1, 0},
+	Optab{AMOVBZ, C_REG, C_NONE, C_NONE, C_REG, 1, 0},
+	Optab{AMOVW, C_REG, C_NONE, C_NONE, C_REG, 1, 0},
+	Optab{AMOVWZ, C_REG, C_NONE, C_NONE, C_REG, 1, 0},
+	Optab{AFMOVD, C_FREG, C_NONE, C_NONE, C_FREG, 1, 0},
+	Optab{AMOVDBR, C_REG, C_NONE, C_NONE, C_REG, 1, 0},
+
 	Optab{AADD, C_REG, C_REG, C_NONE, C_REG, 2, 0},
 	Optab{AADD, C_REG, C_NONE, C_NONE, C_REG, 2, 0},
 	Optab{AADD, C_LCON, C_REG, C_NONE, C_REG, 22, 0},
@@ -120,7 +120,6 @@ var optab = []Optab{
 	Optab{AFADD, C_FREG, C_FREG, C_NONE, C_FREG, 2, 0},
 	Optab{AFABS, C_FREG, C_NONE, C_NONE, C_FREG, 33, 0},
 	Optab{AFABS, C_NONE, C_NONE, C_NONE, C_FREG, 33, 0},
-	Optab{AFMOVD, C_FREG, C_NONE, C_NONE, C_FREG, 33, 0},
 	Optab{AFMADD, C_FREG, C_FREG, C_FREG, C_FREG, 34, 0},
 	Optab{AFMUL, C_FREG, C_NONE, C_NONE, C_FREG, 32, 0},
 	Optab{AFMUL, C_FREG, C_FREG, C_NONE, C_FREG, 32, 0},
@@ -130,45 +129,12 @@ var optab = []Optab{
 	Optab{ACFEBRA, C_FREG, C_NONE, C_NONE, C_REG, 83, 0},
 	Optab{AMVC, C_SOREG, C_NONE, C_SCON, C_SOREG, 84, 0},
 	Optab{ALARL, C_LCON, C_NONE, C_NONE, C_REG, 85, 0},
+	Optab{ALARL, C_SYMADDR, C_NONE, C_NONE, C_REG, 85, 0},
 	Optab{ALA, C_SOREG, C_NONE, C_NONE, C_REG, 86, 0},
 	Optab{ALA, C_SAUTO, C_NONE, C_NONE, C_REG, 86, REGSP},
-	Optab{AEXRL, C_LCON, C_NONE, C_NONE, C_REG, 87, 0},
+	Optab{AEXRL, C_SYMADDR, C_NONE, C_NONE, C_REG, 87, 0},
 	Optab{ASTCK, C_NONE, C_NONE, C_NONE, C_SAUTO, 88, REGSP},
 	Optab{ASTCK, C_NONE, C_NONE, C_NONE, C_SOREG, 88, 0},
-
-	/* store, short offset */
-	Optab{AMOVD, C_REG, C_REG, C_NONE, C_ZOREG, 7, REGZERO},
-	Optab{AMOVW, C_REG, C_REG, C_NONE, C_ZOREG, 7, REGZERO},
-	Optab{AMOVWZ, C_REG, C_REG, C_NONE, C_ZOREG, 7, REGZERO},
-	Optab{AMOVBZ, C_REG, C_REG, C_NONE, C_ZOREG, 7, REGZERO},
-	Optab{AMOVB, C_REG, C_REG, C_NONE, C_ZOREG, 7, REGZERO},
-	Optab{AMOVD, C_REG, C_NONE, C_NONE, C_SAUTO, 7, REGSP},
-	Optab{AMOVW, C_REG, C_NONE, C_NONE, C_SAUTO, 7, REGSP},
-	Optab{AMOVWZ, C_REG, C_NONE, C_NONE, C_SAUTO, 7, REGSP},
-	Optab{AMOVBZ, C_REG, C_NONE, C_NONE, C_SAUTO, 7, REGSP},
-	Optab{AMOVB, C_REG, C_NONE, C_NONE, C_SAUTO, 7, REGSP},
-	Optab{AMOVD, C_REG, C_NONE, C_NONE, C_SOREG, 7, REGZERO},
-	Optab{AMOVW, C_REG, C_NONE, C_NONE, C_SOREG, 7, REGZERO},
-	Optab{AMOVWZ, C_REG, C_NONE, C_NONE, C_SOREG, 7, REGZERO},
-	Optab{AMOVBZ, C_REG, C_NONE, C_NONE, C_SOREG, 7, REGZERO},
-	Optab{AMOVB, C_REG, C_NONE, C_NONE, C_SOREG, 7, REGZERO},
-
-	/* load, short offset */
-	Optab{AMOVD, C_ZOREG, C_REG, C_NONE, C_REG, 8, REGZERO},
-	Optab{AMOVW, C_ZOREG, C_REG, C_NONE, C_REG, 8, REGZERO},
-	Optab{AMOVWZ, C_ZOREG, C_REG, C_NONE, C_REG, 8, REGZERO},
-	Optab{AMOVBZ, C_ZOREG, C_REG, C_NONE, C_REG, 8, REGZERO},
-	Optab{AMOVB, C_ZOREG, C_REG, C_NONE, C_REG, 9, REGZERO},
-	Optab{AMOVD, C_SAUTO, C_NONE, C_NONE, C_REG, 8, REGSP},
-	Optab{AMOVW, C_SAUTO, C_NONE, C_NONE, C_REG, 8, REGSP},
-	Optab{AMOVWZ, C_SAUTO, C_NONE, C_NONE, C_REG, 8, REGSP},
-	Optab{AMOVBZ, C_SAUTO, C_NONE, C_NONE, C_REG, 8, REGSP},
-	Optab{AMOVB, C_SAUTO, C_NONE, C_NONE, C_REG, 9, REGSP},
-	Optab{AMOVD, C_SOREG, C_NONE, C_NONE, C_REG, 8, REGZERO},
-	Optab{AMOVW, C_SOREG, C_NONE, C_NONE, C_REG, 8, REGZERO},
-	Optab{AMOVWZ, C_SOREG, C_NONE, C_NONE, C_REG, 8, REGZERO},
-	Optab{AMOVBZ, C_SOREG, C_NONE, C_NONE, C_REG, 8, REGZERO},
-	Optab{AMOVB, C_SOREG, C_NONE, C_NONE, C_REG, 9, REGZERO},
 
 	/* store, long offset */
 	Optab{AMOVD, C_REG, C_NONE, C_NONE, C_LAUTO, 35, REGSP},
@@ -176,11 +142,15 @@ var optab = []Optab{
 	Optab{AMOVWZ, C_REG, C_NONE, C_NONE, C_LAUTO, 35, REGSP},
 	Optab{AMOVBZ, C_REG, C_NONE, C_NONE, C_LAUTO, 35, REGSP},
 	Optab{AMOVB, C_REG, C_NONE, C_NONE, C_LAUTO, 35, REGSP},
-	Optab{AMOVD, C_REG, C_NONE, C_NONE, C_LOREG, 35, REGZERO},
-	Optab{AMOVW, C_REG, C_NONE, C_NONE, C_LOREG, 35, REGZERO},
-	Optab{AMOVWZ, C_REG, C_NONE, C_NONE, C_LOREG, 35, REGZERO},
-	Optab{AMOVBZ, C_REG, C_NONE, C_NONE, C_LOREG, 35, REGZERO},
-	Optab{AMOVB, C_REG, C_NONE, C_NONE, C_LOREG, 35, REGZERO},
+	Optab{AMOVDBR, C_REG, C_NONE, C_NONE, C_LAUTO, 35, REGSP},
+	Optab{AMOVHBR, C_REG, C_NONE, C_NONE, C_LAUTO, 35, REGSP},
+	Optab{AMOVD, C_REG, C_NONE, C_NONE, C_LOREG, 35, 0},
+	Optab{AMOVW, C_REG, C_NONE, C_NONE, C_LOREG, 35, 0},
+	Optab{AMOVWZ, C_REG, C_NONE, C_NONE, C_LOREG, 35, 0},
+	Optab{AMOVBZ, C_REG, C_NONE, C_NONE, C_LOREG, 35, 0},
+	Optab{AMOVB, C_REG, C_NONE, C_NONE, C_LOREG, 35, 0},
+	Optab{AMOVDBR, C_REG, C_NONE, C_NONE, C_LOREG, 35, 0},
+	Optab{AMOVHBR, C_REG, C_NONE, C_NONE, C_LOREG, 35, 0},
 	Optab{AMOVD, C_REG, C_NONE, C_NONE, C_ADDR, 74, 0},
 	Optab{AMOVW, C_REG, C_NONE, C_NONE, C_ADDR, 74, 0},
 	Optab{AMOVWZ, C_REG, C_NONE, C_NONE, C_ADDR, 74, 0},
@@ -192,29 +162,36 @@ var optab = []Optab{
 	Optab{AMOVW, C_LAUTO, C_NONE, C_NONE, C_REG, 36, REGSP},
 	Optab{AMOVWZ, C_LAUTO, C_NONE, C_NONE, C_REG, 36, REGSP},
 	Optab{AMOVBZ, C_LAUTO, C_NONE, C_NONE, C_REG, 36, REGSP},
-	Optab{AMOVB, C_LAUTO, C_NONE, C_NONE, C_REG, 37, REGSP},
-	Optab{AMOVD, C_LOREG, C_NONE, C_NONE, C_REG, 36, REGZERO},
-	Optab{AMOVW, C_LOREG, C_NONE, C_NONE, C_REG, 36, REGZERO},
-	Optab{AMOVWZ, C_LOREG, C_NONE, C_NONE, C_REG, 36, REGZERO},
-	Optab{AMOVBZ, C_LOREG, C_NONE, C_NONE, C_REG, 36, REGZERO},
-	Optab{AMOVB, C_LOREG, C_NONE, C_NONE, C_REG, 37, REGZERO},
+	Optab{AMOVB, C_LAUTO, C_NONE, C_NONE, C_REG, 36, REGSP},
+	Optab{AMOVDBR, C_LAUTO, C_NONE, C_NONE, C_REG, 36, REGSP},
+	Optab{AMOVHBR, C_LAUTO, C_NONE, C_NONE, C_REG, 36, REGSP},
+	Optab{AMOVD, C_LOREG, C_NONE, C_NONE, C_REG, 36, 0},
+	Optab{AMOVW, C_LOREG, C_NONE, C_NONE, C_REG, 36, 0},
+	Optab{AMOVWZ, C_LOREG, C_NONE, C_NONE, C_REG, 36, 0},
+	Optab{AMOVBZ, C_LOREG, C_NONE, C_NONE, C_REG, 36, 0},
+	Optab{AMOVB, C_LOREG, C_NONE, C_NONE, C_REG, 36, 0},
+	Optab{AMOVDBR, C_LOREG, C_NONE, C_NONE, C_REG, 36, 0},
+	Optab{AMOVHBR, C_LOREG, C_NONE, C_NONE, C_REG, 36, 0},
 	Optab{AMOVD, C_ADDR, C_NONE, C_NONE, C_REG, 75, 0},
 	Optab{AMOVW, C_ADDR, C_NONE, C_NONE, C_REG, 75, 0},
 	Optab{AMOVWZ, C_ADDR, C_NONE, C_NONE, C_REG, 75, 0},
 	Optab{AMOVBZ, C_ADDR, C_NONE, C_NONE, C_REG, 75, 0},
-	Optab{AMOVB, C_ADDR, C_NONE, C_NONE, C_REG, 76, 0},
+	Optab{AMOVB, C_ADDR, C_NONE, C_NONE, C_REG, 75, 0},
 
 	/* store constant */
+	Optab{AMOVD, C_SYMADDR, C_NONE, C_NONE, C_ADDR, 73, 0},
 	Optab{AMOVD, C_LCON, C_NONE, C_NONE, C_ADDR, 73, 0},
 	Optab{AMOVW, C_LCON, C_NONE, C_NONE, C_ADDR, 73, 0},
 	Optab{AMOVWZ, C_LCON, C_NONE, C_NONE, C_ADDR, 73, 0},
 	Optab{AMOVBZ, C_LCON, C_NONE, C_NONE, C_ADDR, 73, 0},
 	Optab{AMOVB, C_LCON, C_NONE, C_NONE, C_ADDR, 73, 0},
+	Optab{AMOVD, C_SYMADDR, C_NONE, C_NONE, C_LAUTO, 72, REGSP},
 	Optab{AMOVD, C_LCON, C_NONE, C_NONE, C_LAUTO, 72, REGSP},
 	Optab{AMOVW, C_LCON, C_NONE, C_NONE, C_LAUTO, 72, REGSP},
 	Optab{AMOVWZ, C_LCON, C_NONE, C_NONE, C_LAUTO, 72, REGSP},
 	Optab{AMOVB, C_LCON, C_NONE, C_NONE, C_LAUTO, 72, REGSP},
 	Optab{AMOVBZ, C_LCON, C_NONE, C_NONE, C_LAUTO, 72, REGSP},
+	Optab{AMOVD, C_SYMADDR, C_NONE, C_NONE, C_LOREG, 72, 0},
 	Optab{AMOVD, C_LCON, C_NONE, C_NONE, C_LOREG, 72, 0},
 	Optab{AMOVW, C_LCON, C_NONE, C_NONE, C_LOREG, 72, 0},
 	Optab{AMOVWZ, C_LCON, C_NONE, C_NONE, C_LOREG, 72, 0},
@@ -222,33 +199,17 @@ var optab = []Optab{
 	Optab{AMOVBZ, C_LCON, C_NONE, C_NONE, C_LOREG, 72, 0},
 
 	/* load constant */
-	Optab{AMOVD, C_SACON, C_NONE, C_NONE, C_REG, 3, REGSP},
 	Optab{AMOVD, C_LACON, C_NONE, C_NONE, C_REG, 26, REGSP},
-	Optab{AMOVD, C_ADDCON, C_NONE, C_NONE, C_REG, 3, 0},
-	Optab{AMOVW, C_SACON, C_NONE, C_NONE, C_REG, 3, REGSP},
 	Optab{AMOVW, C_LACON, C_NONE, C_NONE, C_REG, 26, REGSP},
-	Optab{AMOVW, C_ADDCON, C_NONE, C_NONE, C_REG, 3, 0},
-	Optab{AMOVWZ, C_SACON, C_NONE, C_NONE, C_REG, 3, REGSP},
 	Optab{AMOVWZ, C_LACON, C_NONE, C_NONE, C_REG, 26, REGSP},
-	Optab{AMOVWZ, C_ADDCON, C_NONE, C_NONE, C_REG, 3, 0},
-	Optab{AMOVB, C_ADDCON, C_NONE, C_NONE, C_REG, 3, 0},
-	Optab{AMOVBZ, C_ADDCON, C_NONE, C_NONE, C_REG, 3, 0},
-	Optab{AMOVB, C_SCON, C_NONE, C_NONE, C_REG, 3, 0},
-	Optab{AMOVBZ, C_ANDCON, C_NONE, C_NONE, C_REG, 3, 0},
-	Optab{AMOVBZ, C_ADDCON, C_NONE, C_NONE, C_REG, 3, 0},
+	Optab{AMOVD, C_DCON, C_NONE, C_NONE, C_REG, 3, 0},
+	Optab{AMOVW, C_DCON, C_NONE, C_NONE, C_REG, 3, 0},
+	Optab{AMOVWZ, C_DCON, C_NONE, C_NONE, C_REG, 3, 0},
+	Optab{AMOVB, C_DCON, C_NONE, C_NONE, C_REG, 3, 0},
+	Optab{AMOVBZ, C_DCON, C_NONE, C_NONE, C_REG, 3, 0},
 
-	/* load unsigned/long constants (TODO: check) */
-	Optab{AMOVD, C_UCON, C_NONE, C_NONE, C_REG, 3, 0},
-	Optab{AMOVD, C_LCON, C_NONE, C_NONE, C_REG, 19, 0},
-	Optab{AMOVW, C_UCON, C_NONE, C_NONE, C_REG, 3, 0},
-	Optab{AMOVW, C_LCON, C_NONE, C_NONE, C_REG, 19, 0},
-	Optab{AMOVWZ, C_UCON, C_NONE, C_NONE, C_REG, 3, 0},
-	Optab{AMOVWZ, C_LCON, C_NONE, C_NONE, C_REG, 19, 0},
-	Optab{AMOVHBR, C_ZOREG, C_REG, C_NONE, C_REG, 45, 0},
-	Optab{AMOVHBR, C_ZOREG, C_NONE, C_NONE, C_REG, 45, 0},
-	Optab{AMOVHBR, C_REG, C_REG, C_NONE, C_ZOREG, 44, 0},
-	Optab{AMOVHBR, C_REG, C_NONE, C_NONE, C_ZOREG, 44, 0},
-
+	/* load symbol address (and offset) -- implemented by LARL*/
+	Optab{AMOVD, C_SYMADDR, C_NONE, C_NONE, C_REG, 19, 0},
 	Optab{AMOVD, C_GOTADDR, C_NONE, C_NONE, C_REG, 93, 0},
 	Optab{AMOVD, C_TLS_LE, C_NONE, C_NONE, C_REG, 94, 0},
 	Optab{AMOVD, C_TLS_IE, C_NONE, C_NONE, C_REG, 95, 0},
@@ -269,15 +230,11 @@ var optab = []Optab{
 	Optab{ACMPUBEQ, C_REG, C_REG, C_NONE, C_SBRA, 89, 0},
 	Optab{ACMPUBEQ, C_REG, C_NONE, C_ANDCON, C_SBRA, 90, 0},
 
-	Optab{AFMOVD, C_SAUTO, C_NONE, C_NONE, C_FREG, 8, REGSP},
-	Optab{AFMOVD, C_SOREG, C_NONE, C_NONE, C_FREG, 8, REGZERO},
 	Optab{AFMOVD, C_LAUTO, C_NONE, C_NONE, C_FREG, 36, REGSP},
-	Optab{AFMOVD, C_LOREG, C_NONE, C_NONE, C_FREG, 36, REGZERO},
+	Optab{AFMOVD, C_LOREG, C_NONE, C_NONE, C_FREG, 36, 0},
 	Optab{AFMOVD, C_ADDR, C_NONE, C_NONE, C_FREG, 75, 0},
-	Optab{AFMOVD, C_FREG, C_NONE, C_NONE, C_SAUTO, 7, REGSP},
-	Optab{AFMOVD, C_FREG, C_NONE, C_NONE, C_SOREG, 7, REGZERO},
 	Optab{AFMOVD, C_FREG, C_NONE, C_NONE, C_LAUTO, 35, REGSP},
-	Optab{AFMOVD, C_FREG, C_NONE, C_NONE, C_LOREG, 35, REGZERO},
+	Optab{AFMOVD, C_FREG, C_NONE, C_NONE, C_LOREG, 35, 0},
 	Optab{AFMOVD, C_FREG, C_NONE, C_NONE, C_ADDR, 74, 0},
 	Optab{AFMOVD, C_ZCON, C_NONE, C_NONE, C_FREG, 67, 0},
 	Optab{ASYNC, C_NONE, C_NONE, C_NONE, C_NONE, 81, 0},
@@ -604,7 +561,7 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 				goto consize
 			}
 
-			return C_LCON
+			return C_SYMADDR
 
 		case obj.NAME_AUTO:
 			ctxt.Instoffset = int64(ctxt.Autosize) + a.Offset
@@ -738,6 +695,11 @@ func cmp(a int, b int) bool {
 		return true
 	}
 	switch a {
+	case C_DCON:
+		if b == C_LCON {
+			return true
+		}
+		fallthrough
 	case C_LCON:
 		if b == C_ZCON || b == C_SCON || b == C_UCON || b == C_ADDCON || b == C_ANDCON {
 			return true
@@ -776,11 +738,6 @@ func cmp(a int, b int) bool {
 	case C_LAUTO:
 		if b == C_SAUTO {
 			return true
-		}
-
-	case C_REG:
-		if b == C_ZCON {
-			return r0iszero != 0 /*TypeKind(100016)*/
 		}
 
 	case C_LOREG:
@@ -1012,8 +969,10 @@ func buildop(ctxt *obj.Link) {
 
 		case ASYSCALL: /* just the op; flow of control */
 
-		case AMOVHBR:
+		case AMOVDBR:
 			opset(AMOVWBR, r0)
+
+		case AMOVHBR: // no reg-reg moves
 
 		case ACMP:
 			opset(ACMPW, r0)
@@ -2651,6 +2610,9 @@ func oclass(a *obj.Addr) int {
 // Add a relocation for the immediate in a RIL style instruction.
 // The addend will be adjusted as required.
 func addrilreloc(ctxt *obj.Link, sym *obj.LSym, add int64) *obj.Reloc {
+	if sym == nil {
+		ctxt.Diag("require symbol to apply relocation")
+	}
 	offset := int64(2) // relocation offset from start of instruction
 	rel := obj.Addrel(ctxt.Cursym)
 	rel.Off = int32(ctxt.Pc + offset)
@@ -2662,6 +2624,9 @@ func addrilreloc(ctxt *obj.Link, sym *obj.LSym, add int64) *obj.Reloc {
 }
 
 func addrilrelocoffset(ctxt *obj.Link, sym *obj.LSym, add, offset int64) *obj.Reloc {
+	if sym == nil {
+		ctxt.Diag("require symbol to apply relocation")
+	}
 	offset += int64(2) // relocation offset from start of instruction
 	rel := obj.Addrel(ctxt.Cursym)
 	rel.Off = int32(ctxt.Pc + offset)
@@ -2675,6 +2640,9 @@ func addrilrelocoffset(ctxt *obj.Link, sym *obj.LSym, add, offset int64) *obj.Re
 // Add a CALL relocation for the immediate in a RIL style instruction.
 // The addend will be adjusted as required.
 func addcallreloc(ctxt *obj.Link, sym *obj.LSym, add int64) *obj.Reloc {
+	if sym == nil {
+		ctxt.Diag("require symbol to apply relocation")
+	}
 	offset := int64(2) // relocation offset from start of instruction
 	rel := obj.Addrel(ctxt.Cursym)
 	rel.Off = int32(ctxt.Pc + offset)
@@ -2798,15 +2766,39 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 	default:
 		ctxt.Diag("unknown type %d", o.type_)
 
-	case 0: /* pseudo ops */
+	case 0: // PSEUDO OPS
 		break
 
-	case 1: /* mov r1,r2 ==> OR Rs,Rs,Ra */ // lgr r1,r2
-		if p.From.Type == obj.TYPE_CONST { //happens when a zero constant is used
-			v := regoff(ctxt, &p.From)
-			RI(OP_LGHI, uint32(p.To.Reg), uint32(v), asm)
-		} else {
+	case 1: // MOV REG TO REG
+		switch p.As {
+		default:
+			ctxt.Diag("unhandled operation: %v", p.As)
+		case AMOVD:
 			RRE(OP_LGR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
+		// sign extend
+		case AMOVW:
+			RRE(OP_LGFR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
+		case AMOVH:
+			RRE(OP_LGHR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
+		case AMOVB:
+			RRE(OP_LGBR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
+		// zero extend
+		case AMOVWZ:
+			RRE(OP_LLGFR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
+		case AMOVHZ:
+			RRE(OP_LLGHR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
+		case AMOVBZ:
+			RRE(OP_LLGCR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
+		// reverse bytes
+		case AMOVDBR:
+			RRE(OP_LRVGR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
+		case AMOVWBR:
+			RRE(OP_LRVR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
+		// floating point
+		case AFMOVD:
+			RR(OP_LDR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
+		case AFMOVS:
+			RR(OP_LER, uint32(p.To.Reg), uint32(p.From.Reg), asm)
 		}
 
 	case 2: /* int/cr/fp op Rb,[Ra],Rd */
@@ -2874,16 +2866,16 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 
 		case ADIVW, ADIVWU, ADIVD, ADIVDU:
 			if p.As == ADIVWU || p.As == ADIVDU {
-				RRE(OP_LGR, uint32(REGTMP), uint32(REGZERO), asm)
+				RRE(OP_LGR, REGTMP, REGZERO, asm)
 			}
-			RRE(OP_LGR, uint32(REGTMP2), uint32(r), asm)
-			RRE(opcode, uint32(REGTMP), uint32(p.From.Reg), asm)
-			RRE(OP_LGR, uint32(p.To.Reg), uint32(REGTMP2), asm)
+			RRE(OP_LGR, REGTMP2, uint32(r), asm)
+			RRE(opcode, REGTMP, uint32(p.From.Reg), asm)
+			RRE(OP_LGR, uint32(p.To.Reg), REGTMP2, asm)
 
 		case AMULHDU:
-			RRE(OP_LGR, uint32(REGTMP2), uint32(r), asm)
-			RRE(opcode, uint32(REGTMP), uint32(p.From.Reg), asm)
-			RRE(OP_LGR, uint32(p.To.Reg), uint32(REGTMP), asm)
+			RRE(OP_LGR, REGTMP2, uint32(r), asm)
+			RRE(opcode, REGTMP, uint32(p.From.Reg), asm)
+			RRE(OP_LGR, uint32(p.To.Reg), REGTMP, asm)
 
 		case AFADD, AFADDS:
 			if r == int(p.To.Reg) {
@@ -2899,10 +2891,10 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			if r == int(p.To.Reg) {
 				RRE(opcode, uint32(p.To.Reg), uint32(p.From.Reg), asm)
 			} else if p.From.Reg == p.To.Reg {
-				RRE(OP_LGDR, uint32(REGTMP), uint32(r), asm)
+				RRE(OP_LGDR, REGTMP, uint32(r), asm)
 				RRE(opcode, uint32(r), uint32(p.From.Reg), asm)
 				RR(OP_LDR, uint32(p.To.Reg), uint32(r), asm)
-				RRE(OP_LDGR, uint32(r), uint32(REGTMP), asm)
+				RRE(OP_LDGR, uint32(r), REGTMP, asm)
 			} else {
 				RR(OP_LDR, uint32(p.To.Reg), uint32(r), asm)
 				RRE(opcode, uint32(p.To.Reg), uint32(p.From.Reg), asm)
@@ -2910,33 +2902,41 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 
 		}
 
-	case 3: // mov $soreg/addcon/ucon,r => LGFI Rd, $i or LAY Rd, $i(Rs)
-		d := vregoff(ctxt, &p.From)
-
-		v := int32(d)
-		r := int(p.From.Reg)
-
-		if r == 0 {
-			r = int(o.param)
+	case 3: // MOV CONSTANT TO REG
+		v := vregoff(ctxt, &p.From)
+		switch p.As {
+		case AMOVBZ:
+			v = int64(uint8(v))
+		case AMOVHZ:
+			v = int64(uint16(v))
+		case AMOVWZ:
+			v = int64(uint32(v))
+		case AMOVB:
+			v = int64(int8(v))
+		case AMOVH:
+			v = int64(int16(v))
+		case AMOVW:
+			v = int64(int32(v))
 		}
-
-		if r == 0 {
-			switch p.As {
-			case AMOVWZ, AMOVHZ, AMOVBZ:
-				switch p.As {
-				case AMOVHZ:
-					v = int32(uint16(v))
-				case AMOVBZ:
-					v = int32(uint8(v))
-				}
-				RIL(a, OP_LLILF, uint32(p.To.Reg), uint32(v), asm)
-			default:
-				RIL(a, OP_LGFI, uint32(p.To.Reg), uint32(v), asm)
-			}
-		} else if v >= 0 && v < DISP12 {
-			RX(OP_LA, uint32(p.To.Reg), uint32(r), 0, uint32(v), asm)
+		if v&0xffff == v {
+			RI(OP_LLILL, uint32(p.To.Reg), uint32(v), asm)
+		} else if v&0xffff0000 == v {
+			RI(OP_LLILH, uint32(p.To.Reg), uint32(v>>16), asm)
+		} else if v&0xffff00000000 == v {
+			RI(OP_LLIHL, uint32(p.To.Reg), uint32(v>>32), asm)
+		} else if uint64(v)&0xffff000000000000 == uint64(v) {
+			RI(OP_LLIHH, uint32(p.To.Reg), uint32(v>>48), asm)
+		} else if int64(int16(v)) == v {
+			RI(OP_LGHI, uint32(p.To.Reg), uint32(v), asm)
+		} else if int64(int32(v)) == v {
+			RIL(a, OP_LGFI, uint32(p.To.Reg), uint32(v), asm)
+		} else if int64(uint32(v)) == v {
+			RIL(a, OP_LLILF, uint32(p.To.Reg), uint32(v), asm)
+		} else if uint64(v)&0xffffffff00000000 == uint64(v) {
+			RIL(a, OP_LLIHF, uint32(p.To.Reg), uint32(v>>32), asm)
 		} else {
-			RXY(a, OP_LAY, uint32(p.To.Reg), uint32(r), 0, uint32(v), asm)
+			RIL(a, OP_LLILF, uint32(p.To.Reg), uint32(v), asm)
+			RIL(a, OP_IIHF, uint32(p.To.Reg), uint32(v>>32), asm)
 		}
 
 	case 5: /* syscall */ // This might be right, assuming SVC is the same as Power's SC
@@ -2987,8 +2987,8 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 				RRE(OP_LCGR, uint32(p.To.Reg), uint32(p.To.Reg), asm)
 				RRE(opcode1, uint32(p.To.Reg), uint32(p.From.Reg), asm)
 			} else {
-				RRE(OP_LCGR, uint32(REGTMP), uint32(r), asm)
-				RRF(opcode2, uint32(REGTMP), 0, uint32(p.To.Reg), uint32(p.From.Reg), asm)
+				RRE(OP_LCGR, REGTMP, uint32(r), asm)
+				RRF(opcode2, REGTMP, 0, uint32(p.To.Reg), uint32(p.From.Reg), asm)
 			}
 
 		case ANAND, ANOR:
@@ -3040,39 +3040,6 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 
 		}
 
-	case 7: /* mov r, soreg ==> stg o(r) */
-		x := int(p.To.Reg)
-		if x == 0 {
-			x = int(o.param)
-		}
-		var b int
-		if p.To.Type == obj.TYPE_MEM && p.To.Index != 0 {
-			b = int(p.To.Index)
-		} else {
-			b = x
-			x = 0
-		}
-		v := regoff(ctxt, &p.To)
-
-		RXY(0, zopstore(ctxt, int(p.As)), uint32(p.From.Reg), uint32(x), uint32(b), uint32(v), asm)
-
-	/* AMOVD, AMOVW, AMOVWZ, AMOVBZ */
-	case 8, 9: /* mov soreg, r ==> lbz/lhz/lwz o(r) */
-		x := int(p.From.Reg)
-		if x == 0 {
-			x = int(o.param)
-		}
-		var b int
-		if p.From.Type == obj.TYPE_MEM && p.From.Index != 0 {
-			b = int(p.From.Index)
-		} else {
-			b = x
-			x = 0
-		}
-		v := regoff(ctxt, &p.From)
-
-		RXY(0, zopload(ctxt, int(p.As)), uint32(p.To.Reg), uint32(x), uint32(b), uint32(v), asm)
-
 	case 10: /* sub Ra,[Rb],Rd => subf Rd,Ra,Rb */
 		r := int(p.Reg)
 
@@ -3098,9 +3065,9 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			if r == int(p.To.Reg) {
 				RRE(OP_SLBGR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
 			} else if p.From.Reg == p.To.Reg {
-				RRE(OP_LGR, uint32(REGTMP), uint32(p.From.Reg), asm)
+				RRE(OP_LGR, REGTMP, uint32(p.From.Reg), asm)
 				RRE(OP_LGR, uint32(p.To.Reg), uint32(r), asm)
-				RRE(OP_SLBGR, uint32(p.To.Reg), uint32(REGTMP), asm)
+				RRE(OP_SLBGR, uint32(p.To.Reg), REGTMP, asm)
 			} else {
 				RRE(OP_LGR, uint32(p.To.Reg), uint32(r), asm)
 				RRE(OP_SLBGR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
@@ -3125,32 +3092,6 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			if p.To.Sym != nil {
 				addcallreloc(ctxt, p.To.Sym, p.To.Offset)
 			}
-		}
-
-	case 12: /* movb r,r (lgbr); movw r,r (lgfr) */
-		if p.To.Reg == REGZERO && p.From.Type == obj.TYPE_CONST {
-			v := regoff(ctxt, &p.From)
-			if r0iszero != 0 /*TypeKind(100016)*/ && v != 0 {
-				ctxt.Diag("literal operation on R0\n%v", p)
-			}
-			RIL(a, OP_LGFI, uint32(REGZERO), uint32(v), asm)
-		} else if p.As == AMOVW {
-			RRE(OP_LGFR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
-		} else {
-			RRE(OP_LGBR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
-		}
-
-	case 13: /* mov[bhw]z r,r (llgbr, llghr, llgfr) */
-		if p.As == AMOVBZ {
-			RRE(OP_LLGCR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
-		} else if p.As == AMOVH {
-			RRE(OP_LGHR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
-		} else if p.As == AMOVHZ {
-			RRE(OP_LLGHR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
-		} else if p.As == AMOVWZ {
-			RRE(OP_LLGFR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
-		} else {
-			ctxt.Diag("internal: bad mov[bhw]z\n%v", p)
 		}
 
 	case 14: /* rldc[lr] Rb,Rs,$mask,Ra -- left, right give different masks */
@@ -3181,9 +3122,9 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		if r == 0 {
 			r = int(p.To.Reg)
 		}
-		RSY(OP_RLLG, uint32(REGTMP), uint32(r), uint32(p.From.Reg), 0, asm)
-		RRE(OP_LGR, uint32(p.To.Reg), uint32(REGZERO), asm)
-		RIE(f, OP_RISBG, uint32(p.To.Reg), uint32(REGTMP), 0, uint32(i3), uint32(i4), 0, 0, asm)
+		RSY(OP_RLLG, REGTMP, uint32(r), uint32(p.From.Reg), 0, asm)
+		RRE(OP_LGR, uint32(p.To.Reg), REGZERO, asm)
+		RIE(f, OP_RISBG, uint32(p.To.Reg), REGTMP, 0, uint32(i3), uint32(i4), 0, 0, asm)
 
 	case 15: /* br/bl (r) */
 		r := p.To.Reg
@@ -3221,19 +3162,14 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			ctxt.Diag("bad optab entry (18): %d\n%v", p.To.Class, p)
 		}
 
-	case 19: /* mov $lcon,r ==> cau+or */
+	case 19: // MOV $sym+n(SB) TO REG
 		d := vregoff(ctxt, &p.From)
-
-		if p.From.Sym == nil {
-			RIL(a, OP_LGFI, uint32(p.To.Reg), uint32(d), asm)
-		} else {
-			RIL(b, OP_LARL, uint32(p.To.Reg), 0, asm)
-			if d&1 != 0 {
-				RX(OP_LA, uint32(p.To.Reg), uint32(p.To.Reg), 0, 1, asm)
-				d -= 1
-			}
-			addrilreloc(ctxt, p.From.Sym, d)
+		RIL(b, OP_LARL, uint32(p.To.Reg), 0, asm)
+		if d&1 != 0 {
+			RX(OP_LA, uint32(p.To.Reg), uint32(p.To.Reg), 0, 1, asm)
+			d -= 1
 		}
+		addrilreloc(ctxt, p.From.Sym, d)
 
 	case 22: /* add $lcon,r1,r2 ==> cau+or+add */ /* could do add/sub more efficiently */
 
@@ -3344,15 +3280,16 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			RSY(OP_SRLG, uint32(p.To.Reg), uint32(r), 0, uint32(v), asm)
 		}
 
-	case 26: /* mov $lsext/auto/oreg,,r2 ==> addis+addi */
+	case 26: // MOV LACON
 		v := regoff(ctxt, &p.From)
-		r := int(p.From.Reg)
+		r := p.From.Reg
 		if r == 0 {
-			r = int(o.param)
+			r = o.param
 		}
-
-		if v >= -DISP20/2 && v < DISP20/2 {
-			RXY(0, OP_LAY, uint32(p.To.Reg), uint32(r), 0, uint32(v), asm)
+		if v >= 0 && v < DISP12 {
+			RX(OP_LA, uint32(p.To.Reg), uint32(r), 0, uint32(v), asm)
+		} else if v >= -DISP20/2 && v < DISP20/2 {
+			RXY(a, OP_LAY, uint32(p.To.Reg), uint32(r), 0, uint32(v), asm)
 		} else {
 			RIL(a, OP_LGFI, REGTMP, uint32(v), asm)
 			RX(OP_LA, uint32(p.To.Reg), uint32(r), REGTMP, 0, asm)
@@ -3413,10 +3350,10 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 
 		r := int(p.Reg)
 		if p.To.Reg == p.Reg {
-			RRE(OP_LGR, uint32(REGTMP), uint32(p.Reg), asm)
-			r = int(REGTMP)
+			RRE(OP_LGR, REGTMP, uint32(p.Reg), asm)
+			r = REGTMP
 		}
-		RRE(OP_LGR, uint32(p.To.Reg), uint32(REGZERO), asm)
+		RRE(OP_LGR, uint32(p.To.Reg), REGZERO, asm)
 		RIE(f, OP_RISBG, uint32(p.To.Reg), uint32(r), 0, uint32(i3), uint32(i4), 0, uint32(i5), asm)
 
 	case 30: /* rldimi $sh,s,$mask,a */
@@ -3475,38 +3412,29 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		}
 
 	case 33: /* fabs [frb,]frd; fmr. frb,frd */
-		r := int(p.From.Reg)
-
+		r := p.From.Reg
 		if oclass(&p.From) == C_NONE {
-			r = int(p.To.Reg)
+			r = p.To.Reg
 		}
-
+		var opcode uint32
 		switch p.As {
-		case AFMOVD, AFMOVS:
-			RR(OP_LDR, uint32(p.To.Reg), uint32(r), asm)
 		default:
-			var opcode uint32
-
-			switch p.As {
-			default:
-			case AFABS:
-				opcode = OP_LPDBR
-			case AFNABS:
-				opcode = OP_LNDBR
-			case AFNEG:
-				opcode = OP_LCDFR
-			case ALEDBR:
-				opcode = OP_LEDBR
-			case ALDEBR:
-				opcode = OP_LDEBR
-			case AFSQRT:
-				opcode = OP_SQDBR
-			case AFSQRTS:
-				opcode = OP_SQEBR
-			}
-
-			RRE(opcode, uint32(p.To.Reg), uint32(r), asm)
+		case AFABS:
+			opcode = OP_LPDBR
+		case AFNABS:
+			opcode = OP_LNDBR
+		case AFNEG:
+			opcode = OP_LCDFR
+		case ALEDBR:
+			opcode = OP_LEDBR
+		case ALDEBR:
+			opcode = OP_LDEBR
+		case AFSQRT:
+			opcode = OP_SQDBR
+		case AFSQRTS:
+			opcode = OP_SQEBR
 		}
+		RRE(opcode, uint32(p.To.Reg), uint32(r), asm)
 
 	case 34: /* FMADDx fra,frb,frc,frd (d=a*b+c); FSELx a<0? (d=b): (d=c) */
 
@@ -3540,40 +3468,39 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			RRE(OP_LCDFR, uint32(p.To.Reg), uint32(p.To.Reg), asm)
 		}
 
-	case 35: /* mov[M][D|W|H|B][Z] r, lext/lauto/loreg ==>
-		   LGFI regtmp, off; STG[F|H|C] r, 0(regaddr, regtmp) */
-		v := regoff(ctxt, &p.To)
-		r := int(p.To.Reg)
-		if r == 0 {
-			r = int(o.param)
+	case 35: // MOVE REG TO LAUTO/LOREG
+		d2 := regoff(ctxt, &p.To)
+		b2 := p.To.Reg
+		if b2 == 0 {
+			b2 = o.param
 		}
-
-		if v >= -DISP20/2 && v < DISP20/2 {
-			RXY(0, zopstore(ctxt, int(p.As)), uint32(p.From.Reg), uint32(r), 0,
-				uint32(v), asm)
-		} else {
-			RIL(a, OP_LGFI, REGTMP, uint32(v), asm)
-			RXY(0, zopstore(ctxt, int(p.As)), uint32(p.From.Reg), uint32(r), REGTMP,
-				0, asm)
+		x2 := p.To.Index
+		if d2 < -DISP20/2 || d2 >= DISP20/2 {
+			RIL(a, OP_LGFI, REGTMP, uint32(d2), asm)
+			if x2 != 0 {
+				RX(OP_LA, REGTMP, REGTMP, uint32(x2), 0, asm)
+			}
+			x2 = REGTMP
+			d2 = 0
 		}
+		RXY(0, zopstore(ctxt, int(p.As)), uint32(p.From.Reg), uint32(x2), uint32(b2), uint32(d2), asm)
 
-	case 36, 37: /* MOV[M][D|W|H|B][Z] lext/lauto/lreg, r ==>
-		   LGFI regtmp, off; [L]LG[F|H|C] r, 0(regaddr, regtmp) */
-		v := regoff(ctxt, &p.From)
-
-		r := int(p.From.Reg)
-		if r == 0 {
-			r = int(o.param)
+	case 36: // MOV LAUTO/LOREG TO REG
+		d2 := regoff(ctxt, &p.From)
+		b2 := p.From.Reg
+		if b2 == 0 {
+			b2 = o.param
 		}
-
-		if v >= -DISP20/2 && v < DISP20/2 {
-			RXY(0, zopload(ctxt, int(p.As)), uint32(p.To.Reg), uint32(r), 0,
-				uint32(v), asm)
-		} else {
-			RIL(a, OP_LGFI, REGTMP, uint32(v), asm)
-			RXY(0, zopload(ctxt, int(p.As)), uint32(p.To.Reg), uint32(r), REGTMP,
-				0, asm)
+		x2 := p.From.Index
+		if d2 < -DISP20/2 || d2 >= DISP20/2 {
+			RIL(a, OP_LGFI, REGTMP, uint32(d2), asm)
+			if x2 != 0 {
+				RX(OP_LA, REGTMP, REGTMP, uint32(x2), 0, asm)
+			}
+			x2 = REGTMP
+			d2 = 0
 		}
+		RXY(0, zopload(ctxt, int(p.As)), uint32(p.To.Reg), uint32(x2), uint32(b2), uint32(d2), asm)
 
 	case 40: /* word and byte*/
 		wd := uint32(regoff(ctxt, &p.From))
@@ -3583,12 +3510,6 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			*asm = append(*asm, uint8(wd))
 		}
 
-	case 44: /* indexed store */
-		RXY(0, zopstore(ctxt, int(p.As)), uint32(p.From.Reg), uint32(p.To.Index), uint32(p.To.Reg), 0, asm)
-
-	case 45: /* indexed load */
-		RXY(0, zopload(ctxt, int(p.As)), uint32(p.To.Reg), uint32(p.From.Index), uint32(p.From.Reg), 0, asm)
-
 	case 47: /* op Ra, Rd; also op [Ra,] Rd */
 		switch p.As {
 		default:
@@ -3596,8 +3517,8 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		case AADDME:
 			r := int(p.From.Reg)
 			if p.To.Reg == p.From.Reg {
-				RRE(OP_LGR, uint32(REGTMP), uint32(p.From.Reg), asm)
-				r = int(REGTMP)
+				RRE(OP_LGR, REGTMP, uint32(p.From.Reg), asm)
+				r = REGTMP
 			}
 			RIL(a, OP_LGFI, uint32(p.To.Reg), 0xffffffff, asm) // p.To.Reg <- -1
 			RRE(OP_ALCGR, uint32(p.To.Reg), uint32(r), asm)
@@ -3605,17 +3526,17 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		case AADDZE:
 			r := int(p.From.Reg)
 			if p.To.Reg == p.From.Reg {
-				RRE(OP_LGR, uint32(REGTMP), uint32(p.From.Reg), asm)
-				r = int(REGTMP)
+				RRE(OP_LGR, REGTMP, uint32(p.From.Reg), asm)
+				r = REGTMP
 			}
-			RRE(OP_LGR, uint32(p.To.Reg), uint32(REGZERO), asm) // p.To.Reg <- 0
+			RRE(OP_LGR, uint32(p.To.Reg), REGZERO, asm) // p.To.Reg <- 0
 			RRE(OP_ALCGR, uint32(p.To.Reg), uint32(r), asm)
 
 		case ASUBME:
 			r := int(p.From.Reg)
 			if p.To.Reg == p.From.Reg {
-				RRE(OP_LGR, uint32(REGTMP), uint32(p.From.Reg), asm)
-				r = int(REGTMP)
+				RRE(OP_LGR, REGTMP, uint32(p.From.Reg), asm)
+				r = REGTMP
 			}
 			RIL(a, OP_LGFI, uint32(p.To.Reg), 0xffffffff, asm) // p.To.Reg <- -1
 			RRE(OP_SLBGR, uint32(p.To.Reg), uint32(r), asm)
@@ -3623,10 +3544,10 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		case ASUBZE:
 			r := int(p.From.Reg)
 			if p.To.Reg == p.From.Reg {
-				RRE(OP_LGR, uint32(REGTMP), uint32(p.From.Reg), asm)
-				r = int(REGTMP)
+				RRE(OP_LGR, REGTMP, uint32(p.From.Reg), asm)
+				r = REGTMP
 			}
-			RRE(OP_LGR, uint32(p.To.Reg), uint32(REGZERO), asm) // p.To.Reg <- 0
+			RRE(OP_LGR, uint32(p.To.Reg), REGZERO, asm) // p.To.Reg <- 0
 			RRE(OP_SLBGR, uint32(p.To.Reg), uint32(r), asm)
 
 		case ANEG:
@@ -3656,11 +3577,11 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		}
 
 		if p.As == AREMU {
-			RRE(OP_LGR, uint32(REGTMP), uint32(REGZERO), asm)
+			RRE(OP_LGR, REGTMP, REGZERO, asm)
 		}
-		RRE(OP_LGR, uint32(REGTMP2), uint32(r), asm)
-		RRE(opcode, uint32(REGTMP), uint32(p.From.Reg), asm)
-		RRE(OP_LGR, uint32(p.To.Reg), uint32(REGTMP), asm)
+		RRE(OP_LGR, REGTMP2, uint32(r), asm)
+		RRE(opcode, REGTMP, uint32(p.From.Reg), asm)
+		RRE(OP_LGR, uint32(p.To.Reg), REGTMP, asm)
 
 	case 51: /* remd[u] r1[,r2],r3 */
 		r := int(p.Reg)
@@ -3681,11 +3602,11 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		}
 
 		if p.As == AREMDU {
-			RRE(OP_LGR, uint32(REGTMP), uint32(REGZERO), asm)
+			RRE(OP_LGR, REGTMP, REGZERO, asm)
 		}
-		RRE(OP_LGR, uint32(REGTMP2), uint32(r), asm)
-		RRE(opcode, uint32(REGTMP), uint32(p.From.Reg), asm)
-		RRE(OP_LGR, uint32(p.To.Reg), uint32(REGTMP), asm)
+		RRE(OP_LGR, REGTMP2, uint32(r), asm)
+		RRE(opcode, REGTMP, uint32(p.From.Reg), asm)
+		RRE(OP_LGR, uint32(p.To.Reg), REGTMP, asm)
 
 	case 56: /* sra $sh,[s,]a; srd $sh,[s,]a */
 		v := regoff(ctxt, &p.From)
@@ -3752,10 +3673,10 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		case ARLWNM:
 			r := int(p.Reg)
 			if p.To.Reg == p.Reg {
-				RRE(OP_LGR, uint32(REGTMP), uint32(p.Reg), asm)
-				r = int(REGTMP)
+				RRE(OP_LGR, REGTMP, uint32(p.Reg), asm)
+				r = REGTMP
 			}
-			RRE(OP_LGR, uint32(p.To.Reg), uint32(REGZERO), asm)
+			RRE(OP_LGR, uint32(p.To.Reg), REGZERO, asm)
 			RIE(f, OP_RISBLG, uint32(p.To.Reg), uint32(r), 0, uint32(i3), uint32(i4), 0, uint32(i5), asm)
 
 		default:
@@ -3777,18 +3698,18 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 
 		switch p.As {
 		case ARLWMI:
-			RSY(OP_RLL, uint32(REGTMP), uint32(p.Reg), uint32(p.From.Reg), 0, asm)
-			RIE(f, OP_RISBLG, uint32(p.To.Reg), uint32(REGTMP), 0, uint32(i3), uint32(i4), 0, 0, asm)
+			RSY(OP_RLL, REGTMP, uint32(p.Reg), uint32(p.From.Reg), 0, asm)
+			RIE(f, OP_RISBLG, uint32(p.To.Reg), REGTMP, 0, uint32(i3), uint32(i4), 0, 0, asm)
 
 		case ARLWNM:
 			if p.To.Reg == p.Reg {
-				RRE(OP_LGR, uint32(REGTMP), uint32(p.Reg), asm)
-				RSY(OP_RLL, uint32(REGTMP), uint32(REGTMP), uint32(p.From.Reg), 0, asm)
+				RRE(OP_LGR, REGTMP, uint32(p.Reg), asm)
+				RSY(OP_RLL, REGTMP, REGTMP, uint32(p.From.Reg), 0, asm)
 			} else {
-				RSY(OP_RLL, uint32(REGTMP), uint32(p.Reg), uint32(p.From.Reg), 0, asm)
+				RSY(OP_RLL, REGTMP, uint32(p.Reg), uint32(p.From.Reg), 0, asm)
 			}
-			RRE(OP_LGR, uint32(p.To.Reg), uint32(REGZERO), asm)
-			RIE(f, OP_RISBLG, uint32(p.To.Reg), uint32(REGTMP), 0, uint32(i3), uint32(i4), 0, 0, asm)
+			RRE(OP_LGR, uint32(p.To.Reg), REGZERO, asm)
+			RIE(f, OP_RISBLG, uint32(p.To.Reg), REGTMP, 0, uint32(i3), uint32(i4), 0, 0, asm)
 
 		default:
 
@@ -3838,7 +3759,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			RIL(b, OP_LARL, REGTMP, 0, asm)
 			if v&0x1 != 0 {
 				v -= 1
-				RX(OP_LA, uint32(REGTMP), uint32(REGTMP), 0, 1, asm)
+				RX(OP_LA, REGTMP, REGTMP, 0, 1, asm)
 			}
 			addrilreloc(ctxt, p.From.Sym, int64(v))
 			if d < -DISP20/2 || d >= DISP20/2 {
@@ -3895,7 +3816,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			a := uint32(0)
 			if v&0x1 != 0 {
 				v -= 1
-				RX(OP_LA, uint32(REGTMP2), uint32(REGTMP2), 0, 1, asm)
+				RX(OP_LA, REGTMP2, REGTMP2, 0, 1, asm)
 			}
 			addrilrelocoffset(ctxt, p.From.Sym, int64(v), FORMAT_RIL_size)
 			RXY(0, zopstore(ctxt, int(p.As)), REGTMP2, 0, REGTMP, a, asm)
@@ -3912,101 +3833,81 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 				opcode = OP_MVI
 			}
 			if opcode == OP_MVI {
-				SI(opcode, uint32(v), uint32(REGTMP), a, asm)
+				SI(opcode, uint32(v), REGTMP, a, asm)
 			} else {
-				SIL(opcode, uint32(REGTMP), a, uint32(v), asm)
+				SIL(opcode, REGTMP, a, uint32(v), asm)
 			}
 		} else {
 			RIL(a, OP_LGFI, REGTMP2, uint32(v), asm)
 			RXY(0, zopstore(ctxt, int(p.As)), REGTMP2, 0, REGTMP, a, asm)
 		}
 
-	/* relocation operations */
-	case 74: /* AMOV[F][D|W|H|B|S][Z] Rs, addr -> ST[G|H]RL Rs, addr (with a reloaction entry ) */
-		v := regoff(ctxt, &p.To)
-
+	case 74: // MOV sym+n(SB) TO REG (requires relocation)
+		i2 := regoff(ctxt, &p.To)
 		switch p.As {
 		case AMOVD:
-			RIL(b, OP_STGRL, uint32(p.From.Reg), uint32(v), asm)
-
+			RIL(b, OP_STGRL, uint32(p.From.Reg), 0, asm)
 		case AMOVW, AMOVWZ: // The zero extension doesn't affect store instructions
-			RIL(b, OP_STRL, uint32(p.From.Reg), uint32(v), asm)
-
+			RIL(b, OP_STRL, uint32(p.From.Reg), 0, asm)
 		case AMOVH, AMOVHZ: // The zero extension doesn't affect store instructions
-			RIL(b, OP_STHRL, uint32(p.From.Reg), uint32(v), asm)
-
+			RIL(b, OP_STHRL, uint32(p.From.Reg), 0, asm)
 		case AMOVB, AMOVBZ: // The zero extension doesn't affect store instructions
 			RIL(b, OP_LARL, REGTMP, 0, asm)
 			adj := uint32(0) // adjustment needed for odd addresses
-			if v&1 != 0 {
-				v -= 1
+			if i2&1 != 0 {
+				i2 -= 1
 				adj = 1
 			}
-			RX(OP_STC, uint32(p.From.Reg), REGTMP, 0, adj, asm)
-
+			RX(OP_STC, uint32(p.From.Reg), 0, REGTMP, adj, asm)
 		case AFMOVD:
-			RIL(b, OP_LARL, REGTMP, uint32(v), asm)
-			RX(OP_STD, uint32(p.From.Reg), REGTMP, 0, 0, asm)
-
+			RIL(b, OP_LARL, REGTMP, 0, asm)
+			RX(OP_STD, uint32(p.From.Reg), 0, REGTMP, 0, asm)
 		case AFMOVS:
-			RIL(b, OP_LARL, REGTMP, uint32(v), asm)
-			RX(OP_STE, uint32(p.From.Reg), REGTMP, 0, 0, asm)
-
+			RIL(b, OP_LARL, REGTMP, 0, asm)
+			RX(OP_STE, uint32(p.From.Reg), 0, REGTMP, 0, asm)
 		}
-		addrilreloc(ctxt, p.To.Sym, int64(v))
+		addrilreloc(ctxt, p.To.Sym, int64(i2))
 
-	case 75, 76: /* AMOV[F][D|W|H|B|S][Z] addr, Rd -> L[L][F|H]GRL Rd, addr (with a relocation entry) */
-		d := regoff(ctxt, &p.From)
-		if p.From.Sym == nil {
-			RIL(a, OP_LGFI, uint32(p.To.Reg), uint32(d), asm)
-		} else {
-			switch p.As {
-			case AMOVD:
-				if d&1 != 0 {
-					RIL(b, OP_LARL, REGTMP, 0, asm)
-					RXY(0, OP_LG, uint32(p.To.Reg), REGTMP, 0, 1, asm)
-					d -= 1
-				} else {
-					RIL(b, OP_LGRL, uint32(p.To.Reg), uint32(d), asm)
-				}
-
-			case AMOVW:
-				RIL(b, OP_LGFRL, uint32(p.To.Reg), uint32(d), asm)
-
-			case AMOVWZ:
-				RIL(b, OP_LLGFRL, uint32(p.To.Reg), uint32(d), asm)
-
-			case AMOVH:
-				RIL(b, OP_LGHRL, uint32(p.To.Reg), uint32(d), asm)
-
-			case AMOVHZ:
-				RIL(b, OP_LLGHRL, uint32(p.To.Reg), uint32(d), asm)
-
-			case AMOVB, AMOVBZ:
+	case 75: // MOV REG TO sym+n(SB) (requires relocation)
+		i2 := regoff(ctxt, &p.From)
+		switch p.As {
+		case AMOVD:
+			if i2&1 != 0 {
 				RIL(b, OP_LARL, REGTMP, 0, asm)
-				adj := uint32(0) // adjustment needed for odd addresses
-				if d&1 != 0 {
-					d -= 1
-					adj = 1
-				}
-				switch p.As {
-				case AMOVB:
-					RXY(0, OP_LGB, uint32(p.To.Reg), REGTMP, 0, adj, asm)
-				case AMOVBZ:
-					RXY(0, OP_LLGC, uint32(p.To.Reg), REGTMP, 0, adj, asm)
-				}
-
-			case AFMOVD:
-				RIL(a, OP_LARL, REGTMP, uint32(d), asm)
-				RX(OP_LD, uint32(p.To.Reg), REGTMP, 0, 0, asm)
-
-			case AFMOVS:
-				RIL(a, OP_LARL, REGTMP, uint32(d), asm)
-				RX(OP_LE, uint32(p.To.Reg), REGTMP, 0, 0, asm)
+				RXY(0, OP_LG, uint32(p.To.Reg), REGTMP, 0, 1, asm)
+				i2 -= 1
+			} else {
+				RIL(b, OP_LGRL, uint32(p.To.Reg), uint32(d), asm)
 			}
-
-			addrilreloc(ctxt, p.From.Sym, int64(d))
+		case AMOVW:
+			RIL(b, OP_LGFRL, uint32(p.To.Reg), 0, asm)
+		case AMOVWZ:
+			RIL(b, OP_LLGFRL, uint32(p.To.Reg), 0, asm)
+		case AMOVH:
+			RIL(b, OP_LGHRL, uint32(p.To.Reg), 0, asm)
+		case AMOVHZ:
+			RIL(b, OP_LLGHRL, uint32(p.To.Reg), 0, asm)
+		case AMOVB, AMOVBZ:
+			RIL(b, OP_LARL, REGTMP, 0, asm)
+			adj := uint32(0) // adjustment needed for odd addresses
+			if i2&1 != 0 {
+				i2 -= 1
+				adj = 1
+			}
+			switch p.As {
+			case AMOVB:
+				RXY(0, OP_LGB, uint32(p.To.Reg), 0, REGTMP, adj, asm)
+			case AMOVBZ:
+				RXY(0, OP_LLGC, uint32(p.To.Reg), 0, REGTMP, adj, asm)
+			}
+		case AFMOVD:
+			RIL(a, OP_LARL, REGTMP, 0, asm)
+			RX(OP_LD, uint32(p.To.Reg), 0, REGTMP, 0, asm)
+		case AFMOVS:
+			RIL(a, OP_LARL, REGTMP, 0, asm)
+			RX(OP_LE, uint32(p.To.Reg), 0, REGTMP, 0, asm)
 		}
+		addrilreloc(ctxt, p.From.Sym, int64(i2))
 
 	case 77: /* syscall $scon */
 		if p.From.Offset > 255 || p.From.Offset < 1 {
@@ -4254,7 +4155,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		// --------------------------------------------------------------
 
 		// R_390_TLS_IEENT
-		RIL(b, OP_LARL, uint32(REGTMP), 0, asm)
+		RIL(b, OP_LARL, REGTMP, 0, asm)
 		ieent := obj.Addrel(ctxt.Cursym)
 		ieent.Off = int32(ctxt.Pc + 2)
 		ieent.Siz = 4
@@ -4280,12 +4181,12 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		for length > 0 {
 			if offset < 0 || offset >= DISP12 {
 				if offset >= -DISP20/2 && offset < DISP20/2 {
-					RXY(0, OP_LAY, uint32(REGTMP), uint32(reg), 0, uint32(offset), asm)
+					RXY(0, OP_LAY, REGTMP, uint32(reg), 0, uint32(offset), asm)
 				} else {
 					if reg != REGTMP {
-						RRE(OP_LGR, uint32(REGTMP), uint32(reg), asm)
+						RRE(OP_LGR, REGTMP, uint32(reg), asm)
 					}
-					RIL(a, OP_AGFI, uint32(REGTMP), uint32(offset), asm)
+					RIL(a, OP_AGFI, REGTMP, uint32(offset), asm)
 				}
 				reg = REGTMP
 				offset = 0
@@ -4322,9 +4223,9 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		}
 		if offset < -DISP20/2 || offset >= DISP20/2 {
 			if reg != REGTMP {
-				RRE(OP_LGR, uint32(REGTMP), uint32(reg), asm)
+				RRE(OP_LGR, REGTMP, uint32(reg), asm)
 			}
-			RIL(a, OP_AGFI, uint32(REGTMP), uint32(offset), asm)
+			RIL(a, OP_AGFI, REGTMP, uint32(offset), asm)
 			reg = REGTMP
 			offset = 0
 		}
@@ -4349,9 +4250,9 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		}
 		if offset < -DISP20/2 || offset >= DISP20/2 {
 			if reg != REGTMP {
-				RRE(OP_LGR, uint32(REGTMP), uint32(reg), asm)
+				RRE(OP_LGR, REGTMP, uint32(reg), asm)
 			}
-			RIL(a, OP_AGFI, uint32(REGTMP), uint32(offset), asm)
+			RIL(a, OP_AGFI, REGTMP, uint32(offset), asm)
 			reg = REGTMP
 			offset = 0
 		}
@@ -4594,6 +4495,8 @@ func zopload(ctxt *obj.Link, a int) uint32 {
 		return uint32(OP_LEY)
 
 	/* byte reversed load*/
+	case AMOVDBR:
+		return uint32(OP_LRVG)
 	case AMOVWBR:
 		return uint32(OP_LRV)
 	case AMOVHBR:
@@ -4626,6 +4529,8 @@ func zopstore(ctxt *obj.Link, a int) uint32 {
 		return uint32(OP_STEY)
 
 	/* byte reversed store */
+	case AMOVDBR:
+		return uint32(OP_STRVG)
 	case AMOVWBR:
 		return uint32(OP_STRV)
 	case AMOVHBR:

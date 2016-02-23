@@ -87,17 +87,22 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 			p.From.Offset = 0
 		}
 
-		// Put >32-bit constants in memory and load them
+		// put constants not loadable by LOAD IMMEDIATE into memory
 	case AMOVD:
-		if p.From.Type == obj.TYPE_CONST && p.From.Name == obj.NAME_NONE && p.From.Reg == 0 && int64(int32(p.From.Offset)) != p.From.Offset {
-			literal := fmt.Sprintf("$i64.%016x", uint64(p.From.Offset))
-			s := obj.Linklookup(ctxt, literal, 0)
-			s.Size = 8
-			p.From.Type = obj.TYPE_MEM
-			p.From.Sym = s
-			p.From.Sym.Local = true
-			p.From.Name = obj.NAME_EXTERN
-			p.From.Offset = 0
+		if p.From.Type == obj.TYPE_CONST {
+			val := p.From.Offset
+			if int64(int32(val)) != val &&
+				int64(uint32(val)) != val &&
+				int64(uint64(val)&(0xffffffff<<32)) != val {
+				literal := fmt.Sprintf("$i64.%016x", uint64(p.From.Offset))
+				s := obj.Linklookup(ctxt, literal, 0)
+				s.Size = 8
+				p.From.Type = obj.TYPE_MEM
+				p.From.Sym = s
+				p.From.Sym.Local = true
+				p.From.Name = obj.NAME_EXTERN
+				p.From.Offset = 0
+			}
 		}
 	}
 

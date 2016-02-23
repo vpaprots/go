@@ -27,6 +27,7 @@ var cnamesz = []string{
 	"TLS_IE",
 	"GOK",
 	"ADDR",
+	"SYMADDR",
 	"GOTADDR",
 	"TEXTSIZE",
 	"ANY",
