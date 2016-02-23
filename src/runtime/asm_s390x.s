@@ -7,23 +7,41 @@
 #include "funcdata.h"
 #include "textflag.h"
 
-DATA runtime·vectorfacility+0x00(SB)/4, $0
+// Indicate the status of vector facility
+// -1: 	init value
+// 0:	vector not installed
+// 1:	vector installed and enabled
+// 2:	vector installed but not enabled
+
+DATA runtime·vectorfacility+0x00(SB)/4, $-1
 GLOBL runtime·vectorfacility(SB), NOPTR, $4
 
-TEXT runtime·checkvectorfacility(SB),NOSPLIT,$24-0
-	MOVD	$2, R0
-	MOVD	$x-24(SP), R1
-	// STFLE 0(R1)
-	WORD	$0xB2B01000
-	MOVBZ	z-8(SP), R1
-	AND	$0x40, R1
-	BNE	setvector
-	MOVD	$0, R0
+TEXT runtime·checkvectorfacility(SB),NOSPLIT,$32-0
+	MOVD    $2, R0
+	MOVD	R1, tmp-32(SP)
+	MOVD    $x-24(SP), R1
+//      STFLE   0(R1)
+	WORD    $0xB2B01000
+	MOVBZ   z-8(SP), R1
+	AND     $0x40, R1
+	BNE     vectorinstalled
+	MOVB    $0, runtime·vectorfacility(SB) //Vector not installed
+	MOVD	tmp-32(SP), R1
+	MOVD    $0, R0
 	RET
-setvector:
-	MOVD	$1, R1
-	MOVBZ	R1, runtime·vectorfacility(SB)
-	MOVD	$0, R0
+vectorinstalled:
+	// check if the vector instruction has been enabled
+	VLEIB   $0, $0xF, V16
+	VLGVB   $0, V16, R0
+	CMPBEQ  R0, $0xF, vectorenabled
+	MOVB    $2, runtime·vectorfacility(SB) //Vector installed but not enabled
+	MOVD    tmp-32(SP), R1
+	MOVD    $0, R0
+	RET
+vectorenabled:
+	MOVB    $1, runtime·vectorfacility(SB) //Vector installed and enabled
+	MOVD    tmp-32(SP), R1
+	MOVD    $0, R0
 	RET
 
 TEXT runtime·rt0_go(SB),NOSPLIT,$0
@@ -86,9 +104,6 @@ nocgo:
 	BL	runtime·args(SB)
 	BL	runtime·osinit(SB)
 	BL	runtime·schedinit(SB)
-
-	// check and set the vectorfacility
-	BL	runtime·checkvectorfacility(SB)
 
 	// create a new goroutine to start program
 	MOVD	$runtime·mainPC(SB), R2		// entry
@@ -921,10 +936,12 @@ notfound:
 	RET
 
 large:
-	MOVBZ	runtime·vectorfacility(SB), R1
+	MOVB	runtime·vectorfacility(SB), R1
+	CMPBEQ	R1, $-1, checkvector	// vectorfacility = -1, vector not checked yet
+vectorchecked:
 	CMPBEQ	R1, $1, vectorimpl      // vectorfacility = 1, vector supported
 
-srstimpl:                       // vectorfacility == 0, not support vector
+srstimpl:                       // vectorfacility != 1, not support or enable vector
 	MOVBZ	R5, R0          // c needs to be in R0, leave until last minute as currently R0 is expected to be 0
 srstloop:
 	WORD	$0xB25E0083     // srst %r8, %r3 (search the range [R3, R8))
@@ -976,6 +993,11 @@ notalignedloop:
 	LA	1(R3), R3
 	CMPBNE	R7, R5, notalignedloop
 	BR	found
+
+checkvector:
+	CALL	runtime·checkvectorfacility(SB)
+	MOVB    runtime·vectorfacility(SB), R1
+	BR	vectorchecked
 
 TEXT runtime·return0(SB), NOSPLIT, $0
 	MOVW	$0, R3
