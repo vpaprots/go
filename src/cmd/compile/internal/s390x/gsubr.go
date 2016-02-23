@@ -565,8 +565,17 @@ func gins(as int, f, t *gc.Node) *obj.Prog {
 // generate one instruction:
 //	as f, t
 func rawgins(as int, f *gc.Node, t *gc.Node) *obj.Prog {
-	// TODO(mundaym): add self-move tests like amd64 but be careful of
-	// truncation moves.
+	// self move check
+	// TODO(mundaym): use sized math and extend to MOVB, MOVWZ etc.
+	switch as {
+	case s390x.AMOVD, s390x.AFMOVS, s390x.AFMOVD:
+		if f != nil && t != nil &&
+			f.Op == gc.OREGISTER && t.Op == gc.OREGISTER &&
+			f.Reg == t.Reg {
+			return nil
+		}
+	}
+
 	p := gc.Prog(as)
 	gc.Naddr(&p.From, f)
 	gc.Naddr(&p.To, t)
