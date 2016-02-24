@@ -89,7 +89,7 @@ func peep(firstp *obj.Prog) {
 			// can eliminate moves that don't care without
 			// breaking moves that do care.  This might let us
 			// simplify or remove the next peep loop, too.
-			if p.As == s390x.AMOVD || p.As == s390x.AFMOVD {
+			if p.As == s390x.AMOVD || p.As == s390x.AFMOVD || p.As == s390x.AFMOVS {
 				if regtyp(&p.To) {
 					// Convert uses to $0 to uses of R0 and
 					// propagate R0
@@ -130,8 +130,7 @@ func peep(firstp *obj.Prog) {
 		p := r.Prog
 
 		switch p.As {
-		case s390x.AFMOVS,
-			s390x.AMOVW, s390x.AMOVWZ,
+		case s390x.AMOVW, s390x.AMOVWZ,
 			s390x.AMOVH, s390x.AMOVHZ,
 			s390x.AMOVB, s390x.AMOVBZ:
 
@@ -141,7 +140,7 @@ func peep(firstp *obj.Prog) {
 			}
 
 			if ((regtyp(&p.From) || regzer(&p.From) == 1 ||
-				p.From.Type == obj.TYPE_CONST || p.From.Type == obj.TYPE_FCONST || p.From.Type == obj.TYPE_SCONST) &&
+				p.From.Type == obj.TYPE_CONST || p.From.Type == obj.TYPE_SCONST) &&
 				regtyp(&p.To)) != true {
 				continue
 			}
