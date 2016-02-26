@@ -3771,7 +3771,17 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 				x = REGTMP2
 			}
 			RXY(0, zopstore(ctxt, int(p.As)), REGTMP, uint32(x), uint32(r), uint32(d), asm)
-		} else if int32(int16(v)) == v && x == 0 && d >= 0 && d < DISP12 {
+		} else if int32(int16(v)) == v && x == 0 {
+			if d < 0 || d >= DISP12 {
+				if r == REGTMP || r == REGTMP2 {
+					RIL(a, OP_AGFI, uint32(r), uint32(d), asm)
+				} else {
+					RIL(a, OP_LGFI, REGTMP, uint32(d), asm)
+					RRE(OP_AGR, REGTMP, uint32(r), asm)
+					r = REGTMP
+				}
+				d = 0
+			}
 			var opcode uint32
 			switch p.As {
 			case AMOVD:
@@ -3789,16 +3799,20 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 				SIL(opcode, uint32(r), uint32(d), uint32(v), asm)
 			}
 		} else {
-			RIL(a, OP_LGFI, REGTMP, uint32(v), asm)
+			RIL(a, OP_LGFI, REGTMP2, uint32(v), asm)
 			if d < -DISP20/2 || d >= DISP20/2 {
-				RIL(a, OP_LGFI, REGTMP2, uint32(d), asm)
-				if x != 0 {
-					RRE(OP_AGR, REGTMP2, uint32(x), asm)
+				if r == REGTMP {
+					RIL(a, OP_AGFI, REGTMP, uint32(d), asm)
+				} else {
+					RIL(a, OP_LGFI, REGTMP, uint32(d), asm)
+					if x != 0 {
+						RRE(OP_AGR, REGTMP, uint32(x), asm)
+					}
+					x = REGTMP
 				}
 				d = 0
-				x = REGTMP2
 			}
-			RXY(0, zopstore(ctxt, int(p.As)), REGTMP, uint32(x), uint32(r), uint32(d), asm)
+			RXY(0, zopstore(ctxt, int(p.As)), REGTMP2, uint32(x), uint32(r), uint32(d), asm)
 		}
 
 	case 73: // MOV int32 -> addr

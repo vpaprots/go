@@ -710,6 +710,10 @@ func isFPR(a *obj.Addr) bool {
 		a.Reg <= s390x.REG_F15
 }
 
+func isConst(a *obj.Addr) bool {
+	return a.Type == obj.TYPE_CONST || a.Type == obj.TYPE_FCONST
+}
+
 // isIndirectMem returns true if a refers to a memory location addressable by a
 // register and an offset, such as:
 // 	x+8(R1)
@@ -1182,24 +1186,13 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 
 	case s390x.ABL:
 		if v.Type == obj.TYPE_REG {
-			// TODO(rsc): REG_R0 and REG_F0 used to be
-			// (when register numbers started at 0) exregoffset and exfregoffset,
-			// which are unset entirely.
-			// It's strange that this handles R0 and F0 differently from the other
-			// registers. Possible failure to optimize?
-			if s390x.REG_R0 < v.Reg && v.Reg <= s390x.REG_R15 {
+			if s390x.REGARG != -1 && v.Reg == s390x.REGARG {
 				return 2
 			}
-			if v.Reg == s390x.REGARG {
-				return 2
-			}
-			if s390x.REG_F0 < v.Reg && v.Reg <= s390x.REG_F15 {
-				return 2
-			}
-		}
 
-		if p.From.Type == obj.TYPE_REG && v.Type == obj.TYPE_REG && p.From.Reg == v.Reg {
-			return 2
+			if p.From.Type == obj.TYPE_REG && p.From.Reg == v.Reg {
+				return 2
+			}
 		}
 
 		if s != nil {
@@ -1469,19 +1462,29 @@ func fuseMoveChains(r *gc.Flow) {
 
 		// r is a move with a destination register
 		var move *gc.Flow
-		visited := make(map[*gc.Flow]bool)
 		for rr := gc.Uniqs(r); rr != nil; rr = gc.Uniqs(rr) {
-			if visited[rr] {
+			if rr == r {
+				// loop
 				break
-			} else {
-				visited[rr] = true
 			}
 			if gc.Uniqp(rr) == nil {
 				// branch target: leave alone
 				break
 			}
 			pp := rr.Prog
-			if isMove(pp) && isGPR(&pp.From) && isGPR(&pp.To) && pp.From.Reg == p.To.Reg {
+			if isMove(pp) && isGPR(&pp.From) && pp.From.Reg == p.To.Reg {
+				switch p.From.Type {
+				case obj.TYPE_MEM, obj.TYPE_ADDR:
+					if pp.To.Type == obj.TYPE_MEM {
+						continue
+					}
+				case obj.TYPE_CONST:
+					if pp.To.Type == obj.TYPE_MEM {
+						if int64(int16(p.From.Offset)) != p.From.Offset {
+							continue
+						}
+					}
+				}
 				move = rr
 				break
 			}
@@ -1494,7 +1497,7 @@ func fuseMoveChains(r *gc.Flow) {
 		// we have a move that reads from our destination reg, check if any future
 		// instructions also read from the reg
 		if move != nil && move.Prog.From.Reg != move.Prog.To.Reg {
-			safe := false
+			safe := true
 			visited := make(map[*gc.Flow]bool)
 			children := make([]*gc.Flow, 0)
 			if move.S1 != nil {
@@ -1503,39 +1506,33 @@ func fuseMoveChains(r *gc.Flow) {
 			if move.S2 != nil {
 				children = append(children, move.S2)
 			}
-			if len(children) == 0 {
-				safe = true
-			} else {
-				for len(children) > 0 {
-					rr := children[0]
-					if visited[rr] {
-						children = children[1:]
-						continue
-					} else {
-						visited[rr] = true
-					}
-					pp := rr.Prog
-					t := copyu(pp, &p.To, nil)
-					if t == 0 { // not found
-						if rr.S1 != nil {
-							children = append(children, rr.S1)
-						}
-						if rr.S2 != nil {
-							children = append(children, rr.S2)
-						}
-						children = children[1:]
-						continue
-					}
-					if t == 3 { // set
-						children = children[1:]
-						if len(children) == 0 {
-							safe = true
-						}
-						continue
-					}
-					// t is 1, 2 or 4: use
-					break
+			for len(children) > 0 {
+				rr := children[0]
+				if visited[rr] {
+					children = children[1:]
+					continue
+				} else {
+					visited[rr] = true
 				}
+				pp := rr.Prog
+				t := copyu(pp, &p.To, nil)
+				if t == 0 { // not found
+					if rr.S1 != nil {
+						children = append(children, rr.S1)
+					}
+					if rr.S2 != nil {
+						children = append(children, rr.S2)
+					}
+					children = children[1:]
+					continue
+				}
+				if t == 3 { // set
+					children = children[1:]
+					continue
+				}
+				// t is 1, 2 or 4: use
+				safe = false
+				break
 			}
 			if !safe {
 				move = nil
@@ -1548,12 +1545,33 @@ func fuseMoveChains(r *gc.Flow) {
 
 		pp := move.Prog
 		execute := false
+
 		// at this point we have something like:
 		// MOV* anything, reg1
-		// MOV* reg1, reg2
+		// MOV* reg1, reg2/mem
 		// now check if this is a cast that cannot be forward propagated
-		if p.As == pp.As {
-			// if the operations match then we can always propagate
+		if p.As == pp.As || regzer(&p.From) == 1 {
+			// if the operations match or our source is zero then we
+			// can always propagate
+			execute = true
+		}
+		if !execute && isConst(&p.From) {
+			v := p.From.Offset
+			switch p.As {
+			case s390x.AMOVWZ:
+				v = int64(uint32(v))
+			case s390x.AMOVHZ:
+				v = int64(uint16(v))
+			case s390x.AMOVBZ:
+				v = int64(uint8(v))
+			case s390x.AMOVW:
+				v = int64(int32(v))
+			case s390x.AMOVH:
+				v = int64(int16(v))
+			case s390x.AMOVB:
+				v = int64(int8(v))
+			}
+			p.From.Offset = v
 			execute = true
 		}
 		if !execute && isGPR(&p.From) {
