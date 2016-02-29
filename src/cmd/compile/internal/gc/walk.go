@@ -3285,7 +3285,7 @@ func samecheap(a *Node, b *Node) bool {
 }
 
 func walkrotate(np **Node) {
-	if Thearch.Thechar == '0' || Thearch.Thechar == '7' || Thearch.Thechar == '9' || Thearch.Thechar == 'z' {
+	if Thearch.Thechar == '0' || Thearch.Thechar == '7' || Thearch.Thechar == '9' {
 		return
 	}
 
@@ -3306,6 +3306,11 @@ func walkrotate(np **Node) {
 
 	// Constants adding to width?
 	w := int(l.Type.Width * 8)
+
+	if Thearch.Thechar == 'z' && w < 32 {
+		// only supports 32-bit and 64-bit rotates
+		return
+	}
 
 	if Smallintconst(l.Right) && Smallintconst(r.Right) {
 		sl := int(Mpgetfix(l.Right.Val().U.(*Mpint)))

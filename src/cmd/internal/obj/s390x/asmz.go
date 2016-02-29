@@ -93,29 +93,10 @@ var optab = []Optab{
 	Optab{ADIVW, C_REG, C_NONE, C_NONE, C_REG, 2, 0},
 	Optab{ASUB, C_REG, C_REG, C_NONE, C_REG, 10, 0}, /* op r2[,r1],r3 */
 	Optab{ASUB, C_REG, C_NONE, C_NONE, C_REG, 10, 0},
-	Optab{ASLW, C_REG, C_NONE, C_NONE, C_REG, 6, 0},
-	Optab{ASLW, C_REG, C_REG, C_NONE, C_REG, 6, 0},
-	Optab{ASLD, C_REG, C_NONE, C_NONE, C_REG, 6, 0},
-	Optab{ASLD, C_REG, C_REG, C_NONE, C_REG, 6, 0},
-	Optab{ASLD, C_SCON, C_REG, C_NONE, C_REG, 25, 0},
-	Optab{ASLD, C_SCON, C_NONE, C_NONE, C_REG, 25, 0},
-	Optab{ASLW, C_SCON, C_REG, C_NONE, C_REG, 57, 0},
-	Optab{ASLW, C_SCON, C_NONE, C_NONE, C_REG, 57, 0},
-	Optab{ASRAW, C_REG, C_NONE, C_NONE, C_REG, 6, 0},
-	Optab{ASRAW, C_REG, C_REG, C_NONE, C_REG, 6, 0},
-	Optab{ASRAW, C_SCON, C_REG, C_NONE, C_REG, 56, 0},
-	Optab{ASRAW, C_SCON, C_NONE, C_NONE, C_REG, 56, 0},
-	Optab{ASRAD, C_REG, C_NONE, C_NONE, C_REG, 6, 0},
-	Optab{ASRAD, C_REG, C_REG, C_NONE, C_REG, 6, 0},
-	Optab{ASRAD, C_SCON, C_REG, C_NONE, C_REG, 56, 0},
-	Optab{ASRAD, C_SCON, C_NONE, C_NONE, C_REG, 56, 0},
-	Optab{ARLWMI, C_SCON, C_REG, C_LCON, C_REG, 62, 0},
-	Optab{ARLWMI, C_REG, C_REG, C_LCON, C_REG, 63, 0},
-	Optab{ARLDMI, C_SCON, C_REG, C_LCON, C_REG, 30, 0},
-	Optab{ARLDC, C_SCON, C_REG, C_LCON, C_REG, 29, 0},
-	Optab{ARLDCL, C_SCON, C_REG, C_LCON, C_REG, 29, 0},
-	Optab{ARLDCL, C_REG, C_REG, C_LCON, C_REG, 14, 0},
-	Optab{ARLDCL, C_REG, C_NONE, C_LCON, C_REG, 14, 0},
+	Optab{ASLD, C_REG, C_NONE, C_NONE, C_REG, 7, 0},
+	Optab{ASLD, C_REG, C_REG, C_NONE, C_REG, 7, 0},
+	Optab{ASLD, C_SCON, C_REG, C_NONE, C_REG, 7, 0},
+	Optab{ASLD, C_SCON, C_NONE, C_NONE, C_REG, 7, 0},
 	Optab{AFADD, C_FREG, C_NONE, C_NONE, C_FREG, 2, 0},
 	Optab{AFADD, C_FREG, C_FREG, C_NONE, C_FREG, 2, 0},
 	Optab{AFABS, C_FREG, C_NONE, C_NONE, C_FREG, 33, 0},
@@ -936,33 +917,22 @@ func buildop(ctxt *obj.Link) {
 		case AOR: /* or/xor Rb,Rs,Ra; ori/xori $uimm,Rs,Ra; oris/xoris $uimm,Rs,Ra */
 			opset(AXOR, r0)
 
-		case ASLW:
-			opset(ASRW, r0)
-
 		case ASLD:
 			opset(ASRD, r0)
+			opset(ASLW, r0)
+			opset(ASRW, r0)
+			opset(ASRAD, r0)
+			opset(ASRAW, r0)
+			opset(ARLL, r0)
+			opset(ARLLG, r0)
 
 		case ACS, ACSG:
-
-		case ASRAW: /* sraw Rb,Rs,Ra; srawi sh,Rs,Ra */
-
-		case ASRAD: /* sraw Rb,Rs,Ra; srawi sh,Rs,Ra */
 
 		case ASUB: /* SUB Ra,Rb,Rd => subf Rd,ra,rb */
 			opset(ASUBC, r0)
 			opset(ASUBE, r0)
 
 		case ASYNC:
-
-		case ARLWMI:
-			opset(ARLWNM, r0)
-
-		case ARLDMI:
-
-		case ARLDC:
-
-		case ARLDCL:
-			opset(ARLDCR, r0)
 
 		case AFMOVD:
 			opset(AFMOVS, r0)
@@ -2653,87 +2623,6 @@ func addcallreloc(ctxt *obj.Link, sym *obj.LSym, add int64) *obj.Reloc {
 	return rel
 }
 
-/*
- * 32-bit masks
- */
-func getmask(m []byte, v uint32) bool {
-	m[1] = 0
-	m[0] = m[1]
-	if v != ^uint32(0) && v&(1<<31) != 0 && v&1 != 0 { /* MB > ME */
-		if getmask(m, ^v) {
-			i := int(m[0])
-			m[0] = m[1] + 1
-			m[1] = byte(i - 1)
-			return true
-		}
-
-		return false
-	}
-
-	for i := 0; i < 32; i++ {
-		if v&(1<<uint(31-i)) != 0 {
-			m[0] = byte(i)
-			for {
-				m[1] = byte(i)
-				i++
-				if i >= 32 || v&(1<<uint(31-i)) == 0 {
-					break
-				}
-			}
-
-			for ; i < 32; i++ {
-				if v&(1<<uint(31-i)) != 0 {
-					return false
-				}
-			}
-			return true
-		}
-	}
-
-	return false
-}
-
-func maskgen(ctxt *obj.Link, p *obj.Prog, m []byte, v uint32) {
-	if !getmask(m, v) {
-		ctxt.Diag("cannot generate mask #%x\n%v", v, p)
-	}
-}
-
-/*
- * 64-bit masks (rldic etc)
- */
-func getmask64(m []byte, v uint64) bool {
-	m[1] = 0
-	m[0] = m[1]
-	for i := 0; i < 64; i++ {
-		if v&(uint64(1)<<uint(63-i)) != 0 {
-			m[0] = byte(i)
-			for {
-				m[1] = byte(i)
-				i++
-				if i >= 64 || v&(uint64(1)<<uint(63-i)) == 0 {
-					break
-				}
-			}
-
-			for ; i < 64; i++ {
-				if v&(uint64(1)<<uint(63-i)) != 0 {
-					return false
-				}
-			}
-			return true
-		}
-	}
-
-	return false
-}
-
-func maskgen64(ctxt *obj.Link, p *obj.Prog, m []byte, v uint64) {
-	if !getmask64(m, v) {
-		ctxt.Diag("cannot generate mask #%x\n%v", v, p)
-	}
-}
-
 func branchMask(ctxt *obj.Link, p *obj.Prog) uint32 {
 	switch p.As {
 	case ABEQ, ACMPBEQ, ACMPUBEQ:
@@ -3011,34 +2900,37 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			}
 
 			RRE(OP_LCGR, uint32(p.To.Reg), uint32(p.To.Reg), asm)
-
-		case ASLW, ASLD, ASRAW, ASRAD, ASRW, ASRD:
-			var opcode uint32
-			switch p.As {
-			default:
-			case ASLW:
-				opcode = OP_SLLK
-			case ASLD:
-				opcode = OP_SLLG
-			case ASRAW:
-				opcode = OP_SRAK
-			case ASRAD:
-				opcode = OP_SRAG
-			case ASRW:
-				opcode = OP_SRLK
-			case ASRD:
-				opcode = OP_SRLG
-			}
-
-			r := int(p.Reg)
-			if r == 0 {
-				r = int(p.To.Reg)
-			}
-			RSY(opcode, uint32(p.To.Reg), uint32(r), uint32(p.From.Reg), 0, asm)
-
-		default:
-
 		}
+
+	case 7: // shift left/right and rotate left
+		d2 := vregoff(ctxt, &p.From)
+		b2 := p.From.Reg
+		r3 := p.Reg
+		if r3 == 0 {
+			r3 = p.To.Reg
+		}
+		r1 := p.To.Reg
+		var opcode uint32
+		switch p.As {
+		default:
+		case ASLD:
+			opcode = OP_SLLG
+		case ASRD:
+			opcode = OP_SRLG
+		case ASLW:
+			opcode = OP_SLLK
+		case ASRW:
+			opcode = OP_SRLK
+		case ARLL:
+			opcode = OP_RLL
+		case ARLLG:
+			opcode = OP_RLLG
+		case ASRAW:
+			opcode = OP_SRAK
+		case ASRAD:
+			opcode = OP_SRAG
+		}
+		RSY(opcode, uint32(r1), uint32(r3), uint32(b2), uint32(d2), asm)
 
 	case 10: /* sub Ra,[Rb],Rd => subf Rd,Ra,Rb */
 		r := int(p.Reg)
@@ -3093,38 +2985,6 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 				addcallreloc(ctxt, p.To.Sym, p.To.Offset)
 			}
 		}
-
-	case 14: /* rldc[lr] Rb,Rs,$mask,Ra -- left, right give different masks */
-		d := vregoff(ctxt, p.From3)
-		var mask [2]uint8
-		maskgen64(ctxt, p, mask[:], uint64(d))
-		var i3, i4 int
-		switch p.As {
-		case ARLDCL:
-			i3 = int(mask[0]) // MB
-			i4 = int(63)
-			if mask[1] != 63 {
-				ctxt.Diag("invalid mask for rotate: %x (end != bit 63)\n%v", uint64(d), p)
-			}
-
-		case ARLDCR:
-			i3 = int(0)
-			i4 = int(mask[1]) // ME
-			if mask[0] != 0 {
-				ctxt.Diag("invalid mask for rotate: %x (start != 0)\n%v", uint64(d), p)
-			}
-
-		default:
-			ctxt.Diag("unexpected op in rldc case\n%v", p)
-		}
-
-		r := int(p.Reg)
-		if r == 0 {
-			r = int(p.To.Reg)
-		}
-		RSY(OP_RLLG, REGTMP, uint32(r), uint32(p.From.Reg), 0, asm)
-		RRE(OP_LGR, uint32(p.To.Reg), REGZERO, asm)
-		RIE(f, OP_RISBG, uint32(p.To.Reg), REGTMP, 0, uint32(i3), uint32(i4), 0, 0, asm)
 
 	case 15: /* br/bl (r) */
 		r := p.To.Reg
@@ -3258,28 +3118,6 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			RRF(opcode, uint32(r), 0, uint32(p.To.Reg), REGTMP, asm)
 		}
 
-	case 25:
-		/* sld[.] $sh,rS,rA -> rldicr[.] $sh,rS,mask(0,63-sh),rA; srd[.] -> rldicl */
-		v := regoff(ctxt, &p.From)
-		if v < 0 {
-			v = 0
-		} else if v > 63 {
-			v = 63
-		}
-
-		r := int(p.Reg)
-		if r == 0 {
-			r = int(p.To.Reg)
-		}
-
-		switch p.As {
-		default:
-		case ASLD:
-			RSY(OP_SLLG, uint32(p.To.Reg), uint32(r), 0, uint32(v), asm)
-		case ASRD:
-			RSY(OP_SRLG, uint32(p.To.Reg), uint32(r), 0, uint32(v), asm)
-		}
-
 	case 26: // MOV LACON
 		v := regoff(ctxt, &p.From)
 		r := p.From.Reg
@@ -3310,68 +3148,6 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		if p.From.Sym != nil {
 			ctxt.Diag("%v is not supported", p)
 		}
-
-	case 29: /* rldic[lr]? $sh,s,$mask,a -- left, right, plain give different masks */
-		v := regoff(ctxt, &p.From)
-		d := vregoff(ctxt, p.From3)
-
-		var mask [2]uint8
-		maskgen64(ctxt, p, mask[:], uint64(d))
-
-		var i3, i4, i5 int
-		switch p.As {
-		case ARLDC:
-			i3 = int(mask[0]) // MB
-			i4 = int(63 - v)
-			i5 = int(v)
-			if int32(mask[1]) != int32(63-v) {
-				ctxt.Diag("invalid mask for shift: %x (shift %d)\n%v", uint64(d), v, p)
-			}
-
-		case ARLDCL:
-			i3 = int(mask[0]) // MB
-			i4 = int(63)
-			i5 = int(v)
-			if mask[1] != 63 {
-				ctxt.Diag("invalid mask for shift: %x (shift %d)\n%v", uint64(d), v, p)
-			}
-
-		case ARLDCR:
-			i3 = int(0)
-			i4 = int(mask[1]) // ME
-			i5 = int(v)
-			if mask[0] != 0 {
-				ctxt.Diag("invalid mask for shift: %x (shift %d)\n%v", uint64(d), v, p)
-			}
-
-		default:
-			ctxt.Diag("unexpected op in rldic case\n%v", p)
-		}
-
-		r := int(p.Reg)
-		if p.To.Reg == p.Reg {
-			RRE(OP_LGR, REGTMP, uint32(p.Reg), asm)
-			r = REGTMP
-		}
-		RRE(OP_LGR, uint32(p.To.Reg), REGZERO, asm)
-		RIE(f, OP_RISBG, uint32(p.To.Reg), uint32(r), 0, uint32(i3), uint32(i4), 0, uint32(i5), asm)
-
-	case 30: /* rldimi $sh,s,$mask,a */
-		v := regoff(ctxt, &p.From)
-		d := vregoff(ctxt, p.From3)
-
-		var mask [2]uint8
-		maskgen64(ctxt, p, mask[:], uint64(d))
-
-		var i3, i4, i5 int
-		i3 = int(mask[0]) // MB
-		i4 = int(63 - v)
-		i5 = int(v)
-		if int32(mask[1]) != int32(63-v) {
-			ctxt.Diag("invalid mask for shift: %x (shift %d)\n%v", uint64(d), v, p)
-		}
-
-		RIE(f, OP_RISBG, uint32(p.To.Reg), uint32(p.Reg), 0, uint32(i3), uint32(i4), 0, uint32(i5), asm)
 
 	case 31: /* dword */
 		wd := uint64(vregoff(ctxt, &p.From))
@@ -3607,113 +3383,6 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		RRE(OP_LGR, REGTMP2, uint32(r), asm)
 		RRE(opcode, REGTMP, uint32(p.From.Reg), asm)
 		RRE(OP_LGR, uint32(p.To.Reg), REGTMP, asm)
-
-	case 56: /* sra $sh,[s,]a; srd $sh,[s,]a */
-		v := regoff(ctxt, &p.From)
-		if v < 0 {
-			v = 0
-		} else if v > 63 {
-			v = 63
-		}
-
-		r := int(p.Reg)
-		if r == 0 {
-			r = int(p.To.Reg)
-		}
-
-		switch p.As {
-		default:
-		case ASRAW:
-			RSY(OP_SRAK, uint32(p.To.Reg), uint32(r), 0, uint32(v), asm)
-		case ASRAD:
-			RSY(OP_SRAG, uint32(p.To.Reg), uint32(r), 0, uint32(v), asm)
-		}
-
-	case 57: /* slw $sh,[s,]a -> rlwinm ... */
-		v := regoff(ctxt, &p.From)
-		if v < 0 {
-			v = 0
-		} else if v > 63 {
-			v = 63
-		}
-
-		r := int(p.Reg)
-		if r == 0 {
-			r = int(p.To.Reg)
-		}
-
-		switch p.As {
-		default:
-		case ASLW:
-			RSY(OP_SLLK, uint32(p.To.Reg), uint32(r), 0, uint32(v), asm)
-		case ASRW:
-			RSY(OP_SRLK, uint32(p.To.Reg), uint32(r), 0, uint32(v), asm)
-		}
-
-	case 62: /* rlwmi $sh,s,$mask,a */
-		v := regoff(ctxt, &p.From)
-		d := vregoff(ctxt, p.From3)
-
-		var mask [2]uint8
-		maskgen64(ctxt, p, mask[:], uint64(d))
-
-		var i3, i4, i5 int
-		i3 = int(mask[0]) // MB
-		i4 = int(mask[1]) // ME
-		i5 = int(v)
-
-		if i3 > 0x1f || i4 > 0x1f {
-			ctxt.Diag("invalid mask for shift: %x (shift %d)\n%v", uint64(d), v, p)
-		}
-
-		switch p.As {
-		case ARLWMI:
-			RIE(f, OP_RISBLG, uint32(p.To.Reg), uint32(p.Reg), 0, uint32(i3), uint32(i4), 0, uint32(i5), asm)
-
-		case ARLWNM:
-			r := int(p.Reg)
-			if p.To.Reg == p.Reg {
-				RRE(OP_LGR, REGTMP, uint32(p.Reg), asm)
-				r = REGTMP
-			}
-			RRE(OP_LGR, uint32(p.To.Reg), REGZERO, asm)
-			RIE(f, OP_RISBLG, uint32(p.To.Reg), uint32(r), 0, uint32(i3), uint32(i4), 0, uint32(i5), asm)
-
-		default:
-
-		}
-
-	case 63: /* rlwmi b,s,$mask,a */
-		d := vregoff(ctxt, p.From3)
-		var mask [2]uint8
-		maskgen64(ctxt, p, mask[:], uint64(d))
-
-		var i3, i4 int
-		i3 = int(mask[0]) // MB
-		i4 = int(mask[1]) // ME
-
-		if i3 > 0x1f || i4 > 0x1f {
-			ctxt.Diag("invalid mask for shift: %x (shift)\n%v", uint64(d), p)
-		}
-
-		switch p.As {
-		case ARLWMI:
-			RSY(OP_RLL, REGTMP, uint32(p.Reg), uint32(p.From.Reg), 0, asm)
-			RIE(f, OP_RISBLG, uint32(p.To.Reg), REGTMP, 0, uint32(i3), uint32(i4), 0, 0, asm)
-
-		case ARLWNM:
-			if p.To.Reg == p.Reg {
-				RRE(OP_LGR, REGTMP, uint32(p.Reg), asm)
-				RSY(OP_RLL, REGTMP, REGTMP, uint32(p.From.Reg), 0, asm)
-			} else {
-				RSY(OP_RLL, REGTMP, uint32(p.Reg), uint32(p.From.Reg), 0, asm)
-			}
-			RRE(OP_LGR, uint32(p.To.Reg), REGZERO, asm)
-			RIE(f, OP_RISBLG, uint32(p.To.Reg), REGTMP, 0, uint32(i3), uint32(i4), 0, 0, asm)
-
-		default:
-
-		}
 
 	case 67: // AFMOVx $0, Fy -- move +0 into reg
 		var opcode uint32

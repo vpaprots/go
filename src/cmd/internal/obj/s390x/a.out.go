@@ -264,12 +264,8 @@ const (
 	ASRAW
 	ASRD
 	ASRAD
-	ARLWMI
-	ARLWNM
-	ARLDMI
-	ARLDC
-	ARLDCR
-	ARLDCL
+	ARLL
+	ARLLG
 
 	// floating point
 	AFABS

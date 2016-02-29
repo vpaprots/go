@@ -48,8 +48,6 @@ func jumpS390x(word string) bool {
 // The FMADD-like instructions behave similarly.
 func IsS390xRLD(op int) bool {
 	switch op {
-	case s390x.ARLDC, s390x.ARLDCR, s390x.ARLWMI, s390x.ARLWNM:
-		return true
 	case s390x.AFMADD,
 		s390x.AFMADDS,
 		s390x.AFMSUB,

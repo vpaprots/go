@@ -356,14 +356,14 @@ func peep(firstp *obj.Prog) {
 			s390x.AREMU,
 			s390x.AREMD,
 			s390x.AREMDU,
-			s390x.ARLWMI,
-			s390x.ARLWNM,
 			s390x.ASLW,
 			s390x.ASRAW,
 			s390x.ASRW,
 			s390x.ASLD,
 			s390x.ASRAD,
 			s390x.ASRD,
+			s390x.ARLL,
+			s390x.ARLLG,
 			s390x.ASUB,
 			s390x.ASUBC,
 			s390x.ASUBME,
@@ -1039,12 +1039,6 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 
 		return 0
 
-	// read p->from, read p->reg, rar p->to
-	case s390x.ARLWMI:
-		if copyas(&p.To, v) {
-			return 2
-		}
-		fallthrough
 	// read p->from, read p->reg, write p->to
 	case s390x.AADD,
 		s390x.AADDC,
@@ -1056,6 +1050,8 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 		s390x.ASLD,
 		s390x.ASRD,
 		s390x.ASRAD,
+		s390x.ARLL,
+		s390x.ARLLG,
 		s390x.AOR,
 		s390x.AORN,
 		s390x.AAND,
@@ -1073,7 +1069,6 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 		s390x.AREMU,
 		s390x.AREMD,
 		s390x.AREMDU,
-		s390x.ARLWNM,
 		s390x.AFADDS,
 		s390x.AFADD,
 		s390x.AFSUBS,

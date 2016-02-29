@@ -55,6 +55,8 @@ var progtable = [s390x.ALAST]obj.ProgInfo{
 	s390x.ASLD:    {Flags: gc.SizeQ | gc.LeftRead | gc.RegRead | gc.RightWrite},
 	s390x.ASRD:    {Flags: gc.SizeQ | gc.LeftRead | gc.RegRead | gc.RightWrite},
 	s390x.ASRAD:   {Flags: gc.SizeQ | gc.LeftRead | gc.RegRead | gc.RightWrite},
+	s390x.ARLL:    {Flags: gc.SizeL | gc.LeftRead | gc.RegRead | gc.RightWrite},
+	s390x.ARLLG:   {Flags: gc.SizeQ | gc.LeftRead | gc.RegRead | gc.RightWrite},
 	s390x.ACMP:    {Flags: gc.SizeQ | gc.LeftRead | gc.RightRead},
 	s390x.ACMPU:   {Flags: gc.SizeQ | gc.LeftRead | gc.RightRead},
 

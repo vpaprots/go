@@ -653,6 +653,7 @@ func optoas(op gc.Op, t *gc.Type) int {
 		OAS_    = uint32(gc.OAS) << 16
 		OHMUL_  = uint32(gc.OHMUL) << 16
 		OSQRT_  = uint32(gc.OSQRT) << 16
+		OLROT_  = uint32(gc.OLROT) << 16
 	)
 
 	a := int(obj.AXXX)
@@ -954,6 +955,16 @@ func optoas(op gc.Op, t *gc.Type) int {
 
 	case OSQRT_ | gc.TFLOAT64:
 		a = s390x.AFSQRT
+
+	case OLROT_ | gc.TUINT32,
+		OLROT_ | gc.TPTR32,
+		OLROT_ | gc.TINT32:
+		a = s390x.ARLL
+
+	case OLROT_ | gc.TUINT64,
+		OLROT_ | gc.TPTR64,
+		OLROT_ | gc.TINT64:
+		a = s390x.ARLLG
 	}
 
 	return a
