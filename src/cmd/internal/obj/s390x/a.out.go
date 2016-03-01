@@ -232,10 +232,6 @@ const (
 	ASUBV
 	ASUBE
 	ASUBZE
-	AREM
-	AREMU
-	AREMD
-	AREMDU
 	ANEG
 
 	// integer moves
