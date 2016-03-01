@@ -45,7 +45,7 @@ func blockcopy(n, res *gc.Node, osrc, odst, w int64) {
 
 	offset := int64(0)
 	dir := _FORWARDS
-	if osrc < odst && int64(odst) < int64(osrc)+w {
+	if osrc < odst && odst < osrc+w {
 		// Reverse. Can't use MVC, fall back onto basic moves.
 		dir = _BACKWARDS
 		const copiesPerIter = 2
@@ -59,7 +59,7 @@ func blockcopy(n, res *gc.Node, osrc, odst, w int64) {
 			p := gins(s390x.ASUB, nil, &end)
 			p.From.Type = obj.TYPE_CONST
 			p.From.Offset = cnt
-			p.Reg = int16(src.Reg)
+			p.Reg = src.Reg
 
 			var label *obj.Prog
 			for i := 0; i < copiesPerIter; i++ {
@@ -96,7 +96,7 @@ func blockcopy(n, res *gc.Node, osrc, odst, w int64) {
 		add := gins(s390x.AADD, nil, &end)
 		add.From.Type = obj.TYPE_CONST
 		add.From.Offset = cnt
-		add.Reg = int16(src.Reg)
+		add.Reg = src.Reg
 
 		mvc := gins(s390x.AMVC, &src, &dst)
 		mvc.From.Type = obj.TYPE_MEM

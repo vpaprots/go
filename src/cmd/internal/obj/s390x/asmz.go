@@ -3000,9 +3000,9 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		}
 		mask := branchMask(ctxt, p)
 		if p.To.Sym == nil && int32(int16(v)) == v {
-			zRI(op_BRC, uint32(mask), uint32(v), asm)
+			zRI(op_BRC, mask, uint32(v), asm)
 		} else {
-			zRIL(c, op_BRCL, uint32(mask), uint32(v), asm)
+			zRIL(c, op_BRCL, mask, uint32(v), asm)
 		}
 		if p.To.Sym != nil {
 			addrilreloc(ctxt, p.To.Sym, p.To.Offset)
@@ -3241,7 +3241,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			x2 = REGTMP
 			d2 = 0
 		}
-		zRXY(0, zopstore(ctxt, int(p.As)), uint32(p.From.Reg), uint32(x2), uint32(b2), uint32(d2), asm)
+		zRXY(0, zopstore(ctxt, p.As), uint32(p.From.Reg), uint32(x2), uint32(b2), uint32(d2), asm)
 
 	case 36: // MOV LAUTO/LOREG TO REG
 		d2 := regoff(ctxt, &p.From)
@@ -3258,7 +3258,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			x2 = REGTMP
 			d2 = 0
 		}
-		zRXY(0, zopload(ctxt, int(p.As)), uint32(p.To.Reg), uint32(x2), uint32(b2), uint32(d2), asm)
+		zRXY(0, zopload(ctxt, p.As), uint32(p.To.Reg), uint32(x2), uint32(b2), uint32(d2), asm)
 
 	case 40: /* word and byte*/
 		wd := uint32(regoff(ctxt, &p.From))
@@ -3337,16 +3337,16 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			ctxt.Diag("unsupported nozero CC in Z")
 		}
 		if p.As == ACMPW || p.As == ACMPWU {
-			zRR(zoprr(ctxt, int(p.As)), uint32(p.From.Reg), uint32(p.To.Reg), asm)
+			zRR(zoprr(ctxt, p.As), uint32(p.From.Reg), uint32(p.To.Reg), asm)
 		} else {
-			zRRE(zoprre(ctxt, int(p.As)), uint32(p.From.Reg), uint32(p.To.Reg), asm)
+			zRRE(zoprre(ctxt, p.As), uint32(p.From.Reg), uint32(p.To.Reg), asm)
 		}
 
 	case 71: /* cmp[l] r,i,cr*/
 		if p.Reg != 0 {
 			ctxt.Diag("unsupported nozero CC in Z")
 		}
-		zRIL(0, uint32(zopril(ctxt, int(p.As))), uint32(p.From.Reg), uint32(int32(regoff(ctxt, &p.To))), asm)
+		zRIL(0, zopril(ctxt, p.As), uint32(p.From.Reg), uint32(regoff(ctxt, &p.To)), asm)
 
 	case 72: // MOV int32 -> s+o(r)(i*1)
 		v := regoff(ctxt, &p.From)
@@ -3371,7 +3371,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 				d = 0
 				x = REGTMP2
 			}
-			zRXY(0, zopstore(ctxt, int(p.As)), REGTMP, uint32(x), uint32(r), uint32(d), asm)
+			zRXY(0, zopstore(ctxt, p.As), REGTMP, uint32(x), uint32(r), uint32(d), asm)
 		} else if int32(int16(v)) == v && x == 0 {
 			if d < 0 || d >= DISP12 {
 				if r == REGTMP || r == REGTMP2 {
@@ -3413,7 +3413,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 				}
 				d = 0
 			}
-			zRXY(0, zopstore(ctxt, int(p.As)), REGTMP2, uint32(x), uint32(r), uint32(d), asm)
+			zRXY(0, zopstore(ctxt, p.As), REGTMP2, uint32(x), uint32(r), uint32(d), asm)
 		}
 
 	case 73: // MOV int32 -> addr
@@ -3434,7 +3434,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 				zRX(op_LA, REGTMP2, REGTMP2, 0, 1, asm)
 			}
 			addrilrelocoffset(ctxt, p.From.Sym, int64(v), sizeRIL)
-			zRXY(0, zopstore(ctxt, int(p.As)), REGTMP2, 0, REGTMP, a, asm)
+			zRXY(0, zopstore(ctxt, p.As), REGTMP2, 0, REGTMP, a, asm)
 		} else if int32(int16(v)) == v {
 			var opcode uint32
 			switch p.As {
@@ -3454,7 +3454,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			}
 		} else {
 			zRIL(a, op_LGFI, REGTMP2, uint32(v), asm)
-			zRXY(0, zopstore(ctxt, int(p.As)), REGTMP2, 0, REGTMP, a, asm)
+			zRXY(0, zopstore(ctxt, p.As), REGTMP2, 0, REGTMP, a, asm)
 		}
 
 	case 74: // MOV sym+n(SB) TO REG (requires relocation)
@@ -3665,7 +3665,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 				ctxt.Diag("cannot use EXRL with odd offset: %v", v)
 			}
 		} else {
-			addrilreloc(ctxt, p.From.Sym, int64(v))
+			addrilreloc(ctxt, p.From.Sym, v)
 			v = 0
 		}
 		zRIL(b, op_EXRL, uint32(p.To.Reg), uint32(v>>1), asm)
@@ -3706,7 +3706,7 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		mask := branchMask(ctxt, p)
 		if int32(int16(v)) != v {
 			zRRE(opcode2, uint32(p.From.Reg), uint32(p.Reg), asm)
-			zRIL(c, op_BRCL, uint32(mask), uint32(v-sizeRRE/2), asm)
+			zRIL(c, op_BRCL, mask, uint32(v-sizeRRE/2), asm)
 		} else {
 			zRIE(b, opcode, uint32(p.From.Reg), uint32(p.Reg), uint32(v), 0, 0, mask, 0, asm)
 		}
@@ -3727,10 +3727,10 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		}
 		mask := branchMask(ctxt, p)
 		if int32(int16(v)) != v {
-			zRIL(0, opcode2, uint32(p.From.Reg), uint32(int32(regoff(ctxt, p.From3))), asm)
+			zRIL(0, opcode2, uint32(p.From.Reg), uint32(regoff(ctxt, p.From3)), asm)
 			zRIL(c, op_BRCL, mask, uint32(v-sizeRIL/2), asm)
 		} else {
-			zRIE(c, opcode, uint32(p.From.Reg), mask, uint32(v), 0, 0, 0, uint32(int32(regoff(ctxt, p.From3))), asm)
+			zRIE(c, opcode, uint32(p.From.Reg), mask, uint32(v), 0, 0, 0, uint32(regoff(ctxt, p.From3)), asm)
 		}
 
 	case 93: // GOT lookup
@@ -4085,117 +4085,117 @@ func regoff(ctxt *obj.Link, a *obj.Addr) int32 {
 /*
  * load o(a), d
  */
-func zopload(ctxt *obj.Link, a int) uint32 {
+func zopload(ctxt *obj.Link, a int16) uint32 {
 	switch a {
 	/* fixed point load */
 	case AMOVD:
-		return uint32(op_LG)
+		return op_LG
 	case AMOVW:
-		return uint32(op_LGF)
+		return op_LGF
 	case AMOVWZ:
-		return uint32(op_LLGF)
+		return op_LLGF
 	case AMOVH:
-		return uint32(op_LGH)
+		return op_LGH
 	case AMOVHZ:
-		return uint32(op_LLGH)
+		return op_LLGH
 	case AMOVB:
-		return uint32(op_LGB)
+		return op_LGB
 	case AMOVBZ:
-		return uint32(op_LLGC)
+		return op_LLGC
 
 	/* floating pointer load*/
 	case AFMOVD:
-		return uint32(op_LDY)
+		return op_LDY
 	case AFMOVS:
-		return uint32(op_LEY)
+		return op_LEY
 
 	/* byte reversed load*/
 	case AMOVDBR:
-		return uint32(op_LRVG)
+		return op_LRVG
 	case AMOVWBR:
-		return uint32(op_LRV)
+		return op_LRV
 	case AMOVHBR:
-		return uint32(op_LRVH)
+		return op_LRVH
 	}
 
-	ctxt.Diag("unknown store opcode %v", obj.Aconv(a))
+	ctxt.Diag("unknown store opcode %v", obj.Aconv(int(a)))
 	return 0
 }
 
 /*
  * store s,o(d)
  */
-func zopstore(ctxt *obj.Link, a int) uint32 {
+func zopstore(ctxt *obj.Link, a int16) uint32 {
 	switch a {
 	/* fixed point store */
 	case AMOVD:
-		return uint32(op_STG)
+		return op_STG
 	case AMOVW, AMOVWZ:
-		return uint32(op_STY)
+		return op_STY
 	case AMOVH, AMOVHZ:
-		return uint32(op_STHY)
+		return op_STHY
 	case AMOVB, AMOVBZ:
-		return uint32(op_STCY)
+		return op_STCY
 
 	/* floating point store */
 	case AFMOVD:
-		return uint32(op_STDY)
+		return op_STDY
 	case AFMOVS:
-		return uint32(op_STEY)
+		return op_STEY
 
 	/* byte reversed store */
 	case AMOVDBR:
-		return uint32(op_STRVG)
+		return op_STRVG
 	case AMOVWBR:
-		return uint32(op_STRV)
+		return op_STRV
 	case AMOVHBR:
-		return uint32(op_STRVH)
+		return op_STRVH
 	}
 
-	ctxt.Diag("unknown store opcode %v", obj.Aconv(a))
+	ctxt.Diag("unknown store opcode %v", obj.Aconv(int(a)))
 	return 0
 }
 
-func zoprre(ctxt *obj.Link, a int) uint32 {
+func zoprre(ctxt *obj.Link, a int16) uint32 {
 	switch a {
 	case ACMP:
-		return uint32(op_CGR)
+		return op_CGR
 	case ACMPU:
-		return uint32(op_CLGR)
+		return op_CLGR
 	case AFCMPO: //ordered
-		return uint32(op_KDBR)
+		return op_KDBR
 	case AFCMPU: //unordered
-		return uint32(op_CDBR)
+		return op_CDBR
 	case ACEBR:
-		return uint32(op_CEBR)
+		return op_CEBR
 	}
-	ctxt.Diag("unknown rre opcode %v", obj.Aconv(a))
+	ctxt.Diag("unknown rre opcode %v", obj.Aconv(int(a)))
 	return 0
 }
 
-func zoprr(ctxt *obj.Link, a int) uint32 {
+func zoprr(ctxt *obj.Link, a int16) uint32 {
 	switch a {
 	case ACMPW:
-		return uint32(op_CR)
+		return op_CR
 	case ACMPWU:
-		return uint32(op_CLR)
+		return op_CLR
 	}
-	ctxt.Diag("unknown rr opcode %v", obj.Aconv(a))
+	ctxt.Diag("unknown rr opcode %v", obj.Aconv(int(a)))
 	return 0
 }
 
-func zopril(ctxt *obj.Link, a int) uint32 {
+func zopril(ctxt *obj.Link, a int16) uint32 {
 	switch a {
 	case ACMP:
-		return uint32(op_CGFI)
+		return op_CGFI
 	case ACMPU:
-		return uint32(op_CLGFI)
+		return op_CLGFI
 	case ACMPW:
-		return uint32(op_CFI)
+		return op_CFI
 	case ACMPWU:
-		return uint32(op_CLFI)
+		return op_CLFI
 	}
-	ctxt.Diag("unknown ril opcode %v", obj.Aconv(a))
+	ctxt.Diag("unknown ril opcode %v", obj.Aconv(int(a)))
 	return 0
 }
 

@@ -211,7 +211,7 @@ func gmove(f *gc.Node, t *gc.Node) {
 
 	ft := int(gc.Simsimtype(f.Type))
 	tt := int(gc.Simsimtype(t.Type))
-	cvt := (*gc.Type)(t.Type)
+	cvt := t.Type
 
 	if gc.Iscomplex[ft] || gc.Iscomplex[tt] {
 		gc.Complexmove(f, t)
@@ -258,13 +258,13 @@ func gmove(f *gc.Node, t *gc.Node) {
 
 	// a float-to-int or int-to-float conversion requires the source operand in a register
 	if gc.Ismem(f) && ((gc.Isfloat[ft] && gc.Isint[tt]) || (gc.Isint[ft] && gc.Isfloat[tt])) {
-		cvt = (*gc.Type)(f.Type)
+		cvt = f.Type
 		goto hard
 	}
 
 	// a float32-to-float64 or float64-to-float32 conversion requires the source operand in a register
 	if gc.Ismem(f) && gc.Isfloat[ft] && gc.Isfloat[tt] && (ft != tt) {
-		cvt = (*gc.Type)(f.Type)
+		cvt = f.Type
 		goto hard
 	}
 

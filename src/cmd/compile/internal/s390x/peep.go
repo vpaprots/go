@@ -43,7 +43,7 @@ var mergeopmv_cnt int
 var cnb_cnt int
 
 func peep(firstp *obj.Prog) {
-	g := (*gc.Graph)(gc.Flowstart(firstp, nil))
+	g := gc.Flowstart(firstp, nil)
 	if g == nil {
 		return
 	}
@@ -51,7 +51,7 @@ func peep(firstp *obj.Prog) {
 
 	// promote zero moves to MOVD so that they are more likely to
 	// be optimized in later passes
-	for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
+	for r := g.Start; r != nil; r = r.Link {
 		p := r.Prog
 		if isMove(p) && p.As != s390x.AMOVD && regzer(&p.From) != 0 && isGPR(&p.To) {
 			p.As = s390x.AMOVD
@@ -62,7 +62,7 @@ func peep(firstp *obj.Prog) {
 	// find MOV $con,R followed by
 	// another MOV $con,R without
 	// setting R in the interim
-	for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
+	for r := g.Start; r != nil; r = r.Link {
 		p := r.Prog
 		switch p.As {
 		case s390x.AMOVD,
@@ -80,7 +80,7 @@ func peep(firstp *obj.Prog) {
 
 	for {
 		changed := false
-		for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
+		for r := g.Start; r != nil; r = r.Link {
 			p := r.Prog
 
 			// TODO(austin) Handle smaller moves.  arm and amd64
@@ -125,7 +125,7 @@ func peep(firstp *obj.Prog) {
 	 * MOV Ra, Rb; ...; MOV Rb, Rc; -> MOV Ra, Rc;
 	 */
 
-	for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
+	for r := g.Start; r != nil; r = r.Link {
 		if (gc.Debugmovprop != -1) && (movprop_cnt >= gc.Debugmovprop) {
 			break
 		}
@@ -153,9 +153,9 @@ func peep(firstp *obj.Prog) {
 		}
 
 		r0 := r
-		p0 := (*obj.Prog)(r0.Prog)
-		s0 := (*obj.Addr)(&p0.From)
-		v0 := (*obj.Addr)(&p0.To)
+		p0 := r0.Prog
+		s0 := &p0.From
+		v0 := &p0.To
 		r1 := gc.Uniqs(r0)
 
 		// v0used: 0 means must not be used;
@@ -244,7 +244,7 @@ func peep(firstp *obj.Prog) {
 	/*
 	 * look for MOVB x,R; MOVB R,R (for small MOVs not handled above)
 	 */
-	for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
+	for r := g.Start; r != nil; r = r.Link {
 		p := r.Prog
 		switch p.As {
 		default:
@@ -302,7 +302,7 @@ func peep(firstp *obj.Prog) {
 		// load pipelining
 		// push any load from memory as early as possible
 		// to give it time to complete before use.
-		for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
+		for r := g.Start; r != nil; r = r.Link {
 			p := r.Prog
 			switch p.As {
 			case s390x.AMOVB,
@@ -324,7 +324,7 @@ func peep(firstp *obj.Prog) {
 	 * look for OP a, b, c; MOV c, d; -> OP a, b, d;
 	 */
 
-	for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
+	for r := g.Start; r != nil; r = r.Link {
 
 		if (gc.Debugmergeopmv != -1) && (mergeopmv_cnt >= gc.Debugmergeopmv) {
 			break
@@ -420,7 +420,7 @@ func peep(firstp *obj.Prog) {
 		goto ret
 	}
 
-	for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
+	for r := g.Start; r != nil; r = r.Link {
 		if (gc.Debugcnb != -1) && (cnb_cnt >= gc.Debugcnb) {
 			break
 		}
@@ -538,9 +538,9 @@ ret:
 }
 
 func conprop(r0 *gc.Flow) {
-	p0 := (*obj.Prog)(r0.Prog)
-	v0 := (*obj.Addr)(&p0.To)
-	r := (*gc.Flow)(r0)
+	p0 := r0.Prog
+	v0 := &p0.To
+	r := r0
 	for {
 		r = gc.Uniqs(r)
 		if r == nil || r == r0 {
@@ -589,7 +589,7 @@ func pushback(r0 *gc.Flow) {
 	var r *gc.Flow
 
 	var b *gc.Flow
-	p0 := (*obj.Prog)(r0.Prog)
+	p0 := r0.Prog
 	for r = gc.Uniqp(r0); r != nil && gc.Uniqs(r) != nil; r = gc.Uniqp(r) {
 		p := r.Prog
 		if p.As != obj.ANOP {
@@ -620,7 +620,7 @@ func pushback(r0 *gc.Flow) {
 
 	if gc.Debug['P'] != 0 && gc.Debug['v'] != 0 {
 		fmt.Printf("pushback\n")
-		for r := (*gc.Flow)(b); ; r = r.Link {
+		for r := b; ; r = r.Link {
 			fmt.Printf("\t%v\n", r.Prog)
 			if r == r0 {
 				break
@@ -665,7 +665,7 @@ func pushback(r0 *gc.Flow) {
 }
 
 func excise(r *gc.Flow) {
-	p := (*obj.Prog)(r.Prog)
+	p := r.Prog
 	if gc.Debug['P'] != 0 && gc.Debug['v'] != 0 {
 		fmt.Printf("%v ===delete===\n", p)
 	}
@@ -746,12 +746,12 @@ func isIndirectMem(a *obj.Addr) bool {
  * above sequences.  This returns 1 if it modified any instructions.
  */
 func subprop(r0 *gc.Flow) bool {
-	p := (*obj.Prog)(r0.Prog)
-	v1 := (*obj.Addr)(&p.From)
+	p := r0.Prog
+	v1 := &p.From
 	if !regtyp(v1) {
 		return false
 	}
-	v2 := (*obj.Addr)(&p.To)
+	v2 := &p.To
 	if !regtyp(v2) {
 		return false
 	}
@@ -789,9 +789,7 @@ func subprop(r0 *gc.Flow) bool {
 						}
 					}
 
-					t := int(int(v1.Reg))
-					v1.Reg = v2.Reg
-					v2.Reg = int16(t)
+					v1.Reg, v2.Reg = v2.Reg, v1.Reg
 					if gc.Debug['P'] != 0 {
 						fmt.Printf("%v last\n", r.Prog)
 					}
@@ -824,9 +822,9 @@ func subprop(r0 *gc.Flow) bool {
  *	set v2	return success (caller can remove v1->v2 move)
  */
 func copyprop(r0 *gc.Flow) bool {
-	p := (*obj.Prog)(r0.Prog)
-	v1 := (*obj.Addr)(&p.From)
-	v2 := (*obj.Addr)(&p.To)
+	p := r0.Prog
+	v1 := &p.From
+	v2 := &p.To
 	if copyas(v1, v2) {
 		if gc.Debug['P'] != 0 {
 			fmt.Printf("eliminating self-move: %v\n", r0.Prog)

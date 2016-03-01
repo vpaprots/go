@@ -302,13 +302,11 @@ func dodiv(op gc.Op, nl *gc.Node, nr *gc.Node, res *gc.Node) {
 func cgen_hmul(nl *gc.Node, nr *gc.Node, res *gc.Node) {
 	// largest ullman on left.
 	if nl.Ullman < nr.Ullman {
-		tmp := (*gc.Node)(nl)
-		nl = nr
-		nr = tmp
+		nl, nr = nr, nl
 	}
 
-	t := (*gc.Type)(nl.Type)
-	w := int(int(t.Width * 8))
+	t := nl.Type
+	w := int(t.Width) * 8
 	var n1 gc.Node
 	gc.Cgenr(nl, &n1, res)
 	var n2 gc.Node
@@ -318,7 +316,7 @@ func cgen_hmul(nl *gc.Node, nr *gc.Node, res *gc.Node) {
 		gc.TINT16,
 		gc.TINT32:
 		gins(optoas(gc.OMUL, t), &n2, &n1)
-		p := (*obj.Prog)(gins(s390x.ASRAD, nil, &n1))
+		p := gins(s390x.ASRAD, nil, &n1)
 		p.From.Type = obj.TYPE_CONST
 		p.From.Offset = int64(w)
 
@@ -326,7 +324,7 @@ func cgen_hmul(nl *gc.Node, nr *gc.Node, res *gc.Node) {
 		gc.TUINT16,
 		gc.TUINT32:
 		gins(optoas(gc.OMUL, t), &n2, &n1)
-		p := (*obj.Prog)(gins(s390x.ASRD, nil, &n1))
+		p := gins(s390x.ASRD, nil, &n1)
 		p.From.Type = obj.TYPE_CONST
 		p.From.Offset = int64(w)
 
@@ -353,7 +351,7 @@ func cgen_hmul(nl *gc.Node, nr *gc.Node, res *gc.Node) {
  *	res = nl >> nr
  */
 func cgen_shift(op gc.Op, bounded bool, nl *gc.Node, nr *gc.Node, res *gc.Node) {
-	a := int(optoas(op, nl.Type))
+	a := optoas(op, nl.Type)
 
 	if nr.Op == gc.OLITERAL {
 		var n1 gc.Node
@@ -422,7 +420,7 @@ func cgen_shift(op gc.Op, bounded bool, nl *gc.Node, nr *gc.Node, res *gc.Node) 
 	if !bounded {
 		gc.Nodconst(&n3, tcount, nl.Type.Width*8)
 		gins(optoas(gc.OCMP, tcount), &n1, &n3)
-		p1 := (*obj.Prog)(gc.Gbranch(optoas(gc.OLT, tcount), nil, +1))
+		p1 := gc.Gbranch(optoas(gc.OLT, tcount), nil, 1)
 		if op == gc.ORSH && gc.Issigned[nl.Type.Etype] {
 			gc.Nodconst(&n3, gc.Types[gc.TUINT32], nl.Type.Width*8-1)
 			gins(a, &n3, &n2)
@@ -458,7 +456,7 @@ func clearfat(nl *gc.Node) {
 	gc.Agen(nl, &dst)
 
 	var boff int64
-	w := int64(nl.Type.Width)
+	w := nl.Type.Width
 	if w > clearLoopCutoff {
 		// Generate a loop clearing 256 bytes per iteration using XCs.
 		var end gc.Node
@@ -475,7 +473,7 @@ func clearfat(nl *gc.Node) {
 		p.From3 = new(obj.Addr)
 		p.From3.Offset = 256
 		p.From3.Type = obj.TYPE_CONST
-		pl := (*obj.Prog)(p)
+		pl := p
 
 		ginscon(s390x.AADD, 256, &dst)
 		gins(s390x.ACMP, &dst, &end)
@@ -533,7 +531,7 @@ func clearfat(nl *gc.Node) {
 // Called after regopt and peep have run.
 // Expand CHECKNIL pseudo-op into actual nil pointer check.
 func expandchecks(firstp *obj.Prog) {
-	for p := (*obj.Prog)(firstp); p != nil; p = p.Link {
+	for p := firstp; p != nil; p = p.Link {
 		if gc.Debug_checknil != 0 && gc.Ctxt.Debugvlog != 0 {
 			fmt.Printf("expandchecks: %v\n", p)
 		}
