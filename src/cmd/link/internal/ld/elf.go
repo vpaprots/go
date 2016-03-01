@@ -284,8 +284,6 @@ const (
 	DT_VERSYM            = 0x6ffffff0
 	DT_PPC64_GLINK       = DT_LOPROC + 0
 	DT_PPC64_OPT         = DT_LOPROC + 3
-	DT_S390X_GLINK       = DT_LOPROC + 0
-	DT_S390X_OPT         = DT_LOPROC + 3
 	DF_ORIGIN            = 0x0001
 	DF_SYMBOLIC          = 0x0002
 	DF_TEXTREL           = 0x0004

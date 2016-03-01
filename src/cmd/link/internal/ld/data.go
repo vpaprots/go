@@ -323,6 +323,7 @@ func relocsym(s *LSym) {
 	var rs *LSym
 	var i16 int16
 	var off int32
+	var siz int32
 	var fl int32
 	var o int64
 
@@ -331,10 +332,12 @@ func relocsym(s *LSym) {
 		r = &s.R[ri]
 		r.Done = 1
 		off = r.Off
-		if off < 0 || off+int32(r.Siz) > int32(len(s.P)) {
-			Diag("%s: invalid relocation %d+%d not in [%d,%d)", s.Name, off, int32(r.Siz), 0, len(s.P))
+		siz = int32(r.Siz)
+		if off < 0 || off+siz > int32(len(s.P)) {
+			Diag("%s: invalid relocation %d+%d not in [%d,%d)", s.Name, off, siz, 0, len(s.P))
 			continue
 		}
+
 		if r.Sym != nil && (r.Sym.Type&(obj.SMASK|obj.SHIDDEN) == 0 || r.Sym.Type&obj.SMASK == obj.SXREF) {
 			// When putting the runtime but not main into a shared library
 			// these symbols are undefined and that's OK.
@@ -378,9 +381,9 @@ func relocsym(s *LSym) {
 
 		switch r.Type {
 		default:
-			switch r.Siz {
+			switch siz {
 			default:
-				Diag("bad reloc size %#x for %s", uint32(r.Siz), r.Sym.Name)
+				Diag("bad reloc size %#x for %s", uint32(siz), r.Sym.Name)
 			case 1:
 				o = int64(s.P[off])
 			case 2:
@@ -499,7 +502,7 @@ func relocsym(s *LSym) {
 			// fail at runtime. See https://golang.org/issue/7980.
 			// Instead of special casing only amd64, we treat this as an error on all
 			// 64-bit architectures so as to be future-proof.
-			if int32(o) < 0 && Thearch.Ptrsize > 4 && r.Siz == 4 {
+			if int32(o) < 0 && Thearch.Ptrsize > 4 && siz == 4 {
 				Diag("non-pc-relative relocation address is too big: %#x (%#x + %#x)", uint64(o), Symaddr(r.Sym), r.Add)
 				errorexit()
 			}
@@ -580,10 +583,10 @@ func relocsym(s *LSym) {
 			}
 			fmt.Printf("relocate %s %#x (%#x+%#x, size %d) => %s %#x +%#x [type %d/%d, %x]\n", s.Name, s.Value+int64(off), s.Value, r.Off, r.Siz, nam, Symaddr(r.Sym), r.Add, r.Type, r.Variant, o)
 		}
-		switch r.Siz {
+		switch siz {
 		default:
 			Ctxt.Cursym = s
-			Diag("bad reloc size %#x for %s", uint32(r.Siz), r.Sym.Name)
+			Diag("bad reloc size %#x for %s", uint32(siz), r.Sym.Name)
 			fallthrough
 
 			// TODO(rsc): Remove.
@@ -592,7 +595,7 @@ func relocsym(s *LSym) {
 
 		case 2:
 			if o != int64(int16(o)) {
-				Diag("relocation address for %s (type %v) is too big: %#x", s.Name, r.Type, o)
+				Diag("relocation address is too big: %#x", o)
 			}
 			i16 = int16(o)
 			Ctxt.Arch.ByteOrder.PutUint16(s.P[off:], uint16(i16))
@@ -626,7 +629,6 @@ func reloc() {
 	for s := Ctxt.Textp; s != nil; s = s.Next {
 		relocsym(s)
 	}
-
 	for s := datap; s != nil; s = s.Next {
 		relocsym(s)
 	}
