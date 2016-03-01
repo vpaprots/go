@@ -508,7 +508,10 @@ func gmove(f *gc.Node, t *gc.Node) {
 
 	// requires register destination
 rdst:
-	{
+	if t != nil && t.Op == gc.OREGISTER {
+		gins(a, f, t)
+		return
+	} else {
 		var r1 gc.Node
 		gc.Regalloc(&r1, t.Type, t)
 
