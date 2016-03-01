@@ -930,7 +930,7 @@ func (f *File) applyRelocationss390x(dst []byte, rels []byte) error {
 	for b.Len() > 0 {
 		binary.Read(b, f.ByteOrder, &rela)
 		symNo := rela.Info >> 32
-		t := R_S390X(rela.Info & 0xffff)
+		t := R_390(rela.Info & 0xffff)
 
 		if symNo == 0 || symNo > uint64(len(symbols)) {
 			continue

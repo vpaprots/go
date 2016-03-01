@@ -1726,39 +1726,73 @@ func (i R_PPC64) String() string   { return stringName(uint32(i), rppc64Strings,
 func (i R_PPC64) GoString() string { return stringName(uint32(i), rppc64Strings, true) }
 
 // Relocation types for s390x processors.
-type R_S390X int
+type R_390 int
 
 const (
-	R_390_NONE     R_S390X = 0
-	R_390_8        R_S390X = 1
-	R_390_12       R_S390X = 2
-	R_390_16       R_S390X = 3
-	R_390_32       R_S390X = 4
-	R_390_PC32     R_S390X = 5
-	R_390_GOT12    R_S390X = 6
-	R_390_GOT32    R_S390X = 7
-	R_390_PLT32    R_S390X = 8
-	R_390_COPY     R_S390X = 9
-	R_390_GLOB_DAT R_S390X = 10
-	R_390_JMP_SLOT R_S390X = 11
-	R_390_RELATIVE R_S390X = 12
-	R_390_GOTOFF   R_S390X = 13
-	R_390_GOTPC    R_S390X = 14
-	R_390_GOT16    R_S390X = 15
-	R_390_PC16     R_S390X = 16
-	R_390_PC16DBL  R_S390X = 17
-	R_390_PLT16DBL R_S390X = 18
-	R_390_PC32DBL  R_S390X = 19
-	R_390_PLT32DBL R_S390X = 20
-	R_390_GOTPCDBL R_S390X = 21
-	R_390_64       R_S390X = 22
-	R_390_PC64     R_S390X = 23
-	R_390_GOT64    R_S390X = 24
-	R_390_PLT64    R_S390X = 25
-	R_390_GOTENT   R_S390X = 26
+	R_390_NONE        R_390 = 0
+	R_390_8           R_390 = 1
+	R_390_12          R_390 = 2
+	R_390_16          R_390 = 3
+	R_390_32          R_390 = 4
+	R_390_PC32        R_390 = 5
+	R_390_GOT12       R_390 = 6
+	R_390_GOT32       R_390 = 7
+	R_390_PLT32       R_390 = 8
+	R_390_COPY        R_390 = 9
+	R_390_GLOB_DAT    R_390 = 10
+	R_390_JMP_SLOT    R_390 = 11
+	R_390_RELATIVE    R_390 = 12
+	R_390_GOTOFF      R_390 = 13
+	R_390_GOTPC       R_390 = 14
+	R_390_GOT16       R_390 = 15
+	R_390_PC16        R_390 = 16
+	R_390_PC16DBL     R_390 = 17
+	R_390_PLT16DBL    R_390 = 18
+	R_390_PC32DBL     R_390 = 19
+	R_390_PLT32DBL    R_390 = 20
+	R_390_GOTPCDBL    R_390 = 21
+	R_390_64          R_390 = 22
+	R_390_PC64        R_390 = 23
+	R_390_GOT64       R_390 = 24
+	R_390_PLT64       R_390 = 25
+	R_390_GOTENT      R_390 = 26
+	R_390_GOTOFF16    R_390 = 27
+	R_390_GOTOFF64    R_390 = 28
+	R_390_GOTPLT12    R_390 = 29
+	R_390_GOTPLT16    R_390 = 30
+	R_390_GOTPLT32    R_390 = 31
+	R_390_GOTPLT64    R_390 = 32
+	R_390_GOTPLTENT   R_390 = 33
+	R_390_GOTPLTOFF16 R_390 = 34
+	R_390_GOTPLTOFF32 R_390 = 35
+	R_390_GOTPLTOFF64 R_390 = 36
+	R_390_TLS_LOAD    R_390 = 37
+	R_390_TLS_GDCALL  R_390 = 38
+	R_390_TLS_LDCALL  R_390 = 39
+	R_390_TLS_GD32    R_390 = 40
+	R_390_TLS_GD64    R_390 = 41
+	R_390_TLS_GOTIE12 R_390 = 42
+	R_390_TLS_GOTIE32 R_390 = 43
+	R_390_TLS_GOTIE64 R_390 = 44
+	R_390_TLS_LDM32   R_390 = 45
+	R_390_TLS_LDM64   R_390 = 46
+	R_390_TLS_IE32    R_390 = 47
+	R_390_TLS_IE64    R_390 = 48
+	R_390_TLS_IEENT   R_390 = 49
+	R_390_TLS_LE32    R_390 = 50
+	R_390_TLS_LE64    R_390 = 51
+	R_390_TLS_LDO32   R_390 = 52
+	R_390_TLS_LDO64   R_390 = 53
+	R_390_TLS_DTPMOD  R_390 = 54
+	R_390_TLS_DTPOFF  R_390 = 55
+	R_390_TLS_TPOFF   R_390 = 56
+	R_390_20          R_390 = 57
+	R_390_GOT20       R_390 = 58
+	R_390_GOTPLT20    R_390 = 59
+	R_390_TLS_GOTIE20 R_390 = 60
 )
 
-var rs390xStrings = []intName{
+var r390Strings = []intName{
 	{0, "R_390_NONE"},
 	{1, "R_390_8"},
 	{2, "R_390_12"},
@@ -1786,10 +1820,44 @@ var rs390xStrings = []intName{
 	{24, "R_390_GOT64"},
 	{25, "R_390_PLT64"},
 	{26, "R_390_GOTENT"},
+	{27, "R_390_GOTOFF16"},
+	{28, "R_390_GOTOFF64"},
+	{29, "R_390_GOTPLT12"},
+	{30, "R_390_GOTPLT16"},
+	{31, "R_390_GOTPLT32"},
+	{32, "R_390_GOTPLT64"},
+	{33, "R_390_GOTPLTENT"},
+	{34, "R_390_GOTPLTOFF16"},
+	{35, "R_390_GOTPLTOFF32"},
+	{36, "R_390_GOTPLTOFF64"},
+	{37, "R_390_TLS_LOAD"},
+	{38, "R_390_TLS_GDCALL"},
+	{39, "R_390_TLS_LDCALL"},
+	{40, "R_390_TLS_GD32"},
+	{41, "R_390_TLS_GD64"},
+	{42, "R_390_TLS_GOTIE12"},
+	{43, "R_390_TLS_GOTIE32"},
+	{44, "R_390_TLS_GOTIE64"},
+	{45, "R_390_TLS_LDM32"},
+	{46, "R_390_TLS_LDM64"},
+	{47, "R_390_TLS_IE32"},
+	{48, "R_390_TLS_IE64"},
+	{49, "R_390_TLS_IEENT"},
+	{50, "R_390_TLS_LE32"},
+	{51, "R_390_TLS_LE64"},
+	{52, "R_390_TLS_LDO32"},
+	{53, "R_390_TLS_LDO64"},
+	{54, "R_390_TLS_DTPMOD"},
+	{55, "R_390_TLS_DTPOFF"},
+	{56, "R_390_TLS_TPOFF"},
+	{57, "R_390_20"},
+	{58, "R_390_GOT20"},
+	{59, "R_390_GOTPLT20"},
+	{60, "R_390_TLS_GOTIE20"},
 }
 
-func (i R_S390X) String() string   { return stringName(uint32(i), rs390xStrings, false) }
-func (i R_S390X) GoString() string { return stringName(uint32(i), rs390xStrings, true) }
+func (i R_390) String() string   { return stringName(uint32(i), r390Strings, false) }
+func (i R_390) GoString() string { return stringName(uint32(i), r390Strings, true) }
 
 // Relocation types for SPARC.
 type R_SPARC int
