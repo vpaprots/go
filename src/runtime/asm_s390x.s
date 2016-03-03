@@ -124,7 +124,7 @@ DATA	runtime·mainPC+0(SB)/8,$runtime·main(SB)
 GLOBL	runtime·mainPC(SB),RODATA,$8
 
 TEXT runtime·breakpoint(SB),NOSPLIT|NOFRAME,$0-0
-	MOVD	R0, 2(R0) // TODO: TD
+	MOVD	R0, 2(R0)
 	RET
 
 TEXT runtime·asminit(SB),NOSPLIT|NOFRAME,$0-0
@@ -139,12 +139,11 @@ TEXT runtime·asminit(SB),NOSPLIT|NOFRAME,$0-0
 TEXT runtime·gosave(SB), NOSPLIT, $-8-8
 	MOVD	buf+0(FP), R3
 	MOVD	R15, gobuf_sp(R3)
-	MOVD	LR, R10
-	MOVD	R10, gobuf_pc(R3)
+	MOVD	LR, gobuf_pc(R3)
 	MOVD	g, gobuf_g(R3)
-	MOVD	R0, gobuf_lr(R3)
-	MOVD	R0, gobuf_ret(R3)
-	MOVD	R0, gobuf_ctxt(R3)
+	MOVD	$0, gobuf_lr(R3)
+	MOVD	$0, gobuf_ret(R3)
+	MOVD	$0, gobuf_ctxt(R3)
 	RET
 
 // void gogo(Gobuf*)
@@ -156,17 +155,16 @@ TEXT runtime·gogo(SB), NOSPLIT, $-8-8
 
 	MOVD	0(g), R4
 	MOVD	gobuf_sp(R5), R15
-	MOVD	gobuf_lr(R5), R10
-	MOVD	R10, LR
+	MOVD	gobuf_lr(R5), LR
 	MOVD	gobuf_ret(R5), R3
 	MOVD	gobuf_ctxt(R5), R12
-	MOVD	R0, gobuf_sp(R5)
-	MOVD	R0, gobuf_ret(R5)
-	MOVD	R0, gobuf_lr(R5)
-	MOVD	R0, gobuf_ctxt(R5)
+	MOVD	$0, gobuf_sp(R5)
+	MOVD	$0, gobuf_ret(R5)
+	MOVD	$0, gobuf_lr(R5)
+	MOVD	$0, gobuf_ctxt(R5)
 	CMP	R0, R0 // set condition codes for == test, needed by stack split
-	MOVD	gobuf_pc(R5), R10
-	BR	(R10)
+	MOVD	gobuf_pc(R5), R6
+	BR	(R6)
 
 // void mcall(fn func(*g))
 // Switch to m->g0's stack, call fn(g).
@@ -175,8 +173,7 @@ TEXT runtime·gogo(SB), NOSPLIT, $-8-8
 TEXT runtime·mcall(SB), NOSPLIT, $-8-8
 	// Save caller state in g->sched
 	MOVD	R15, (g_sched+gobuf_sp)(g)
-	MOVD	LR, R10
-	MOVD	R10, (g_sched+gobuf_pc)(g)
+	MOVD	LR, (g_sched+gobuf_pc)(g)
 	MOVD	R0, (g_sched+gobuf_lr)(g)
 	MOVD	g, (g_sched+gobuf_g)(g)
 
@@ -190,12 +187,11 @@ TEXT runtime·mcall(SB), NOSPLIT, $-8-8
 	BR	runtime·badmcall(SB)
 	MOVD	fn+0(FP), R12			// context
 	MOVD	0(R12), R4			// code pointer
-	MOVD	R4, R10
 	MOVD	(g_sched+gobuf_sp)(g), R15	// sp = m->g0->sched.sp
 	SUB	$16, R15
 	MOVD	R3, 8(R15)
-	MOVD	R0, 0(R15)
-	BL	(R10)
+	MOVD	$0, 0(R15)
+	BL	(R4)
 	BR	runtime·badmcall2(SB)
 
 // systemstack_switch is a dummy routine that systemstack leaves at the bottom
@@ -226,8 +222,7 @@ TEXT runtime·systemstack(SB), NOSPLIT, $0-8
 	// Bad: g is not gsignal, not g0, not curg. What is it?
 	// Hide call from linker nosplit analysis.
 	MOVD	$runtime·badsystemstack(SB), R3
-	MOVD	R3, R10
-	BL	(R10)
+	BL	(R3)
 
 switch:
 	// save our state in g->sched.  Pretend to
@@ -251,22 +246,20 @@ switch:
 
 	// call target function
 	MOVD	0(R12), R3	// code pointer
-	MOVD	R3, R10
-	BL	(R10)
+	BL	(R3)
 
 	// switch back to g
 	MOVD	g_m(g), R3
 	MOVD	m_curg(R3), g
 	BL	runtime·save_g(SB)
 	MOVD	(g_sched+gobuf_sp)(g), R15
-	MOVD	R0, (g_sched+gobuf_sp)(g)
+	MOVD	$0, (g_sched+gobuf_sp)(g)
 	RET
 
 noswitch:
 	// already on m stack, just call directly
 	MOVD	0(R12), R3	// code pointer
-	MOVD	R3, R10
-	BL	(R10)
+	BL	(R3)
 	RET
 
 /*
@@ -337,8 +330,7 @@ TEXT runtime·stackBarrier(SB),NOSPLIT,$0
 	ADD	$1, R5
 	MOVD	R5, g_stkbarPos(g)
 	// Jump to the original return PC.
-	MOVD	R6, R10
-	BR	(R10)
+	BR	(R6)
 
 // reflectcall: call a function with the given argument list
 // func call(argtype *_type, f *FuncVal, arg *byte, argsize, retoffset uint32).
@@ -347,11 +339,11 @@ TEXT runtime·stackBarrier(SB),NOSPLIT,$0
 // Caution: ugly multiline assembly macros in your future!
 
 #define DISPATCH(NAME,MAXSIZE)		\
-	MOVD	$MAXSIZE, R10;		\
-	CMP	R3, R10;		\
+	MOVD	$MAXSIZE, R4;		\
+	CMP	R3, R4;		\
 	BGT	3(PC);			\
-	MOVD	$NAME(SB), R10;	\
-	BR	(R10)
+	MOVD	$NAME(SB), R5;	\
+	BR	(R5)
 // Note: can't just "BR NAME(SB)" - bad inlining results.
 
 TEXT reflect·call(SB), NOSPLIT, $0-0
@@ -387,8 +379,8 @@ TEXT ·reflectcall(SB), NOSPLIT, $-8-32
 	DISPATCH(runtime·call268435456, 268435456)
 	DISPATCH(runtime·call536870912, 536870912)
 	DISPATCH(runtime·call1073741824, 1073741824)
-	MOVD	$runtime·badreflectcall(SB), R10
-	BR	(R10)
+	MOVD	$runtime·badreflectcall(SB), R5
+	BR	(R5)
 
 #define CALLFN(NAME,MAXSIZE)			\
 TEXT NAME(SB), WRAPPER, $MAXSIZE-24;		\
@@ -409,9 +401,9 @@ TEXT NAME(SB), WRAPPER, $MAXSIZE-24;		\
 	BR	-6(PC);				\
 	/* call function */			\
 	MOVD	f+8(FP), R12;			\
-	MOVD	(R12), R10;			\
+	MOVD	(R12), R8;			\
 	PCDATA  $PCDATA_StackMapIndex, $0;	\
-	BL	(R10);				\
+	BL	(R8);				\
 	/* copy return values back */		\
 	MOVD	arg+16(FP), R3;			\
 	MOVWZ	n+24(FP), R4;			\
@@ -480,25 +472,22 @@ TEXT runtime·procyield(SB),NOSPLIT,$0-0
 // 2. sub 6 bytes to get back to BL deferreturn (size of BRASL instruction)
 // 3. BR to fn
 TEXT runtime·jmpdefer(SB),NOSPLIT|NOFRAME,$0-16
-	MOVD	0(R15), R10
-	SUB	$6, R10
-	MOVD	R10, LR
+	MOVD	0(R15), R1
+	SUB	$6, R1, LR
 
 	MOVD	fv+0(FP), R12
 	MOVD	argp+8(FP), R15
 	SUB	$8, R15
 	MOVD	0(R12), R3
-	MOVD	R3, R10
-	BR	(R10)
+	BR	(R3)
 
 // Save state of caller into g->sched. Smashes R31.
 TEXT gosave<>(SB),NOSPLIT|NOFRAME,$0
-	MOVD	LR, R10
-	MOVD	R10, (g_sched+gobuf_pc)(g)
+	MOVD	LR, (g_sched+gobuf_pc)(g)
 	MOVD	R15, (g_sched+gobuf_sp)(g)
-	MOVD	R0, (g_sched+gobuf_lr)(g)
-	MOVD	R0, (g_sched+gobuf_ret)(g)
-	MOVD	R0, (g_sched+gobuf_ctxt)(g)
+	MOVD	$0, (g_sched+gobuf_lr)(g)
+	MOVD	$0, (g_sched+gobuf_ret)(g)
+	MOVD	$0, (g_sched+gobuf_ctxt)(g)
 	RET
 
 // func asmcgocall(fn, arg unsafe.Pointer) int32
@@ -537,9 +526,8 @@ g0:
 	SUB	R2, R5
 	MOVD	R5, 160(R15)             // save depth in old g stack (can't just save SP, as stack might be copied during a callback)
 	MOVD	R0, 0(R15)              // clear back chain pointer (TODO can we give it real back trace information?)
-	MOVD	R3, R10
 	MOVD	R4, R2                  // arg in R2
-	BL	R10                     // can clobber: R0-R5, R14, F0-F3, F5, F7-F15
+	BL	R3                      // can clobber: R0-R5, R14, F0-F3, F5, F7-F15
 
 	XOR	R0, R0                  // set R0 back to 0.
 	// Restore g, stack pointer.
@@ -564,8 +552,7 @@ TEXT runtime·cgocallback(SB),NOSPLIT,$24-24
 	MOVD	framesize+16(FP), R3
 	MOVD	R3, 24(R15)
 	MOVD	$runtime·cgocallback_gofunc(SB), R3
-	MOVD	R3, R10
-	BL	(R10)
+	BL	(R3)
 	RET
 
 // cgocallback_gofunc(FuncVal*, void *frame, uintptr framesize)
@@ -665,8 +652,7 @@ havem:
 	MOVD	savedm-8(SP), R6
 	CMPBNE	R6, $0, droppedm
 	MOVD	$runtime·dropm(SB), R3
-	MOVD	R3, R10
-	BL	(R10)
+	BL	(R3)
 droppedm:
 
 	// Done!
@@ -1139,6 +1125,5 @@ TEXT runtime·addmoduledata(SB),NOSPLIT|NOFRAME,$0-0
 	RET
 
 TEXT ·checkASM(SB),NOSPLIT,$0-1
-	MOVW	$1, R3
-	MOVB	R3, ret+0(FP)
+	MOVB	$1, ret+0(FP)
 	RET

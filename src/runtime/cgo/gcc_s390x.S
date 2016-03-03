@@ -35,7 +35,7 @@ crosscall_s390x:
 	ldy	%f2, 136(%r15)
 	ldy	%f4, 144(%r15)
 	ldy	%f6, 152(%r15)
-	
+
 	br      %r14 /* restored by lmg */
 
 #ifdef __ELF__

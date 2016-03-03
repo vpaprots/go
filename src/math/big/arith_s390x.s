@@ -157,7 +157,7 @@ L1:	// n > 0
 E1:	NEG  R4, R4
 	MOVD R4, c+72(FP)	// return c
 	RET
-	
+
 
 // func addVW(z, x []Word, y Word) (c Word)
 TEXT ·addVW(SB),NOSPLIT,$0
@@ -270,187 +270,178 @@ E4:	MOVD R4, c+56(FP)	// return c
 
 // func shlVU(z, x []Word, s uint) (c Word)
 TEXT ·shlVU(SB),NOSPLIT,$0
-        MOVD z_len+8(FP), R5
-        SUB  $1, R5             // n--
-        BLT  X8b                // n < 0        (n <= 0)
+	MOVD z_len+8(FP), R5
+	SUB  $1, R5             // n--
+	BLT  X8b                // n < 0        (n <= 0)
 
-        // n > 0
-        MOVD s+48(FP), R4
+	// n > 0
+	MOVD s+48(FP), R4
 	CMPBEQ	R0, R4, Z80	       //handle 0 case beq
-        MOVD $64, R6
-        CMP  R6, R4
-        BEQ  Z864	       //handle 64 case beq
-        MOVD z+0(FP), R2
-        MOVD x+24(FP), R8
-        SLD  $3, R5             // n = n*8
-        SUB  R4, R6, R7
-        MOVD (R8)(R5*1), R10    // w1 = x[i-1]
-        SRD  R7, R10, R3
-        MOVD R3, c+56(FP)
+	MOVD $64, R6
+	CMPBEQ  R6, R4, Z864	       //handle 64 case beq
+	MOVD z+0(FP), R2
+	MOVD x+24(FP), R8
+	SLD  $3, R5             // n = n*8
+	SUB  R4, R6, R7
+	MOVD (R8)(R5*1), R10    // w1 = x[i-1]
+	SRD  R7, R10, R3
+	MOVD R3, c+56(FP)
 
-        MOVD $0, R1             // i = 0
-        BR   E8
+	MOVD $0, R1             // i = 0
+	BR   E8
 
-        // i < n-1
-L8:     MOVD R10, R3             // w = w1
-        MOVD -8(R8)(R5*1), R10   // w1 = x[i+1]
+	// i < n-1
+L8:	MOVD R10, R3             // w = w1
+	MOVD -8(R8)(R5*1), R10   // w1 = x[i+1]
 
-        SLD  R4,  R3             // w<<s | w1>>ŝ
-        SRD  R7, R10, R6
-        OR   R6, R3
-        MOVD R3, (R2)(R5*1)      // z[i] = w<<s | w1>>ŝ
-        SUB  $8, R5              // i--
+	SLD  R4,  R3             // w<<s | w1>>ŝ
+	SRD  R7, R10, R6
+	OR   R6, R3
+	MOVD R3, (R2)(R5*1)      // z[i] = w<<s | w1>>ŝ
+	SUB  $8, R5              // i--
 
-E8:     CMP R5, R0
-        BGT L8                   // i < n-1
+E8:	CMPBGT R5, R0, L8        // i < n-1
 
-        // i >= n-1
-X8a:    SLD  R4, R10             // w1<<s
-        MOVD R10, (R2)           // z[0] = w1<<s
-        RET
+	// i >= n-1
+X8a:	SLD  R4, R10             // w1<<s
+	MOVD R10, (R2)           // z[0] = w1<<s
+	RET
 
-X8b:    MOVD R0, c+56(FP)
-        RET
+X8b:	MOVD R0, c+56(FP)
+	RET
 
-Z80:    MOVD z+0(FP), R2
-        MOVD x+24(FP), R8
-        SLD  $3, R5             // n = n*8
+Z80:	MOVD z+0(FP), R2
+	MOVD x+24(FP), R8
+	SLD  $3, R5             // n = n*8
 
-        MOVD (R8), R10
-        MOVD $0, R3
-        MOVD R3, c+56(FP)
+	MOVD (R8), R10
+	MOVD $0, R3
+	MOVD R3, c+56(FP)
 
-        MOVD $0, R1             // i = 0
-        BR   E8Z
+	MOVD $0, R1             // i = 0
+	BR   E8Z
 
-        // i < n-1
-L8Z:    MOVD R10, R3
-        MOVD 8(R8)(R1*1), R10
+	// i < n-1
+L8Z:	MOVD R10, R3
+	MOVD 8(R8)(R1*1), R10
 
-        MOVD R3, (R2)(R1*1)
-        ADD  $8, R1
+	MOVD R3, (R2)(R1*1)
+	ADD  $8, R1
 
-E8Z:    CMP R1, R5
-        BLT L8Z
+E8Z:	CMPBLT R1, R5, L8Z
 
-        // i >= n-1
-        MOVD R10, (R2)(R5*1)
-        RET
+	// i >= n-1
+	MOVD R10, (R2)(R5*1)
+	RET
 
-Z864:   MOVD z+0(FP), R2
-        MOVD x+24(FP), R8
-        SLD  $3, R5             // n = n*8
-        MOVD (R8)(R5*1), R3     // w1 = x[n-1]
-        MOVD R3, c+56(FP)       // z[i] = x[n-1]
+Z864:	MOVD z+0(FP), R2
+	MOVD x+24(FP), R8
+	SLD  $3, R5             // n = n*8
+	MOVD (R8)(R5*1), R3     // w1 = x[n-1]
+	MOVD R3, c+56(FP)       // z[i] = x[n-1]
 
-        BR   E864
+	BR   E864
 
-        // i < n-1
-L864:   MOVD -8(R8)(R5*1), R3  
+	// i < n-1
+L864:	MOVD -8(R8)(R5*1), R3
 
-        MOVD R3, (R2)(R5*1)     // z[i] = x[n-1]
-        SUB  $8, R5             // i--
+	MOVD R3, (R2)(R5*1)     // z[i] = x[n-1]
+	SUB  $8, R5             // i--
 
-E864:   CMP R5, R0
-        BGT L864                // i < n-1
+E864:	CMPBGT R5, R0, L864     // i < n-1
 
-        MOVD R0, (R2)           // z[n-1] = 0
-
-        RET
+	MOVD R0, (R2)           // z[n-1] = 0
+	RET
 
 
 // CX = R4, r8 = r8, r10 = r2 , r11 = r5, DX = r3, AX = r10 , BX = R1 , 64-count = r7 (R0 set to 0) temp = R6
 // func shrVU(z, x []Word, s uint) (c Word)
 TEXT ·shrVU(SB),NOSPLIT,$0
-        MOVD z_len+8(FP), R5
-        SUB  $1, R5             // n--
-        BLT  X9b                // n < 0        (n <= 0)
+	MOVD z_len+8(FP), R5
+	SUB  $1, R5             // n--
+	BLT  X9b                // n < 0        (n <= 0)
 
-        // n > 0
-        MOVD s+48(FP), R4
+	// n > 0
+	MOVD s+48(FP), R4
 	CMPBEQ	R0, R4, ZB0	       //handle 0 case beq
-        MOVD $64, R6
-        CMP  R6, R4
-        BEQ  ZB64	       //handle 64 case beq
-        MOVD z+0(FP), R2
-        MOVD x+24(FP), R8
-        SLD  $3, R5             // n = n*8
-        SUB  R4, R6, R7
-        MOVD (R8), R10          // w1 = x[0]
-        SLD  R7, R10, R3
-        MOVD R3, c+56(FP)
+	MOVD $64, R6
+	CMPBEQ  R6, R4, ZB64	       //handle 64 case beq
+	MOVD z+0(FP), R2
+	MOVD x+24(FP), R8
+	SLD  $3, R5             // n = n*8
+	SUB  R4, R6, R7
+	MOVD (R8), R10          // w1 = x[0]
+	SLD  R7, R10, R3
+	MOVD R3, c+56(FP)
 
-        MOVD $0, R1            // i = 0
-        BR   E9
+	MOVD $0, R1            // i = 0
+	BR   E9
 
-        // i < n-1
-L9:     MOVD R10, R3            // w = w1
-        MOVD 8(R8)(R1*1), R10   // w1 = x[i+1]
+	// i < n-1
+L9:	MOVD R10, R3            // w = w1
+	MOVD 8(R8)(R1*1), R10   // w1 = x[i+1]
 
-        SRD  R4,  R3            // w>>s | w1<<s
-        SLD  R7, R10, R6
-        OR   R6, R3
-        MOVD R3, (R2)(R1*1)     // z[i] = w>>s | w1<<s
-        ADD  $8, R1             // i++
+	SRD  R4,  R3            // w>>s | w1<<s
+	SLD  R7, R10, R6
+	OR   R6, R3
+	MOVD R3, (R2)(R1*1)     // z[i] = w>>s | w1<<s
+	ADD  $8, R1             // i++
 
-E9:     CMP R1, R5
-        BLT L9                  // i < n-1
+E9:	CMPBLT R1, R5, L9       // i < n-1
 
-        // i >= n-1
-X9a:    SRD  R4, R10            // w1>>s
-        MOVD R10, (R2)(R5*1)    // z[n-1] = w1>>s
-        RET
+	// i >= n-1
+X9a:	SRD  R4, R10            // w1>>s
+	MOVD R10, (R2)(R5*1)    // z[n-1] = w1>>s
+	RET
 
-X9b:    MOVD R0, c+56(FP)
-        RET
+X9b:	MOVD R0, c+56(FP)
+	RET
 
-ZB0:    MOVD z+0(FP), R2
-        MOVD x+24(FP), R8
-        SLD  $3, R5             // n = n*8
+ZB0:	MOVD z+0(FP), R2
+	MOVD x+24(FP), R8
+	SLD  $3, R5             // n = n*8
 
-        MOVD (R8), R10          // w1 = x[0]
-        MOVD $0, R3             // R10 << 64
-        MOVD R3, c+56(FP)
+	MOVD (R8), R10          // w1 = x[0]
+	MOVD $0, R3             // R10 << 64
+	MOVD R3, c+56(FP)
 
-        MOVD $0, R1            // i = 0
-        BR   E9Z
+	MOVD $0, R1             // i = 0
+	BR   E9Z
 
-        // i < n-1
-L9Z:    MOVD R10, R3            // w = w1
-        MOVD 8(R8)(R1*1), R10   // w1 = x[i+1]
+	// i < n-1
+L9Z:	MOVD R10, R3            // w = w1
+	MOVD 8(R8)(R1*1), R10   // w1 = x[i+1]
 
-        MOVD R3, (R2)(R1*1)     // z[i] = w>>s | w1<<s
-        ADD  $8, R1             // i++
+	MOVD R3, (R2)(R1*1)     // z[i] = w>>s | w1<<s
+	ADD  $8, R1             // i++
 
-E9Z:    CMP R1, R5
-        BLT L9Z                 // i < n-1
+E9Z:	CMPBLT R1, R5, L9Z      // i < n-1
 
-        // i >= n-1
-        MOVD R10, (R2)(R5*1)    // z[n-1] = w1>>s
-        RET
+	// i >= n-1
+	MOVD R10, (R2)(R5*1)    // z[n-1] = w1>>s
+	RET
 
-ZB64:   MOVD z+0(FP), R2
-        MOVD x+24(FP), R8
-        SLD  $3, R5             // n = n*8
-        MOVD (R8), R3          // w1 = x[0]
-        MOVD R3, c+56(FP)
+ZB64:	MOVD z+0(FP), R2
+	MOVD x+24(FP), R8
+	SLD  $3, R5             // n = n*8
+	MOVD (R8), R3          // w1 = x[0]
+	MOVD R3, c+56(FP)
 
-        MOVD $0, R1            // i = 0
-        BR   E964
+	MOVD $0, R1            // i = 0
+	BR   E964
 
-        // i < n-1
-L964:   MOVD 8(R8)(R1*1), R3   // w1 = x[i+1]
+	// i < n-1
+L964:	MOVD 8(R8)(R1*1), R3   // w1 = x[i+1]
 
-        MOVD R3, (R2)(R1*1)     // z[i] = w>>s | w1<<s
-        ADD  $8, R1             // i++
+	MOVD R3, (R2)(R1*1)     // z[i] = w>>s | w1<<s
+	ADD  $8, R1             // i++
 
-E964:   CMP R1, R5
-        BLT L964                  // i < n-1
+E964:	CMPBLT R1, R5, L964     // i < n-1
 
-        // i >= n-1
-        MOVD  $0, R10            // w1>>s
-        MOVD R10, (R2)(R5*1)    // z[n-1] = w1>>s
-        RET
+	// i >= n-1
+	MOVD  $0, R10            // w1>>s
+	MOVD R10, (R2)(R5*1)    // z[n-1] = w1>>s
+	RET
 
 // CX = R4, r8 = r8, r9=r9, r10 = r2 , r11 = r5, DX = r3, AX = r6 , BX = R1 , (R0 set to 0) + use R11 + use R7 for i
 // func mulAddVWW(z, x []Word, y, r Word) (c Word)
@@ -491,7 +482,7 @@ TEXT ·addMulVVW(SB),NOSPLIT,$0
 	MOVD $0, R7		// i = 0
 	MOVD $0, R0		// make sure it's zero
 	MOVD $0, R4		// c = 0
-	
+
 	MOVD R5, R12
 	AND  $-2, R12
 	CMPBGE R5, $2, A6
@@ -506,7 +497,7 @@ A6:	MOVD (R8)(R1*1), R6
 	ADDE R0, R6
 	MOVD R6, R4
 	MOVD R11, (R2)(R1*1)
-	
+
 	MOVD (8)(R8)(R1*1), R6
 	MULHDU R9, R6
 	MOVD (8)(R2)(R1*1), R10
@@ -516,10 +507,10 @@ A6:	MOVD (R8)(R1*1), R6
 	ADDE R0, R6
 	MOVD R6, R4
 	MOVD R11, (8)(R2)(R1*1)
-	
+
 	ADD  $16, R1		// i*8 + 8
 	ADD  $2, R7		// i++
-	
+
 	CMPBLT R7, R12, A6
 	BR E6
 
@@ -532,7 +523,7 @@ L6:	MOVD (R8)(R1*1), R6
 	ADDE R0, R6
 	MOVD R6, R4
 	MOVD R11, (R2)(R1*1)
-	
+
 	ADD  $8, R1		// i*8 + 8
 	ADD  $1, R7		// i++
 

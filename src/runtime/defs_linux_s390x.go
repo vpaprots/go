@@ -1,7 +1,7 @@
-// created by cgo -cdefs and then converted to Go
-// cgo -cdefs defs_linux.go defs3_linux.go
+// Copyright 2016 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
-// TODO: bryanpkc: hardcode this for now, re-generate with cgo -cdefs later
 package runtime
 
 const (
@@ -89,11 +89,6 @@ const (
 	_EPOLL_CTL_MOD = 0x3
 )
 
-//struct Sigset {
-//	uint64	sig[1];
-//};
-//typedef uint64 Sigset;
-
 type timespec struct {
 	tv_sec  int64
 	tv_nsec int64
@@ -142,9 +137,6 @@ type epollevent struct {
 	data      [8]byte // unaligned uintptr
 }
 
-// created by cgo -cdefs and then converted to Go
-// cgo -cdefs defs_linux.go defs3_linux.go
-
 const (
 	_O_RDONLY    = 0x0
 	_O_CLOEXEC   = 0x80000
@@ -154,8 +146,7 @@ const (
 type sigaltstackt struct {
 	ss_sp    *byte
 	ss_flags int32
-	//pad_cgo_0 [4]byte
-	ss_size uintptr
+	ss_size  uintptr
 }
 
 type sigcontext struct {

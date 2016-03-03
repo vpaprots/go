@@ -8,8 +8,7 @@
 // System calls for s390x, Linux
 //
 
-// func Syscall(trap int64, a1, a2, a3 int64) (r1, r2, err int64);
-
+// func Syscall(trap int64, a1, a2, a3 int64) (r1, r2, err int64)
 TEXT ·Syscall(SB),NOSPLIT,$0-56
 	BL	runtime·entersyscall(SB)
 	MOVD	a1+8(FP), R2
@@ -20,21 +19,18 @@ TEXT ·Syscall(SB),NOSPLIT,$0-56
 	MOVD	$0, R7
 	MOVD	trap+0(FP), R1	// syscall entry
 	SYSCALL
-	MOVD	$0xfffffffffffff001, R10
-	CMPUBLT	R2, R10, ok
-	MOVD	$-1, R10
-	MOVD	R10, r1+32(FP)	// r1
-	MOVD	$0, R10
-	MOVD	R10, r2+40(FP)	// r2
+	MOVD	$0xfffffffffffff001, R8
+	CMPUBLT	R2, R8, ok
+	MOVD	$-1, r1+32(FP)
+	MOVD	$0, r2+40(FP)
 	NEG	R2, R2
 	MOVD	R2, err+48(FP)	// errno
 	BL	runtime·exitsyscall(SB)
 	RET
 ok:
-	MOVD	R2, r1+32(FP)	// r1
-	MOVD	R3, r2+40(FP)	// r2
-	MOVD	$0, R10
-	MOVD	R10, err+48(FP)	// errno
+	MOVD	R2, r1+32(FP)
+	MOVD	R3, r2+40(FP)
+	MOVD	$0, err+48(FP)	// errno
 	BL	runtime·exitsyscall(SB)
 	RET
 
@@ -49,21 +45,18 @@ TEXT ·Syscall6(SB),NOSPLIT,$0-80
 	MOVD	a6+48(FP), R7
 	MOVD	trap+0(FP), R1	// syscall entry
 	SYSCALL
-	MOVD	$0xfffffffffffff001, R10
-	CMPUBLT	R2, R10, ok6
-	MOVD	$-1, R10
-	MOVD	R10, r1+56(FP)	// r1
-	MOVD	$0, R10
-	MOVD	R10, r2+64(FP)	// r2
+	MOVD	$0xfffffffffffff001, R8
+	CMPUBLT	R2, R8, ok6
+	MOVD	$-1, r1+56(FP)
+	MOVD	$0, r2+64(FP)
 	NEG	R2, R2
 	MOVD	R2, err+72(FP)	// errno
 	BL	runtime·exitsyscall(SB)
 	RET
 ok6:
-	MOVD	R2, r1+56(FP)	// r1
-	MOVD	R3, r2+64(FP)	// r2
-	MOVD	$0, R10
-	MOVD	R10, err+72(FP)	// errno
+	MOVD	R2, r1+56(FP)
+	MOVD	R3, r2+64(FP)
+	MOVD	$0, err+72(FP)	// errno
 	BL	runtime·exitsyscall(SB)
 	RET
 
@@ -77,20 +70,17 @@ TEXT ·RawSyscall(SB),NOSPLIT,$0-56
 	MOVD	$0, R7
 	MOVD	trap+0(FP), R1	// syscall entry
 	SYSCALL
-	MOVD	$0xfffffffffffff001, R10
-	CMPUBLT	R2, R10, ok1
-	MOVD	$-1, R10
-	MOVD	R10, r1+32(FP)	// r1
-	MOVD	$0, R10
-	MOVD	R10, r2+40(FP)	// r2
+	MOVD	$0xfffffffffffff001, R8
+	CMPUBLT	R2, R8, ok1
+	MOVD	$-1, r1+32(FP)
+	MOVD	$0, r2+40(FP)
 	NEG	R2, R2
 	MOVD	R2, err+48(FP)	// errno
 	RET
 ok1:
-	MOVD	R2, r1+32(FP)	// r1
-	MOVD	R3, r2+40(FP)	// r2
-	MOVD	$0, R10
-	MOVD	R10, err+48(FP)	// errno
+	MOVD	R2, r1+32(FP)
+	MOVD	R3, r2+40(FP)
+	MOVD	$0, err+48(FP)	// errno
 	RET
 
 // func RawSyscall6(trap, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2, err uintptr)
@@ -103,20 +93,17 @@ TEXT ·RawSyscall6(SB),NOSPLIT,$0-80
 	MOVD	a6+48(FP), R7
 	MOVD	trap+0(FP), R1	// syscall entry
 	SYSCALL
-	MOVD	$0xfffffffffffff001, R10
-	CMPUBLT	R2, R10, ok2
-	MOVD	$-1, R10
-	MOVD	R10, r1+56(FP)	// r1
-	MOVD	$0, R10
-	MOVD	R10, r2+64(FP)	// r2
+	MOVD	$0xfffffffffffff001, R8
+	CMPUBLT	R2, R8, ok2
+	MOVD	$-1, r1+56(FP)
+	MOVD	$0, r2+64(FP)
 	NEG	R2, R2
 	MOVD	R2, err+72(FP)	// errno
 	RET
 ok2:
-	MOVD	R2, r1+56(FP)	// r1
-	MOVD	R3, r2+64(FP)	// r2
-	MOVD	$0, R10
-	MOVD	R10, err+72(FP)	// errno
+	MOVD	R2, r1+56(FP)
+	MOVD	R3, r2+64(FP)
+	MOVD	$0, err+72(FP)	// errno
 	RET
 
 #define SYS_SOCKETCALL 102	/* from zsysnum_linux_s390x.go */
@@ -133,18 +120,16 @@ TEXT ·socketcall(SB),NOSPLIT,$0-72
 	MOVD	$0, R6
 	MOVD	$0, R7
 	SYSCALL
-	MOVD	$0xfffffffffffff001, R10
-	CMPUBLT	R2, R10, oksock
-	MOVD	$-1, R10
-	MOVD	R10, n+56(FP)
+	MOVD	$0xfffffffffffff001, R8
+	CMPUBLT	R2, R8, oksock
+	MOVD	$-1, n+56(FP)
 	NEG	R2, R2
 	MOVD	R2, err+64(FP)
 	BL	runtime·exitsyscall(SB)
 	RET
 oksock:
 	MOVD	R2, n+56(FP)
-	MOVD	$0, R10
-	MOVD	R10, err+64(FP)
+	MOVD	$0, err+64(FP)
 	CALL	runtime·exitsyscall(SB)
 	RET
 
@@ -159,15 +144,13 @@ TEXT ·rawsocketcall(SB),NOSPLIT,$0-72
 	MOVD	$0, R6
 	MOVD	$0, R7
 	SYSCALL
-	MOVD	$0xfffffffffffff001, R10
-	CMPUBLT	R2, R10, oksock1
-	MOVD	$-1, R10
-	MOVD	R10, n+56(FP)
+	MOVD	$0xfffffffffffff001, R8
+	CMPUBLT	R2, R8, oksock1
+	MOVD	$-1, n+56(FP)
 	NEG	R2, R2
 	MOVD	R2, err+64(FP)
 	RET
 oksock1:
 	MOVD	R2, n+56(FP)
-	MOVD	$0, R10
-	MOVD	R10, err+64(FP)
+	MOVD	$0, err+64(FP)
 	RET

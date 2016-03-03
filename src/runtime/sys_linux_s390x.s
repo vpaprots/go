@@ -18,7 +18,7 @@
 #define SYS_kill		 37
 #define SYS_fcntl		 55
 #define SYS_gettimeofday	 78
-#define SYS_select		142 	// always return -ENOSYS  // ***** 
+#define SYS_select		142 	// always return -ENOSYS  // *****
 #define SYS_mmap		 90
 #define SYS_munmap		 91
 #define SYS_setitimer		104
@@ -225,8 +225,8 @@ TEXT runtime·sigfwd(SB),NOSPLIT,$0-32
 	MOVW	sig+8(FP), R2
 	MOVD	info+16(FP), R3
 	MOVD	ctx+24(FP), R4
-	MOVD	fn+0(FP), R11
-	BL	R11
+	MOVD	fn+0(FP), R5
+	BL	R5
 	RET
 
 TEXT runtime·sigtramp(SB),NOSPLIT,$64
@@ -242,8 +242,8 @@ TEXT runtime·sigtramp(SB),NOSPLIT,$64
 	MOVW	R2, 8(R15)
 	MOVD	R3, 16(R15)
 	MOVD	R4, 24(R15)
-	MOVD	$runtime·sigtrampgo(SB), R11
-	BL	R11
+	MOVD	$runtime·sigtrampgo(SB), R5
+	BL	R5
 	RET
 
 // func mmap(addr unsafe.Pointer, n uintptr, prot, flags, fd int32, off uint32) unsafe.Pointer
@@ -300,7 +300,7 @@ TEXT runtime·futex(SB),NOSPLIT|NOFRAME,$0
 	MOVW	val+12(FP), R4
 	MOVD	ts+16(FP), R5
 	MOVD	addr2+24(FP), R6
-	MOVW	val3+32(FP),  R7 
+	MOVW	val3+32(FP),  R7
 	MOVW	$SYS_futex, R1
 	SYSCALL
 	MOVW	R2, ret+40(FP)
