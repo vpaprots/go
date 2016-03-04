@@ -1,4 +1,4 @@
-// Copyright 2016 The Go Authors.  All rights reserved.
+// Copyright 2016 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,7 +7,7 @@
 // func block(dig *digest, p []byte)
 TEXT ·block(SB),NOSPLIT,$0-32
 start:
-	// Check that we have the SHA-256 function
+	// Check that we have the SHA-512 function
 	MOVD	·kimdQueryResult(SB), R4
 	SRD	$56, R4 // Get the first byte
 	AND	$0x10, R4, R5 // Bit 3 for SHA-512

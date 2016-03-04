@@ -1442,7 +1442,7 @@ func elfdynhash() {
 		buckets[b] = uint32(sy.Dynid)
 	}
 
-	// s390 violates the ELF spec and defines hash table entries as 8 bytes.
+	// s390x hash table entries are 8 bytes
 	if Thearch.Thechar == 'z' && elf64 {
 		Adduint64(Ctxt, s, uint64(nbucket))
 		Adduint64(Ctxt, s, uint64(nsym))

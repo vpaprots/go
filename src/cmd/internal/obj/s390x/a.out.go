@@ -33,9 +33,6 @@ import "cmd/internal/obj"
 
 //go:generate go run ../stringer.go -i $GOFILE -o anames.go -p s390x
 
-/*
- * s390x
- */
 const (
 	NSNAME = 8
 	NSYM   = 50
@@ -146,16 +143,6 @@ const (
 	REGSP   = REG_R15 // stack pointer
 )
 
-/*
- * GENERAL:
- *
- * compiler allocates R3 up as temps
- * compiler allocates register variables R5-R9
- * compiler allocates external registers R10 down
- *
- * compiler allocates register variables F5-F9
- * compiler allocates external registers F10 down
- */
 const (
 	BIG    = 32768 - 8
 	DISP12 = 4096
@@ -164,7 +151,7 @@ const (
 )
 
 const (
-	/* mark flags */
+	// mark flags
 	LABEL   = 1 << 0
 	LEAF    = 1 << 1
 	FLOAT   = 1 << 2

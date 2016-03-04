@@ -79,7 +79,6 @@ func regnames(n *int) []string {
 
 func excludedregs() uint64 {
 	// Exclude registers with fixed functions
-	// AZHANG TODO: Should other dedicated registers be reserved here?
 	return RtoB(s390x.REG_R0) |
 		RtoB(s390x.REGSP) |
 		RtoB(s390x.REGG) |

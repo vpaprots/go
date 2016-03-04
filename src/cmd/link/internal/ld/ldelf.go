@@ -588,7 +588,7 @@ func ldelf(f *obj.Biobuf, pkg string, length int64, pn string) {
 		}
 	case 'z':
 		if elfobj.machine != ElfMachS390 || hdr.Ident[4] != ElfClass64 {
-			Diag("%s: elf object but not Z", pn)
+			Diag("%s: elf object but not s390x", pn)
 			return
 		}
 	}

@@ -130,7 +130,6 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 	// At the moment EXRL instructions are not emitted by the compiler and only reference local symbols in
 	// assembly code.
-	// TODO(mundaym): A better solution needs to be found.
 	if p.As == AEXRL {
 		return
 	}
@@ -149,7 +148,7 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 		q := p
 		if p.From.Offset != 0 {
 			q = obj.Appendp(ctxt, p)
-			q.As = AADD // TODO(mundaym): should this be LA for performance (address gen short circuit)?
+			q.As = AADD
 			q.From.Type = obj.TYPE_CONST
 			q.From.Offset = p.From.Offset
 			q.To = p.To

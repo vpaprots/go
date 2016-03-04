@@ -1,4 +1,4 @@
-// Copyright 2016 The Go Authors.  All rights reserved.
+// Copyright 2016 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -37,7 +37,7 @@ var progtable = [s390x.ALAST]obj.ProgInfo{
 	obj.AVARLIVE:  {Flags: gc.Pseudo | gc.LeftRead},
 
 	// NOP is an internal no-op that also stands
-	// for USED and SET annotations, not the Power opcode.
+	// for USED and SET annotations.
 	obj.ANOP: {Flags: gc.LeftRead | gc.RightWrite},
 
 	// Integer
