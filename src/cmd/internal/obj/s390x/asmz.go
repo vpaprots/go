@@ -262,7 +262,9 @@ var optab = []Optab{
 	Optab{ASTCK, C_NONE, C_NONE, C_NONE, C_SOREG, 88, 0},
 
 	// storage and storage
-	Optab{AMVC, C_SOREG, C_NONE, C_SCON, C_SOREG, 84, 0},
+	Optab{AMVC, C_LOREG, C_NONE, C_SCON, C_LOREG, 84, 0},
+	Optab{AMVC, C_LOREG, C_NONE, C_SCON, C_LAUTO, 84, REGSP},
+	Optab{AMVC, C_LAUTO, C_NONE, C_SCON, C_LAUTO, 84, REGSP},
 
 	// address
 	Optab{ALARL, C_LCON, C_NONE, C_NONE, C_REG, 85, 0},
@@ -3604,13 +3606,48 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 
 	case 84: /* storage-and-storage operations (mvc, clc, xc, oc, nc) */
 		l := regoff(ctxt, p.From3)
-		d1 := regoff(ctxt, &p.To)
-		d2 := regoff(ctxt, &p.From)
 		if l < 1 || l > 256 {
 			ctxt.Diag("number of bytes (%v) not in range [1,256]", l)
 		}
+		if p.From.Index != 0 || p.To.Index != 0 {
+			ctxt.Diag("cannot use index reg")
+		}
 		b1 := p.To.Reg
 		b2 := p.From.Reg
+		if b1 == 0 {
+			b1 = o.param
+		}
+		if b2 == 0 {
+			b2 = o.param
+		}
+		d1 := regoff(ctxt, &p.To)
+		d2 := regoff(ctxt, &p.From)
+		if d1 < 0 || d1 >= DISP12 {
+			if b2 == REGTMP {
+				ctxt.Diag("REGTMP conflict")
+			}
+			if b1 != REGTMP {
+				zRRE(op_LGR, REGTMP, uint32(b1), asm)
+			}
+			zRIL(a, op_AGFI, REGTMP, uint32(d1), asm)
+			if d1 == d2 && b1 == b2 {
+				d2 = 0
+				b2 = REGTMP
+			}
+			d1 = 0
+			b1 = REGTMP
+		}
+		if d2 < 0 || d2 >= DISP12 {
+			if b1 == REGTMP2 {
+				ctxt.Diag("REGTMP2 conflict")
+			}
+			if b2 != REGTMP2 {
+				zRRE(op_LGR, REGTMP2, uint32(b2), asm)
+			}
+			zRIL(a, op_AGFI, REGTMP2, uint32(d2), asm)
+			d2 = 0
+			b2 = REGTMP2
+		}
 		var opcode uint32
 		switch p.As {
 		default:
