@@ -821,6 +821,7 @@ func buildop(ctxt *obj.Link) {
 			opset(AMULHDU, r0)
 			opset(ADIVD, r0)
 			opset(ADIVDU, r0)
+			opset(ADIVWU, r0)
 
 		case AMOVBZ: /* lbz, stz, rlwm(r/r), lhz, lha, stz, and x variants */
 			opset(AMOVH, r0)
