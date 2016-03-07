@@ -38,9 +38,6 @@ import (
 )
 
 var gactive uint32
-var movprop_cnt int
-var mergeopmv_cnt int
-var cnb_cnt int
 
 func peep(firstp *obj.Prog) {
 	g := gc.Flowstart(firstp, nil)
@@ -126,10 +123,6 @@ func peep(firstp *obj.Prog) {
 	 */
 
 	for r := g.Start; r != nil; r = r.Link {
-		if (gc.Debugmovprop != -1) && (movprop_cnt >= gc.Debugmovprop) {
-			break
-		}
-
 		p := r.Prog
 
 		switch p.As {
@@ -185,7 +178,6 @@ func peep(firstp *obj.Prog) {
 					fmt.Printf("%v\n", p1)
 				}
 				p1.From = p0.From
-				movprop_cnt += 1
 			} else {
 				t := copyu(p1, v0, nil)
 				if gc.Debug['D'] != 0 {
@@ -294,30 +286,23 @@ func peep(firstp *obj.Prog) {
 		gc.Dumpit("fuse clears", g.Start, 0)
 	}
 
-	if gc.Debug['P'] > 1 {
-		goto ret /* allow following code improvement to be suppressed */
-	}
+	// load pipelining
+	// push any load from memory as early as possible
+	// to give it time to complete before use.
+	for r := g.Start; r != nil; r = r.Link {
+		p := r.Prog
+		switch p.As {
+		case s390x.AMOVB,
+			s390x.AMOVW,
+			s390x.AMOVD:
 
-	if gc.Debug['p'] == 0 {
-		// load pipelining
-		// push any load from memory as early as possible
-		// to give it time to complete before use.
-		for r := g.Start; r != nil; r = r.Link {
-			p := r.Prog
-			switch p.As {
-			case s390x.AMOVB,
-				s390x.AMOVW,
-				s390x.AMOVD:
-
-				if regtyp(&p.To) && !regconsttyp(&p.From) {
-					pushback(r)
-				}
+			if regtyp(&p.To) && !regconsttyp(&p.From) {
+				pushback(r)
 			}
 		}
-		if gc.Debug['P'] != 0 && gc.Debug['v'] != 0 {
-			gc.Dumpit("pass8 push load as early as possible", g.Start, 0)
-		}
-
+	}
+	if gc.Debug['P'] != 0 && gc.Debug['v'] != 0 {
+		gc.Dumpit("pass8 push load as early as possible", g.Start, 0)
 	}
 
 	/*
@@ -325,11 +310,6 @@ func peep(firstp *obj.Prog) {
 	 */
 
 	for r := g.Start; r != nil; r = r.Link {
-
-		if (gc.Debugmergeopmv != -1) && (mergeopmv_cnt >= gc.Debugmergeopmv) {
-			break
-		}
-
 		p := r.Prog
 
 		switch p.As {
@@ -404,7 +384,6 @@ func peep(firstp *obj.Prog) {
 		if trymergeopmv(r1) {
 			p.To = p1.To
 			excise(r1)
-			mergeopmv_cnt += 1
 		}
 	}
 
@@ -415,15 +394,7 @@ func peep(firstp *obj.Prog) {
 	/*
 	 * look for CMP x, y; Branch -> Compare and branch
 	 */
-
-	if gc.Debugcnb == 0 {
-		goto ret
-	}
-
 	for r := g.Start; r != nil; r = r.Link {
-		if (gc.Debugcnb != -1) && (cnb_cnt >= gc.Debugcnb) {
-			break
-		}
 		p := r.Prog
 		r1 := gc.Uniqs(r)
 		if r1 == nil {
@@ -517,7 +488,6 @@ func peep(firstp *obj.Prog) {
 		if gc.Debug['D'] != 0 {
 			fmt.Printf("%v\n", p1)
 		}
-		cnb_cnt += 1
 		excise(r)
 	}
 
@@ -533,7 +503,6 @@ func peep(firstp *obj.Prog) {
 		gc.Dumpit("pass 7 fuse load/store instructions", g.Start, 0)
 	}
 
-ret:
 	gc.Flowend(g)
 }
 
@@ -839,12 +808,12 @@ func copyprop(r0 *gc.Flow) bool {
 	return copy1(v1, v2, r0.S1, 0)
 }
 
-// copy1 replaces uses of v2 with v1 starting at r and returns 1 if
+// copy1 replaces uses of v2 with v1 starting at r and returns true if
 // all uses were rewritten.
 func copy1(v1 *obj.Addr, v2 *obj.Addr, r *gc.Flow, f int) bool {
 	if uint32(r.Active) == gactive {
 		if gc.Debug['P'] != 0 {
-			fmt.Printf("act set; return 1\n")
+			fmt.Printf("act set; return true\n")
 		}
 		return true
 	}
