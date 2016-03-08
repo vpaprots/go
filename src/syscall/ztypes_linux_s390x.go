@@ -99,21 +99,21 @@ type Rlimit struct {
 type _Gid_t uint32
 
 type Stat_t struct {
-	Dev               uint64
-	Ino               uint64
-	Nlink             uint64
-	Mode              uint32
-	Uid               uint32
-	Gid               uint32
-	Pad0              int32
-	Rdev              uint64
-	Size              int64
-	Atim              Timespec
-	Mtim              Timespec
-	Ctim              Timespec
-	Blksize           int64
-	Blocks            int64
-	X__glibc_reserved [3]int64
+	Dev                uint64
+	Ino                uint64
+	Nlink              uint64
+	Mode               uint32
+	Uid                uint32
+	Gid                uint32
+	X__glibc_reserved0 int32
+	Rdev               uint64
+	Size               int64
+	Atim               Timespec
+	Mtim               Timespec
+	Ctim               Timespec
+	Blksize            int64
+	Blocks             int64
+	X__glibc_reserved  [3]int64
 }
 
 type Statfs_t struct {
@@ -359,7 +359,7 @@ const (
 	IFLA_LINKINFO       = 0x12
 	IFLA_NET_NS_PID     = 0x13
 	IFLA_IFALIAS        = 0x14
-	IFLA_MAX            = 0x22
+	IFLA_MAX            = 0x27
 	RT_SCOPE_UNIVERSE   = 0x0
 	RT_SCOPE_SITE       = 0xc8
 	RT_SCOPE_LINK       = 0xfd

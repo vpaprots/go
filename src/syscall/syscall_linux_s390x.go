@@ -7,8 +7,8 @@ package syscall
 import "unsafe"
 
 const (
-       _SYS_dup = SYS_DUP2
-       _SYS_getdents = SYS_GETDENTS64
+	_SYS_dup      = SYS_DUP2
+	_SYS_getdents = SYS_GETDENTS64
 )
 
 //sys	Dup2(oldfd int, newfd int) (err error)
