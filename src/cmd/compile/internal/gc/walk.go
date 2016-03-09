@@ -3307,7 +3307,7 @@ func walkrotate(np **Node) {
 	// Constants adding to width?
 	w := int(l.Type.Width * 8)
 
-	if Thearch.Thechar == 'z' && w < 32 {
+	if Thearch.Thechar == 'z' && w != 32 && w != 64 {
 		// only supports 32-bit and 64-bit rotates
 		return
 	}
