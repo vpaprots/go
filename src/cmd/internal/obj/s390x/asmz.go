@@ -222,13 +222,9 @@ var optab = []Optab{
 
 	// compare
 	Optab{ACMP, C_REG, C_NONE, C_NONE, C_REG, 70, 0},
-	Optab{ACMP, C_REG, C_REG, C_NONE, C_REG, 70, 0},
-	Optab{ACMP, C_REG, C_NONE, C_NONE, C_ADDCON, 71, 0},
-	Optab{ACMP, C_REG, C_REG, C_NONE, C_ADDCON, 71, 0},
+	Optab{ACMP, C_REG, C_NONE, C_NONE, C_LCON, 71, 0},
 	Optab{ACMPU, C_REG, C_NONE, C_NONE, C_REG, 70, 0},
-	Optab{ACMPU, C_REG, C_REG, C_NONE, C_REG, 70, 0},
-	Optab{ACMPU, C_REG, C_NONE, C_NONE, C_ANDCON, 71, 0},
-	Optab{ACMPU, C_REG, C_REG, C_NONE, C_ANDCON, 71, 0},
+	Optab{ACMPU, C_REG, C_NONE, C_NONE, C_LCON, 71, 0},
 	Optab{AFCMPO, C_FREG, C_NONE, C_NONE, C_FREG, 70, 0},
 	Optab{AFCMPO, C_FREG, C_REG, C_NONE, C_FREG, 70, 0},
 
@@ -3345,9 +3341,17 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			zRRE(zoprre(ctxt, p.As), uint32(p.From.Reg), uint32(p.To.Reg), asm)
 		}
 
-	case 71: /* cmp[l] r,i,cr*/
-		if p.Reg != 0 {
-			ctxt.Diag("unsupported nozero CC in Z")
+	case 71: // cmp reg $constant
+		v := vregoff(ctxt, &p.To)
+		switch p.As {
+		case ACMP, ACMPW:
+			if int64(int32(v)) != v {
+				ctxt.Diag("%v overflows an int32", v)
+			}
+		case ACMPU, ACMPWU:
+			if int64(uint32(v)) != v {
+				ctxt.Diag("%v overflows a uint32", v)
+			}
 		}
 		zRIL(0, zopril(ctxt, p.As), uint32(p.From.Reg), uint32(regoff(ctxt, &p.To)), asm)
 
