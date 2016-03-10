@@ -402,7 +402,12 @@ func spanz(ctxt *obj.Link, cursym *obj.LSym) {
 
 	buffer := make([]byte, 0)
 	changed := true
+	loop := 0
 	for changed {
+		if loop > 10 {
+			ctxt.Diag("stuck in spanz loop")
+			break
+		}
 		changed = false
 		buffer = buffer[:0]
 		ctxt.Cursym.R = make([]obj.Reloc, 0)
@@ -424,6 +429,7 @@ func spanz(ctxt *obj.Link, cursym *obj.LSym) {
 				}
 			}
 		}
+		loop++
 	}
 
 	cursym.Size = int64(len(buffer))
