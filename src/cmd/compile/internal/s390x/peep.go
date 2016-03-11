@@ -739,7 +739,7 @@ func subprop(r0 *gc.Flow) bool {
 		if p.Info.Flags&(gc.RightRead|gc.RightWrite) == gc.RightWrite {
 			if p.To.Type == v1.Type {
 				if p.To.Reg == v1.Reg {
-					copysub(&p.To, v1, v2, 1)
+					copysub(&p.To, v1, v2)
 					if gc.Debug['P'] != 0 {
 						fmt.Printf("gotit: %v->%v\n%v", gc.Ctxt.Dconv(v1), gc.Ctxt.Dconv(v2), r.Prog)
 						if p.From.Type == v2.Type {
@@ -750,9 +750,9 @@ func subprop(r0 *gc.Flow) bool {
 
 					for r = gc.Uniqs(r); r != r0; r = gc.Uniqs(r) {
 						p = r.Prog
-						copysub(&p.From, v1, v2, 1)
-						copysub1(p, v1, v2, 1)
-						copysub(&p.To, v1, v2, 1)
+						copysub(&p.From, v1, v2)
+						copysub1(p, v1, v2)
+						copysub(&p.To, v1, v2)
 						if gc.Debug['P'] != 0 {
 							fmt.Printf("%v\n", r.Prog)
 						}
@@ -768,9 +768,6 @@ func subprop(r0 *gc.Flow) bool {
 		}
 
 		if copyau(&p.From, v2) || copyau1(p, v2) || copyau(&p.To, v2) {
-			break
-		}
-		if copysub(&p.From, v1, v2, 0) != 0 || copysub1(p, v1, v2, 0) != 0 || copysub(&p.To, v1, v2, 0) != 0 {
 			break
 		}
 	}
@@ -968,15 +965,11 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 		s390x.AFSQRT:
 
 		if s != nil {
-			if copysub(&p.From, v, s, 1) != 0 {
-				return 1
-			}
+			copysub(&p.From, v, s)
 
 			// Update only indirect uses of v in p->to
 			if !copyas(&p.To, v) {
-				if copysub(&p.To, v, s, 1) != 0 {
-					return 1
-				}
+				copysub(&p.To, v, s)
 			}
 			return 0
 		}
@@ -1037,20 +1030,13 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 		s390x.AFDIVS,
 		s390x.AFDIV:
 		if s != nil {
-			if copysub(&p.From, v, s, 1) != 0 {
-				return 1
-			}
-			if copysub1(p, v, s, 1) != 0 {
-				return 1
-			}
+			copysub(&p.From, v, s)
+			copysub1(p, v, s)
 
 			// Update only indirect uses of v in p->to
 			if !copyas(&p.To, v) {
-				if copysub(&p.To, v, s, 1) != 0 {
-					return 1
-				}
+				copysub(&p.To, v, s)
 			}
-			return 0
 		}
 
 		if copyas(&p.To, v) {
@@ -1105,10 +1091,9 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 		s390x.AOC,
 		s390x.ANC:
 		if s != nil {
-			if copysub(&p.From, v, s, 1) != 0 {
-				return 1
-			}
-			return copysub(&p.To, v, s, 1)
+			copysub(&p.From, v, s)
+			copysub(&p.To, v, s)
+			return 0
 		}
 
 		if copyau(&p.From, v) {
@@ -1123,9 +1108,7 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 	// read p->to
 	case s390x.ABR:
 		if s != nil {
-			if copysub(&p.To, v, s, 1) != 0 {
-				return 1
-			}
+			copysub(&p.To, v, s)
 			return 0
 		}
 
@@ -1155,9 +1138,7 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 		}
 
 		if s != nil {
-			if copysub(&p.To, v, s, 1) != 0 {
-				return 1
-			}
+			copysub(&p.To, v, s)
 			return 0
 		}
 
@@ -1233,26 +1214,18 @@ func copyau1(p *obj.Prog, v *obj.Addr) bool {
 	return false
 }
 
-// copysub replaces v with s in a if f!=0 or indicates it if could if f==0.
-// Returns 1 on failure to substitute (it always succeeds on s390x).
-func copysub(a *obj.Addr, v *obj.Addr, s *obj.Addr, f int) int {
-	if f != 0 {
-		if copyau(a, v) {
-			a.Reg = s.Reg
-		}
+// copysub replaces v with s in a
+func copysub(a *obj.Addr, v *obj.Addr, s *obj.Addr) {
+	if copyau(a, v) {
+		a.Reg = s.Reg
 	}
-	return 0
 }
 
-// copysub1 replaces v with s in p1->reg if f!=0 or indicates if it could if f==0.
-// Returns 1 on failure to substitute (it always succeeds on s390x).
-func copysub1(p1 *obj.Prog, v *obj.Addr, s *obj.Addr, f int) int {
-	if f != 0 {
-		if copyau1(p1, v) {
-			p1.Reg = s.Reg
-		}
+// copysub1 replaces v with s in p
+func copysub1(p *obj.Prog, v *obj.Addr, s *obj.Addr) {
+	if copyau1(p, v) {
+		p.Reg = s.Reg
 	}
-	return 0
 }
 
 func sameaddr(a *obj.Addr, v *obj.Addr) bool {
