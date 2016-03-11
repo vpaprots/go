@@ -325,7 +325,6 @@ func peep(firstp *obj.Prog) {
 			s390x.ADIVD,
 			s390x.ADIVDU,
 			s390x.AMULLW,
-			s390x.AMULHD,
 			s390x.AMULHDU,
 			s390x.AMULLD,
 			s390x.ANAND,

@@ -907,10 +907,8 @@ func optoas(op gc.Op, t *gc.Type) int {
 		ORSH_ | gc.TINT64:
 		a = s390x.ASRAD
 
-	case OHMUL_ | gc.TINT64:
-		a = s390x.AMULHD
-
-	case OHMUL_ | gc.TUINT64,
+	case OHMUL_ | gc.TINT64,
+		OHMUL_ | gc.TUINT64,
 		OHMUL_ | gc.TPTR64:
 		a = s390x.AMULHDU
 

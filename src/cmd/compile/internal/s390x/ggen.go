@@ -330,11 +330,7 @@ func cgen_hmul(nl *gc.Node, nr *gc.Node, res *gc.Node) {
 
 	case gc.TINT64,
 		gc.TUINT64:
-		if gc.Issigned[t.Etype] {
-			gins(s390x.AMULHD, &n2, &n1)
-		} else {
-			gins(s390x.AMULHDU, &n2, &n1)
-		}
+		gins(s390x.AMULHDU, &n2, &n1)
 
 	default:
 		gc.Fatalf("cgen_hmul %v", t)

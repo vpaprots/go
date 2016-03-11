@@ -819,7 +819,6 @@ func buildop(ctxt *obj.Link) {
 		case ADIVW: /* op Rb[,Ra],Rd */
 			opset(AADDE, r0)
 			opset(AMULLD, r0)
-			opset(AMULHD, r0)
 			opset(AMULHDU, r0)
 			opset(ADIVD, r0)
 			opset(ADIVDU, r0)
@@ -2716,8 +2715,6 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 			opcode = op_MSGR
 		case AMULHDU:
 			opcode = op_MLGR
-		case AMULHD:
-			ctxt.Diag("MULHD not implemented")
 		case ADIVW:
 			opcode = op_DSGFR
 		case ADIVWU:
