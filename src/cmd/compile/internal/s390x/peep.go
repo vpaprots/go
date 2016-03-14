@@ -1537,16 +1537,14 @@ func fuseMoveChains(r *gc.Flow) {
 			}
 			pp := rr.Prog
 			if isMove(pp) && isGPR(&pp.From) && pp.From.Reg == p.To.Reg {
-				switch p.From.Type {
-				case obj.TYPE_MEM, obj.TYPE_ADDR:
-					if pp.To.Type == obj.TYPE_MEM {
-						continue
+				if pp.To.Type == obj.TYPE_MEM {
+					if p.From.Type == obj.TYPE_MEM ||
+						p.From.Type == obj.TYPE_ADDR {
+						break
 					}
-				case obj.TYPE_CONST:
-					if pp.To.Type == obj.TYPE_MEM {
-						if int64(int16(p.From.Offset)) != p.From.Offset {
-							continue
-						}
+					if p.From.Type == obj.TYPE_CONST &&
+						int64(int16(p.From.Offset)) != p.From.Offset {
+						break
 					}
 				}
 				move = rr
