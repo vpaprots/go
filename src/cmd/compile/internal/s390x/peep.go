@@ -1103,6 +1103,35 @@ func copyu(p *obj.Prog, v *obj.Addr, s *obj.Addr) int {
 		}
 		return 0
 
+	case s390x.ACMPBNE, s390x.ACMPBEQ,
+		s390x.ACMPBLT, s390x.ACMPBLE,
+		s390x.ACMPBGT, s390x.ACMPBGE,
+		s390x.ACMPUBNE, s390x.ACMPUBEQ,
+		s390x.ACMPUBLT, s390x.ACMPUBLE,
+		s390x.ACMPUBGT, s390x.ACMPUBGE:
+		if s != nil {
+			copysub(&p.From, v, s)
+			copysub1(p, v, s)
+			return 0
+		}
+		if copyau(&p.From, v) {
+			return 1
+		}
+		if copyau1(p, v) {
+			return 1
+		}
+		return 0
+
+	case s390x.ACLEAR:
+		if s != nil {
+			copysub(&p.To, v, s)
+			return 0
+		}
+		if copyau(&p.To, v) {
+			return 1
+		}
+		return 0
+
 	// go never generates a branch to a GPR
 	// read p->to
 	case s390x.ABR:
