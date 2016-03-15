@@ -203,6 +203,7 @@ TEXT main·foo(SB),7,$16-0 // TEXT main.foo(SB), 7, $16-0
 	VGFMAH	V21, V31, V24, V0       // VGFMAH  V31, V24, V21, V0       // e705f10087bc
 	WFMSDB	V2, V25, V24, V31       // WFMSDB  V25, V24, V2, V31       // e7f298038b8e
 	VPERM	V31, V0, V2, V3         // VPERM   V0, V2, V31, V3         // e73f0000248c
+	VPDI	$1, V2, V31, V1         // VPDI    V2, V31, $1, V1         // e712f0001284
 
 	RET
 

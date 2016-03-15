@@ -107,6 +107,8 @@ func IsS390xWithIndex(op int) bool {
 		return true
 	case s390x.AVLEIG, s390x.AVLEIF, s390x.AVLEIH, s390x.AVLEIB:
 		return true
+	case s390x.AVPDI:
+		return true
 	}
 	return false
 }

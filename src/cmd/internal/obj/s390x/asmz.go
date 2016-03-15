@@ -361,6 +361,7 @@ var optab = []Optab{
 	Optab{AVAQ, C_VREG, C_VREG, C_NONE, C_VREG, 118, 0},
 	Optab{AVAQ, C_VREG, C_NONE, C_NONE, C_VREG, 118, 0},
 	Optab{AVNOT, C_VREG, C_NONE, C_NONE, C_VREG, 118, 0},
+	Optab{AVPDI, C_VREG, C_VREG, C_SCON, C_VREG, 123, 0},
 
 	// VRR-c shifts
 	Optab{AVERLLVG, C_VREG, C_VREG, C_NONE, C_VREG, 119, 0},
@@ -1407,6 +1408,8 @@ func buildop(ctxt *obj.Link) {
 			opset(AVPERM, r0)
 
 		case AVLVGP:
+
+		case AVPDI:
 
 		case AADD,
 			AMOVW,
@@ -4112,6 +4115,11 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 	case 122: // VRR-f LOAD VRS FROM GRS DISJOINT
 		op, _, _ := vop(p.As)
 		zVRRf(op, uint32(p.To.Reg), uint32(p.From.Reg), uint32(p.Reg), asm)
+
+	case 123: // VPDI $m4, V2, V3, V1
+		op, _, _ := vop(p.As)
+		m4 := regoff(ctxt, p.From3)
+		zVRRc(op, uint32(p.To.Reg), uint32(p.From.Reg), uint32(p.Reg), 0, 0, uint32(m4), asm)
 	}
 }
 
