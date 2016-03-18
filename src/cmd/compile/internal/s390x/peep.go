@@ -1605,6 +1605,7 @@ func fuseMoveChains(r *gc.Flow) {
 // Replaces with:
 //	CLEAR	$24, n(R15)
 func fuseClear(r *gc.Flow) {
+	var align int64
 	var clear *obj.Prog
 	for ; r != nil; r = r.Link {
 		// If there is a branch into the instruction stream then
@@ -1662,6 +1663,12 @@ func fuseClear(r *gc.Flow) {
 			size = 8
 		}
 
+		// doubleword aligned clears should be kept doubleword
+		// aligned
+		if (size == 8 && align != 8) || (size != 8 && align == 8) {
+			clear = nil
+		}
+
 		if clear != nil &&
 			clear.To.Reg == p.To.Reg &&
 			clear.To.Name == p.To.Name &&
@@ -1699,6 +1706,7 @@ func fuseClear(r *gc.Flow) {
 		p.From.Reg = 0
 		p.As = s390x.ACLEAR
 		clear = p
+		align = size
 	}
 }
 
