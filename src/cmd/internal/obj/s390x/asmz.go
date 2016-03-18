@@ -2689,10 +2689,8 @@ func asmout(ctxt *obj.Link, asm *[]byte) {
 		case AMOVWBR:
 			zRRE(op_LRVR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
 		// floating point
-		case AFMOVD:
+		case AFMOVD, AFMOVS:
 			zRR(op_LDR, uint32(p.To.Reg), uint32(p.From.Reg), asm)
-		case AFMOVS:
-			zRR(op_LER, uint32(p.To.Reg), uint32(p.From.Reg), asm)
 		}
 
 	case 2: /* int/cr/fp op Rb,[Ra],Rd */
@@ -4156,7 +4154,7 @@ func zopload(ctxt *obj.Link, a int16) uint32 {
 	case AMOVBZ:
 		return op_LLGC
 
-	/* floating pointer load*/
+	/* floating point load */
 	case AFMOVD:
 		return op_LDY
 	case AFMOVS:
