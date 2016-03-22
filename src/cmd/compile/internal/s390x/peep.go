@@ -105,9 +105,6 @@ func peep(firstp *obj.Prog) {
 				}
 			}
 		}
-		if removeLoadHitStores(g.Start) {
-			changed = true
-		}
 		if !changed {
 			break
 		}
@@ -493,8 +490,6 @@ func peep(firstp *obj.Prog) {
 	if gc.Debug['v'] != 0 {
 		gc.Dumpit("compare and branch", g.Start, 0)
 	}
-
-	removeLoadHitStores(g.Start)
 
 	// Fuse LOAD/STORE instructions into LOAD/STORE MULTIPLE instructions
 	fuseMultiple(g.Start)
@@ -1429,84 +1424,6 @@ func isStore(p *obj.Prog) bool {
 		return false
 	}
 	return true
-}
-
-func isSameStackMem(a, b *obj.Addr) bool {
-	if a.Type != obj.TYPE_MEM || b.Type != obj.TYPE_MEM {
-		return false
-	}
-	if a.Name != b.Name {
-		return false
-	}
-	if a.Name == obj.NAME_NONE {
-		if a.Sym != b.Sym || a.Node != b.Node {
-			return false
-		}
-		if a.Reg != b.Reg || a.Reg != s390x.REGSP {
-			return false
-		}
-		if a.Index != b.Index || a.Index != 0 {
-			return false
-		}
-		if a.Offset == b.Offset && a.Reg == b.Reg {
-			return true
-		}
-	}
-	if a.Name != obj.NAME_PARAM || a.Name != obj.NAME_AUTO {
-		return false
-	}
-	if a.Offset == b.Offset && a.Sym == b.Sym && a.Node == b.Node {
-		return true
-	}
-	return false
-}
-
-// removeLoadHitStores trys to remove loads that take place
-// immediately after a store to the same location. Returns
-// true if load-hit-stores were removed.
-//
-// For example:
-// 	MOVD	R1, 0(R15)
-// 	MOVD	0(R15), R2
-// Would become:
-// 	MOVD	R1, 0(R15)
-// 	MOVD	R1, R2
-func removeLoadHitStores(r *gc.Flow) bool {
-	changed := false
-	for ; r != nil; r = r.Link {
-		p := r.Prog
-		if !isStore(p) {
-			continue
-		}
-		for rr := gc.Uniqs(r); rr != nil; rr = gc.Uniqs(rr) {
-			pp := rr.Prog
-			if gc.Uniqp(rr) == nil {
-				break
-			}
-			if pp.As == obj.ANOP {
-				continue
-			}
-			if isLoad(pp) && isSameStackMem(&p.To, &pp.From) {
-				if p.As == pp.As {
-					pp.From = p.From
-					// self move check
-					if pp.From.Type == obj.TYPE_REG &&
-						pp.To.Type == obj.TYPE_REG &&
-						pp.From.Reg == pp.To.Reg {
-						excise(rr)
-					}
-					changed = true
-				}
-			}
-			if !isMove(pp) || isStore(pp) {
-				break
-			}
-			if pp.To.Type == obj.TYPE_REG && pp.To.Reg == p.From.Reg {
-				break
-			}
-		}
-	}
-	return changed
 }
 
 // fuseMoveChains looks to see if destination register is used
