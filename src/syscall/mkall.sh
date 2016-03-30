@@ -212,7 +212,7 @@ linux_s390x)
 	unistd_h=/usr/include/asm/unistd.h
 	mkerrors="$mkerrors -m64"
 	mksysnum="./mksysnum_linux.pl $unistd_h"
-	mktypes="GOARCH=$GOARCH go tool cgo -godefs -- -fsigned-char"
+	mktypes="GOARCH=$GOARCH go tool cgo -godefs"
 	;;
 nacl_386)
 	mkerrors=""
