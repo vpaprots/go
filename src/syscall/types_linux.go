@@ -100,13 +100,13 @@ typedef struct user_regs_struct PtraceRegs;
 #endif
 
 #if defined(__s390x__)
-typedef struct _user_psw_struct PtraceRegsPsw;
-typedef struct _user_fpregs_struct PtraceRegsFp;
-typedef struct _user_per_struct PtraceRegsPer;
+typedef struct _user_psw_struct ptracePsw;
+typedef struct _user_fpregs_struct ptraceFpregs;
+typedef struct _user_per_struct ptracePer;
 #else
-typedef struct {} PtraceRegsPsw;
-typedef struct {} PtraceRegsFp;
-typedef struct {} PtraceRegsPer;
+typedef struct {} ptracePsw;
+typedef struct {} ptraceFpregs;
+typedef struct {} ptracePer;
 #endif
 
 // The real epoll_event is a union, and godefs doesn't handle it well.
@@ -377,13 +377,14 @@ const SizeofInotifyEvent = C.sizeof_struct_inotify_event
 // Ptrace
 
 // Register structures
-type PtraceRegsPsw C.PtraceRegsPsw
-
-type PtraceRegsFp C.PtraceRegsFp
-
-type PtraceRegsPer C.PtraceRegsPer
-
 type PtraceRegs C.PtraceRegs
+
+// Structures contained in PtraceRegs on s390x (exported by post.go)
+type ptracePsw C.ptracePsw
+
+type ptraceFpregs C.ptraceFpregs
+
+type ptracePer C.ptracePer
 
 // Misc
 
