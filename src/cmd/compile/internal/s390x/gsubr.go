@@ -888,15 +888,23 @@ func optoas(op gc.Op, t *gc.Type) obj.As {
 
 	case OMUL_ | gc.TINT8,
 		OMUL_ | gc.TINT16,
-		OMUL_ | gc.TINT32,
-		OMUL_ | gc.TINT64:
+		OMUL_ | gc.TINT32:
+		a = s390x.AMULLW
+
+	case OMUL_ | gc.TINT64:
 		a = s390x.AMULLD
 
 	case OMUL_ | gc.TUINT8,
-		OMUL_ | gc.TUINT16,
-		OMUL_ | gc.TUINT32,
+		OMUL_ | gc.TUINT16:
+		// Use 32-bit signed multiplication, the result
+		// will be the same.
+		a = s390x.AMULLW
+
+	case OMUL_ | gc.TUINT32,
 		OMUL_ | gc.TPTR32,
-		// don't use word multiply, the high 32-bit are undefined.
+		// MSGFR sign extends one operand to 64-bits and
+		// therefore can't be used for unsigned 32-bit
+		// multiplication.
 		OMUL_ | gc.TUINT64,
 		OMUL_ | gc.TPTR64:
 		// for 64-bit multiplies, signedness doesn't matter.
