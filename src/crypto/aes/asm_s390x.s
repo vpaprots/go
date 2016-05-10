@@ -22,7 +22,6 @@ TEXT ·hasAsm(SB),NOSPLIT,$16-1
 	RET
 notfound:
 	MOVBZ  R0, ret+0(FP)
-	MOVD   $0, 0(R0)
 	RET
 
 // func encryptBlockAsm(nr int, xk *uint32, dst, src *byte)
