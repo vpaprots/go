@@ -19,7 +19,11 @@ type (
 	}
 
 	p256Point struct {
-		xyz [12]uint64
+		x [32]byte
+		y [32]byte
+		z [32]byte
+		
+		xyz [12]uint64 //delete
 	}
 )
 
@@ -44,15 +48,51 @@ func (curve p256Curve) Params() *CurveParams {
 	return curve.CurveParams
 }
 
-// Functions implemented in p256_asm_s390x.s
-// Montgomery multiplication modulo P256
-func p256Mul(res, in1, in2 []uint64){
+func (curve p256Curve) TestDouble(x1, y1, z1 *big.Int) (x3,y3,z3 *big.Int) {
+	resx := make([]byte, 32)
+	resy := make([]byte, 32)
+	resz := make([]byte, 32)
+	x := fromBig(x1)
+	y := fromBig(y1)
+	z := fromBig(z1)
+	p256PointDoubleAsm(resx, resy, resz, x, y, z)
+	return new(big.Int).SetBytes(resx),new(big.Int).SetBytes(resy), new(big.Int).SetBytes(resz)  
 	
 }
 
-// Montgomery square modulo P256
-func p256Sqr(res, in []uint64){
+func (curve p256Curve) TestMul(k *big.Int) *big.Int {
+	res := make([]byte, 32)
+	x := fromBig(k)
+	p256Inverse(res, x)
+	return new(big.Int).SetBytes(res)
 	
+}
+
+// Functions implemented in p256_asm_s390x.s
+// Montgomery multiplication modulo P256
+func p256Mul(res, in1, in2 []byte){
+	x1 := new(big.Int).SetBytes(in1)
+	x2 := new(big.Int).SetBytes(in2)
+	Rinv, _ := new(big.Int).SetString("fffffffe00000003fffffffd0000000200000001fffffffe0000000300000000", 16)
+	temp := new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv)
+	//t := make([]byte, 32)
+	//p256OrdMul(t, in1, in2)
+	
+	copy(res, fromBig(new(big.Int).Mod(temp, p256.P)))
+
+	/*if (!bytes.Equal(t,res)) {
+		fmt.Printf("TEST in1 %s\n", new(big.Int).SetBytes(fromBig(x1)).Text(16))
+		fmt.Printf("TEST in2 %s\n", new(big.Int).SetBytes(fromBig(x2)).Text(16))
+		fmt.Printf("EXPECTED %s\n", new(big.Int).SetBytes(res).Text(16))
+		fmt.Printf("FOUND    %s\n", new(big.Int).SetBytes(t).Text(16))
+	} /*else {
+		fmt.Printf("+\n")
+	}*/
+}
+
+// Montgomery square modulo P256
+func p256Sqr(res, in []byte){
+	p256Mul(res, in, in)
 }
 
 // Montgomery multiplication by 1
@@ -92,7 +132,7 @@ func p256OrdMul(res, in1, in2 []byte)
 func p256OrdMulBig(res, in1, in2 []byte) {
 	x1 := new(big.Int).SetBytes(in1)
 	x2 := new(big.Int).SetBytes(in2)
-	Rinv, _ := new(big.Int).SetString("60d066334905c1e907f8b6041e607725badef3e243566fafce1bc8f79c197c79", 16)
+	Rinv, _ := new(big.Int).SetString("60d066334905c1e907f8b6041e607725badef3e243566fafce1bc8f79c197c79", 16) //minv(2^256,n)
 	temp := new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv)
 	t := make([]byte, 32)
 	p256OrdMul(t, in1, in2)
@@ -185,8 +225,69 @@ func p256PointAddAsm(res, in1, in2 []uint64) {
 }
 
 // Point double
-func p256PointDoubleAsm(res, in []uint64) {
+//http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl
+//http://www.hyperelliptic.org/EFD/g1p/auto-shortw.html
+//http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective-3.html
+func p256PointDoubleAsm(X3, Y3, Z3, X1, Y1, Z1 []byte) {
+	/*
+	 * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#doubling-dbl-2004-hmv	
+	 * Cost: 4M + 4S + 1*half + 5add + 2*2 + 1*3.
+	 * Source: 2004 Hankerson–Menezes–Vanstone, page 91.
+	 * 	A  = 3(X₁-Z₁²)×(X₁+Z₁²)
+	 * 	B  = 2Y₁
+	 * 	Z₃ = B×Z₁
+	 * 	C  = B²
+	 * 	D  = C×X₁
+	 * 	X₃ = A²-2D
+	 * 	Y₃ = (D-X₃)×A-C²/2
+	 * 
+	 * Three-operand formula:
+	 *       T1 = Z1²
+	 *       T2 = X1-T1
+	 *       T1 = X1+T1
+	 *       T2 = T2*T1
+	 *       T2 = 3*T2
+	 *       Y3 = 2*Y1
+	 *       Z3 = Y3*Z1
+	 *       Y3 = Y3²
+	 *       T3 = Y3*X1
+	 *       Y3 = Y3²
+	 *       Y3 = half*Y3
+	 *       X3 = T2²
+	 *       T1 = 2*T3
+	 *       X3 = X3-T1
+	 *       T1 = T3-X3
+	 *       T1 = T1*T2
+	 *       Y3 = T1-Y3
+	 */
 	
+	// Note: This test code was not meant to be pretty! It is written in this convoluted fashion to help debug the real assembly code
+	T1 := make([]byte, 32)
+	T2 := make([]byte, 32)
+	T3 := make([]byte, 32)
+	
+	p256Mul(T1, Z1, Z1) //T1 = Z1²
+	copy(T2, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X1), new(big.Int).SetBytes(T1)), p256.P))) //T2 = X1-T1
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(X1), new(big.Int).SetBytes(T1)), p256.P))) //T1 = X1+T1
+	p256Mul(T2, T2, T1) //T2 = T2*T1
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T2), new(big.Int).SetBytes(T2)), p256.P))) //T2 = 3*T2
+	copy(T2, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T1), new(big.Int).SetBytes(T2)), p256.P)))
+	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(Y1), new(big.Int).SetBytes(Y1)), p256.P))) // Y3 = 2*Y1
+	p256Mul(Z3, Y3, Z1) // Z3 = Y3*Z1
+	p256Mul(Y3, Y3, Y3) // Y3 = Y3²
+	p256Mul(T3, Y3, X1) // T3 = Y3*X1
+	p256Mul(Y3, Y3, Y3) // Y3 = Y3²
+	if (1 == Y3[31]&0x01) { // Y3 = half*Y3
+		copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Rsh(new(big.Int).Add(new(big.Int).SetBytes(Y3), p256.P), 1), p256.P)))
+	} else {
+		copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Rsh(new(big.Int).SetBytes(Y3), 1), p256.P)))
+	}
+	p256Mul(X3, T2, T2) // X3 = T2²
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(T3)), p256.P))) // T1 = 2*T3
+	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T1)), p256.P))) // X3 = X3-T1
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(X3)), p256.P))) // T1 = T3-X3
+	p256Mul(T1, T1, T2) // T1 = T1*T2
+	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T1), new(big.Int).SetBytes(Y3)), p256.P))) // Y3 = T1-Y3
 }
 
 func (curve p256Curve) Inverse(k *big.Int) *big.Int {
@@ -365,8 +466,8 @@ func p256GetScalar(out []uint64, in []byte) {
 // p256Mul operates in a Montgomery domain with R = 2^256 mod p, where p is the
 // underlying field of the curve. (See initP256 for the value.) Thus rr here is
 // R×R mod p. See comment in Inverse about how this is used.
-                  
-var rr = []uint64{0x00000004fffffffd, 0xfffffffffffffffe, 0xfffffffbffffffff, 0x0000000000000003}
+var rr = []byte{  0x00, 0x00, 0x00, 0x04, 0xff, 0xff, 0xff, 0xfd, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
+	              0xff, 0xff, 0xff, 0xfb, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03}
 
 func maybeReduceModP(in *big.Int) *big.Int {
 	if in.Cmp(p256.P) < 0 {
@@ -375,7 +476,7 @@ func maybeReduceModP(in *big.Int) *big.Int {
 	return new(big.Int).Mod(in, p256.P)
 }
 
-func (curve p256Curve) CombinedMult(bigX, bigY *big.Int, baseScalar, scalar []byte) (x, y *big.Int) {
+/*func (curve p256Curve) CombinedMult(bigX, bigY *big.Int, baseScalar, scalar []byte) (x, y *big.Int) {
 	scalarReversed := make([]uint64, 4)
 	var r1, r2 p256Point
 	p256GetScalar(scalarReversed, baseScalar)
@@ -445,16 +546,16 @@ func (p *p256Point) p256PointToAffine() (x, y *big.Int) {
 	p256LittleToBig(yOut, zInv)
 
 	return new(big.Int).SetBytes(xOut), new(big.Int).SetBytes(yOut)
-}
+}*/
 
 // p256Inverse sets out to in^-1 mod p.
-func p256Inverse(out, in []uint64) {
-	var stack [6 * 4]uint64
-	p2 := stack[4*0 : 4*0+4]
-	p4 := stack[4*1 : 4*1+4]
-	p8 := stack[4*2 : 4*2+4]
-	p16 := stack[4*3 : 4*3+4]
-	p32 := stack[4*4 : 4*4+4]
+func p256Inverse(out, in []byte) {
+	var stack [6 * 32]byte
+	p2 := stack[32*0 : 32*0+32]
+	p4 := stack[32*1 : 32*1+32]
+	p8 := stack[32*2 : 32*2+32]
+	p16 := stack[32*3 : 32*3+32]
+	p32 := stack[32*4 : 32*4+32]
 
 	p256Sqr(out, in)
 	p256Mul(p2, out, in) // 3*p
@@ -522,11 +623,19 @@ func p256Inverse(out, in []uint64) {
 	p256Sqr(out, out)
 	p256Sqr(out, out)
 	p256Mul(out, out, in)
+	
+	fmt.Printf("-TEST in  %s\n", new(big.Int).SetBytes(in).Text(16))
+	fmt.Printf("-TEST out %s\n", new(big.Int).SetBytes(out).Text(16))
+	fmt.Printf("-TEST p2  %s\n", new(big.Int).SetBytes(p2).Text(16))
+	fmt.Printf("-TEST p4  %s\n", new(big.Int).SetBytes(p4).Text(16))
+	fmt.Printf("-TEST p8  %s\n", new(big.Int).SetBytes(p8).Text(16))
+	fmt.Printf("-TEST p16 %s\n", new(big.Int).SetBytes(p16).Text(16))
+	fmt.Printf("-TEST p32 %s\n", new(big.Int).SetBytes(p32).Text(16))
 }
 
-func (p *p256Point) p256StorePoint(r *[16 * 4 * 3]uint64, index int) {
+/*func (p *p256Point) p256StorePoint(r *[16 * 4 * 3]uint64, index int) {
 	copy(r[index*12:], p.xyz[:])
-}
+}*/
 
 func boothW5(in uint) (int, int) {
 	var s uint = ^((in >> 5) - 1)
@@ -544,7 +653,7 @@ func boothW7(in uint) (int, int) {
 	return int(d), int(s & 1)
 }
 
-func initTable() {
+/*func initTable() {
 	p256Precomputed = new([37][64 * 8]uint64)
 
 	basePoint := []uint64{
@@ -720,3 +829,4 @@ func (p *p256Point) p256ScalarMult(scalar []uint64) {
 	p256MovCond(t1.xyz[0:12], t1.xyz[0:12], p.xyz[0:12], sel)
 	p256MovCond(p.xyz[0:12], t1.xyz[0:12], t0.xyz[0:12], zero)
 }
+*/

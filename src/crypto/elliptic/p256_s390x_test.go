@@ -58,3 +58,26 @@ func BenchmarkInverse(b *testing.B) {
         pp256.Inverse(x)
     }
 }
+
+
+func TestMul(t *testing.T) {
+	if testing.Short() {
+        t.SkipNow()
+    }
+	
+	x, _ := new(big.Int).SetString("15792089210356248762697446949407573530086143415290314195533631308867097853951", 10)
+	pp256, _ := P256().(p256Curve)
+	xInv := pp256.TestMul(x)
+	fmt.Printf("EXPECTED: %s\n", xInv.String())
+}
+
+func TestDouble(t *testing.T) {
+	if testing.Short() {
+        t.SkipNow()
+    }
+	
+	pp256, _ := P256().(p256Curve)
+	z, _ := new(big.Int).SetString("1", 10)
+	x, y, z := pp256.TestDouble(pp256.Gx, pp256.Gy, z)
+	fmt.Printf("EXPECTED: %s\nEXPECTED: %s\nEXPECTED: %s\n", x.Text(16), y.Text(16), z.Text(16),)
+}
