@@ -81,3 +81,16 @@ func TestDouble(t *testing.T) {
 	x, y, z := pp256.TestDouble(pp256.Gx, pp256.Gy, z)
 	fmt.Printf("EXPECTED: %s\nEXPECTED: %s\nEXPECTED: %s\n", x.Text(16), y.Text(16), z.Text(16),)
 }
+
+func TestAdd(t *testing.T) {
+	if testing.Short() {
+        t.SkipNow()
+    }
+	
+	pp256, _ := P256().(p256Curve)
+	//x, y, z := pp256.TestDouble(pp256.Gx, pp256.Gy, new(big.Int).SetString("1", 10))
+	z2, _ := new(big.Int).SetString("1", 10) 
+	x, y, z := pp256.TestDouble(pp256.Gx, pp256.Gy, z2)
+	x, y, z = pp256.TestAdd(pp256.Gx, pp256.Gy, z2, x, y, z)
+	fmt.Printf("EXPECTED: %s\nEXPECTED: %s\nEXPECTED: %s\n", x.Text(16), y.Text(16), z.Text(16),)
+}
