@@ -22,14 +22,12 @@ type (
 		x [32]byte
 		y [32]byte
 		z [32]byte
-		
-		xyz [12]uint64 //delete
 	}
 )
 
 var (
 	p256            p256Curve
-	p256Precomputed *[37][64 * 8]uint64
+	p256Precomputed *[37][64]p256Point
 	precomputeOnce  sync.Once
 )
 
@@ -49,43 +47,43 @@ func (curve p256Curve) Params() *CurveParams {
 }
 
 func (curve p256Curve) TestDouble(x1, y1, z1 *big.Int) (x3,y3,z3 *big.Int) {
-	resx := make([]byte, 32)
-	resy := make([]byte, 32)
-	resz := make([]byte, 32)
-	x := fromBig(x1)
-	y := fromBig(y1)
-	z := fromBig(z1)
-	p256PointDoubleAsm(resx, resy, resz, x, y, z)
-	return new(big.Int).SetBytes(resx),new(big.Int).SetBytes(resy), new(big.Int).SetBytes(resz)  
+	res  := new(p256Point)
+	in   := new(p256Point)
+	copy(in.x[:], fromBig(x1))
+	copy(in.y[:], fromBig(y1))
+	copy(in.z[:], fromBig(z1))
+	p256PointDoubleAsm(res, in)
+	return new(big.Int).SetBytes(res.x[:]),new(big.Int).SetBytes(res.y[:]), new(big.Int).SetBytes(res.z[:])  
 	
 }
 
 func (curve p256Curve) TestAdd(x1, y1, z1, x2, y2, z2 *big.Int) (x3,y3,z3 *big.Int) {
-	resx := make([]byte, 32)
-	resy := make([]byte, 32)
-	resz := make([]byte, 32)
-	xx1 := fromBig(x1)
-	yy1 := fromBig(y1)
-	zz1 := fromBig(z1)
-	xx2 := fromBig(x2)
-	yy2 := fromBig(y2)
-	zz2 := fromBig(z2)
-	p256PointAddAsm(resx, resy, resz, xx1, yy1, zz1, xx2, yy2, zz2)
-	return new(big.Int).SetBytes(resx),new(big.Int).SetBytes(resy), new(big.Int).SetBytes(resz)  
+	res  := new(p256Point)
+	in1  := new(p256Point)
+	in2  := new(p256Point)
+	copy(in1.x[:], fromBig(x1))
+	copy(in1.y[:], fromBig(y1))
+	copy(in1.z[:], fromBig(z1))
+	copy(in2.x[:], fromBig(x2))
+	copy(in2.y[:], fromBig(y2))
+	copy(in2.z[:], fromBig(z2))
+	p256PointAddAsm(res, in1, in2)
+	return new(big.Int).SetBytes(res.x[:]),new(big.Int).SetBytes(res.y[:]), new(big.Int).SetBytes(res.z[:])  
 	
 }
 
-func (curve p256Curve) TestMul(k *big.Int) *big.Int {
+func (curve p256Curve) TestInv(k *big.Int) *big.Int {
 	res := make([]byte, 32)
 	x := fromBig(k)
 	p256Inverse(res, x)
 	return new(big.Int).SetBytes(res)
-	
 }
 
 // Functions implemented in p256_asm_s390x.s
 // Montgomery multiplication modulo P256
-func p256Mul(res, in1, in2 []byte){
+func p256Mul(res, in1, in2 []byte)
+
+func p256MulBig(res, in1, in2 []byte){
 	x1 := new(big.Int).SetBytes(in1)
 	x2 := new(big.Int).SetBytes(in2)
 	Rinv, _ := new(big.Int).SetString("fffffffe00000003fffffffd0000000200000001fffffffe0000000300000000", 16) //minv(2^256,p)
@@ -180,6 +178,22 @@ func (curve p256Curve) TestOrdMul() {
 	fmt.Printf("-FOUND    %s\n", new(big.Int).SetBytes(t).Text(16))
 }
 
+func (curve p256Curve) TestP256Mul() {
+	res := make([]byte, 32)
+	x1, _ := new(big.Int).SetString("a007c8559316f82de3d5d9f28b8ffcdf5949bd551f7a1348b8acc00860e058", 16)
+	x2, _ := new(big.Int).SetString("66e12d94f3d956202845b2392b6bec594699799c49bd6fa683244c95be79eea2", 16)
+	Rinv, _ := new(big.Int).SetString("115792089183396302114378112356516095823261736990586219612555396166510339686400", 16)
+	temp := new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv)
+	copy(res, fromBig(new(big.Int).Mod(temp, p256.P)))
+	
+	t := make([]byte, 32)
+	p256Mul(t, fromBig(x1), fromBig(x2))
+	fmt.Printf("-TEST in1 %s\n", new(big.Int).SetBytes(fromBig(x1)).Text(16))
+	fmt.Printf("-TEST in2 %s\n", new(big.Int).SetBytes(fromBig(x2)).Text(16))
+	fmt.Printf("-EXPECTED %s\n", new(big.Int).SetBytes(res).Text(16))
+	fmt.Printf("-FOUND    %s\n", new(big.Int).SetBytes(t).Text(16))
+}
+
 /*
 x=0xfef7163fe956730df28c999458d9c038a17b9500f51bd2f803cabdf9818bc253
 RR=0xa3ff46f14bce132cd59447e8378fe08999ca0e402b77090c7215405740ffd73b
@@ -207,6 +221,28 @@ t4
 t5
 t6
 t7
+
+x2=0x3ac62a6b166498176eb40d98a27587d8d7c97ac5f11ca1d8d851202b22c3f5c8
+y2=0x234aabe92636af27ea8edcd2392f97839c5a74b7ddea27bce94c2d270fb65157
+z2=0x57401fa8db8e8e1118a40621ce27d6842bc1e1cef6138faabaf37b85a2a774ea
+x1=0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296
+y1=0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5
+z1=1
+
+Rinv=minv(2^256,p)
+A=Rinv^2*x1*z2^2
+B=Rinv^3*y1*z2^3
+C=Rinv^2*x2*z1^2-A
+D=Rinv^3*y2*z1^3-B
+A=A%p
+B=B%p
+C=C%p
+D=D%p
+x3 = D^2*Rinv - 2*A×C^2*Rinv^2 - C^3*Rinv^2
+Y₃ = D×(A×C² - X₃) - B×C³
+Z₃ = Z₁×Z2×C
+(z1*z2*C)%p
+
 */
 // Montgomery square modulo Ord(G), repeated n times
 func p256OrdSqr(res, in []byte, n int) {
@@ -235,7 +271,7 @@ func p256PointAddAffineAsm(res, in1, in2 []uint64, sign, sel, zero int) {
 }
 
 // Point add
-func p256PointAddAsm(X3, Y3, Z3, X1, Y1, Z1, X2, Y2, Z2 []byte) {
+func p256PointAddAsm(P3, P1, P2 *p256Point) {
 	/*
 	 * https://choucroutage.com/Papers/SideChannelAttacks/ctrsa-2011-brown.pdf "Software Implementation of the NIST Elliptic Curves Over Prime Fields"
 	 *
@@ -280,6 +316,16 @@ func p256PointAddAsm(X3, Y3, Z3, X1, Y1, Z1, X2, Y2, Z2 []byte) {
 	 */
 	
 	// Note: This test code was not meant to be pretty! It is written in this convoluted fashion to help debug the real assembly code
+	X1 := P1.x[:]
+	Y1 := P1.y[:]
+	Z1 := P1.z[:]
+	X2 := P2.x[:]
+	Y2 := P2.y[:]
+	Z2 := P2.z[:]
+	X3 := P3.x[:]
+	Y3 := P3.y[:]
+	Z3 := P3.z[:]
+	
 	T1 := make([]byte, 32)
 	T2 := make([]byte, 32)
 	U1 := make([]byte, 32)
@@ -324,7 +370,7 @@ func p256PointAddAsm(X3, Y3, Z3, X1, Y1, Z1, X2, Y2, Z2 []byte) {
 //http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl
 //http://www.hyperelliptic.org/EFD/g1p/auto-shortw.html
 //http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective-3.html
-func p256PointDoubleAsm(X3, Y3, Z3, X1, Y1, Z1 []byte) {
+func p256PointDoubleAsm(P3, P1 *p256Point) {
 	/*
 	 * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#doubling-dbl-2004-hmv	
 	 * Cost: 4M + 4S + 1*half + 5add + 2*2 + 1*3.
@@ -358,6 +404,13 @@ func p256PointDoubleAsm(X3, Y3, Z3, X1, Y1, Z1 []byte) {
 	 */
 	
 	// Note: This test code was not meant to be pretty! It is written in this convoluted fashion to help debug the real assembly code
+	X1 := P1.x[:]
+	Y1 := P1.y[:]
+	Z1 := P1.z[:]
+	X3 := P3.x[:]
+	Y3 := P3.y[:]
+	Z3 := P3.z[:]
+	
 	T1 := make([]byte, 32)
 	T2 := make([]byte, 32)
 	T3 := make([]byte, 32)
@@ -749,22 +802,24 @@ func boothW7(in uint) (int, int) {
 	return int(d), int(s & 1)
 }
 
-/*func initTable() {
-	p256Precomputed = new([37][64 * 8]uint64)
-
-	basePoint := []uint64{
-		0x79e730d418a9143c, 0x75ba95fc5fedb601, 0x79fb732b77622510, 0x18905f76a53755c6, //(p256.x1*2^256)%p
-		0xddf25357ce95560a, 0x8b4ab8e4ba19e45c, 0xd2e88688dd21f325, 0x8571ff1825885d85,
-		0x0000000000000001, 0xffffffff00000000, 0xffffffffffffffff, 0x00000000fffffffe,
+func initTable() {
+	p256Precomputed = new([37][64]p256Point) //z coordinate not used
+	basePoint := p256Point{ 
+		x: [32]byte{0x18, 0x90, 0x5f, 0x76, 0xa5, 0x37, 0x55, 0xc6, 0x79, 0xfb, 0x73, 0x2b, 0x77, 0x62, 0x25, 0x10, 
+			0x75, 0xba, 0x95, 0xfc, 0x5f, 0xed, 0xb6, 0x01, 0x79, 0xe7, 0x30, 0xd4, 0x18, 0xa9, 0x14, 0x3c}, //(p256.x*2^256)%p
+		y:[32]byte{0x85, 0x71, 0xff, 0x18, 0x25, 0x88, 0x5d, 0x85, 0xd2, 0xe8, 0x86, 0x88, 0xdd, 0x21, 0xf3, 0x25,
+			0x8b, 0x4a, 0xb8, 0xe4, 0xba, 0x19, 0xe4, 0x5c, 0xdd, 0xf2, 0x53, 0x57, 0xce, 0x95, 0x56, 0x0a}, //(p256.y*2^256)%p
+		z:[32]byte{0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},  //(p256.z*2^256)%p
 	}
-	t1 := make([]uint64, 12)
-	t2 := make([]uint64, 12)
-	copy(t2, basePoint)
 
-	zInv := make([]uint64, 4)
-	zInvSq := make([]uint64, 4)
+	t1 := new(p256Point)
+	t2 := p256Point{basePoint.x,basePoint.y, basePoint.z} 
+
+	zInv := make([]byte, 32)
+	zInvSq := make([]byte, 32)
 	for j := 0; j < 64; j++ {
-		copy(t1, t2)
+		*t1 = t2
 		for i := 0; i < 37; i++ {
 			// The window size is 7 so we need to double 7 times.
 			if i != 0 {
@@ -774,21 +829,22 @@ func boothW7(in uint) (int, int) {
 			}
 			// Convert the point to affine form. (Its values are
 			// still in Montgomery form however.)
-			p256Inverse(zInv, t1[8:12])
+			p256Inverse(zInv, t1.z[:])
 			p256Sqr(zInvSq, zInv)
 			p256Mul(zInv, zInv, zInvSq)
 
-			p256Mul(t1[:4], t1[:4], zInvSq)
-			p256Mul(t1[4:8], t1[4:8], zInv)
+			p256Mul(t1.x[:], t1.x[:], zInvSq)
+			p256Mul(t1.y[:], t1.y[:], zInv)
 
-			copy(t1[8:12], basePoint[8:12])
+			copy(t1.z[:], basePoint.z[:])
 			// Update the table entry
-			copy(p256Precomputed[i][j*8:], t1[:8])
+			copy(p256Precomputed[i][j].x[:], t1.x[:])
+			copy(p256Precomputed[i][j].y[:], t1.y[:])
 		}
 		if j == 0 {
-			p256PointDoubleAsm(t2, basePoint)
+			p256PointDoubleAsm(&t2, &basePoint)
 		} else {
-			p256PointAddAsm(t2, t2, basePoint)
+			p256PointAddAsm(&t2, &t2, &basePoint)
 		}
 	}
 }
