@@ -182,7 +182,7 @@ func (curve p256Curve) TestP256Mul() {
 	res := make([]byte, 32)
 	x1, _ := new(big.Int).SetString("a007c8559316f82de3d5d9f28b8ffcdf5949bd551f7a1348b8acc00860e058", 16)
 	x2, _ := new(big.Int).SetString("66e12d94f3d956202845b2392b6bec594699799c49bd6fa683244c95be79eea2", 16)
-	Rinv, _ := new(big.Int).SetString("115792089183396302114378112356516095823261736990586219612555396166510339686400", 16)
+	Rinv, _ := new(big.Int).SetString("fffffffe00000003fffffffd0000000200000001fffffffe0000000300000000", 16)
 	temp := new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv)
 	copy(res, fromBig(new(big.Int).Mod(temp, p256.P)))
 	
@@ -192,6 +192,10 @@ func (curve p256Curve) TestP256Mul() {
 	fmt.Printf("-TEST in2 %s\n", new(big.Int).SetBytes(fromBig(x2)).Text(16))
 	fmt.Printf("-EXPECTED %s\n", new(big.Int).SetBytes(res).Text(16))
 	fmt.Printf("-FOUND    %s\n", new(big.Int).SetBytes(t).Text(16))
+}
+
+func (curve p256Curve) BenchP256Mul(in []byte) {
+	p256Mul(in, in, in)
 }
 
 /*
@@ -242,6 +246,34 @@ x3 = D^2*Rinv - 2*A×C^2*Rinv^2 - C^3*Rinv^2
 Y₃ = D×(A×C² - X₃) - B×C³
 Z₃ = Z₁×Z2×C
 (z1*z2*C)%p
+
+define mydigit(x,n) = (x>>(32*n))%2^32
+x=0xa007c8559316f82de3d5d9f28b8ffcdf5949bd551f7a1348b8acc00860e058
+RR=0x66e12d94f3d956202845b2392b6bec594699799c49bd6fa683244c95be79eea2
+r0=x*mydigit(RR,0)
+r1=x*mydigit(RR,1)
+r2=x*mydigit(RR,2)
+r3=x*mydigit(RR,3)
+r4=x*mydigit(RR,4)
+r5=x*mydigit(RR,5)
+r6=x*mydigit(RR,6)
+r7=x*mydigit(RR,7)
+t0=(r0+mydigit(r0*k0,0)*p)>>32
+t1=(t0+r1+mydigit((t0+r1)*k0,0)*p)>>32
+t2=(t1+r2+mydigit((t1+r2)*k0,0)*p)>>32
+t3=(t2+r3+mydigit((t2+r3)*k0,0)*p)>>32
+t4=(t3+r4+mydigit((t3+r4)*k0,0)*p)>>32
+t5=(t4+r5+mydigit((t4+r5)*k0,0)*p)>>32
+t6=(t5+r6+mydigit((t5+r6)*k0,0)*p)>>32
+t7=(t6+r7+mydigit((t6+r7)*k0,0)*p)>>32
+t0
+t1
+t2
+t3
+t4
+t5
+t6
+t7
 
 */
 // Montgomery square modulo Ord(G), repeated n times

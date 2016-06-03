@@ -512,7 +512,7 @@ TEXT ·p256Mul(SB),NOSPLIT,$0
 
 	VPERM ADD11,ADD1, SEL1, RED2   // d1 d0 d1 d0
 	VPERM ZER,  RED2, SEL2, RED1   // 0  d1 d0  0
-	VSQ   RED2, RED1, RED2          // Guaranteed not to underflow
+	VSQ   RED1, RED2, RED2         // Guaranteed not to underflow
 
 	VACCQ  T0, ADD1H,CAR1
 	VAQ    T0, ADD1H,T0
@@ -556,7 +556,7 @@ TEXT ·p256Mul(SB),NOSPLIT,$0
 
 	VPERM ADD11,ADD1, SEL1, RED2   // d1 d0 d1 d0
 	VPERM ZER,  RED2, SEL2, RED1   // 0  d1 d0  0
-	VSQ   RED2, RED1, RED2         // Guaranteed not to underflow
+	VSQ   RED1, RED2, RED2         // Guaranteed not to underflow
 
 	VACCQ  T0, ADD1H,CAR1
 	VAQ    T0, ADD1H,T0
@@ -571,7 +571,7 @@ TEXT ·p256Mul(SB),NOSPLIT,$0
 
 	//---------------------------------------------------
 
-	VREPF $2,  Y1, YDIG
+	VREPF $3,  Y1, YDIG
 
 	VMALF  X0,YDIG, T0, ADD1
 	VMALF  X1,YDIG, T1, ADD2
@@ -600,7 +600,7 @@ TEXT ·p256Mul(SB),NOSPLIT,$0
 
 	VPERM ADD11,ADD1, SEL1, RED2   // d1 d0 d1 d0
 	VPERM ZER,  RED2, SEL2, RED1   // 0  d1 d0  0
-	VSQ   RED2, RED1, RED2          // Guaranteed not to underflow
+	VSQ   RED1, RED2, RED2         // Guaranteed not to underflow
 
 	VACCQ  T0, ADD1H,CAR1
 	VAQ    T0, ADD1H,T0
@@ -644,7 +644,7 @@ TEXT ·p256Mul(SB),NOSPLIT,$0
 
 	VPERM ADD11,ADD1, SEL1, RED2   // d1 d0 d1 d0
 	VPERM ZER,  RED2, SEL2, RED1   // 0  d1 d0  0
-	VSQ   RED2, RED1, RED2         // Guaranteed not to underflow
+	VSQ   RED1, RED2, RED2         // Guaranteed not to underflow
 
 	VACCQ  T0, ADD1H,CAR1
 	VAQ    T0, ADD1H,T0

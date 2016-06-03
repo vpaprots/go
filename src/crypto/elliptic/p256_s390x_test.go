@@ -56,6 +56,16 @@ func BenchmarkInverse(b *testing.B) {
     }
 }
 
+func BenchmarkP256Mul(b *testing.B) {
+    pp256, _ := P256().(p256Curve)
+    x, _ := rand.Int(rand.Reader, pp256.N)
+    in := make([]byte, 32)
+    copy(in, x.Bytes())
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+		pp256.BenchP256Mul(in);
+    }
+}
 
 func TestInverse(t *testing.T) {
 	if testing.Short() {
@@ -87,7 +97,7 @@ func TestDouble(t *testing.T) {
 	yExp, _ := new(big.Int).SetString("234aabe92636af27ea8edcd2392f97839c5a74b7ddea27bce94c2d270fb65157", 16)
 	zExp, _ := new(big.Int).SetString("57401fa8db8e8e1118a40621ce27d6842bc1e1cef6138faabaf37b85a2a774ea", 16)
 	
-	if (x.Cmp(xExp)!=0 || z.Cmp(xExp)!=0 || z.Cmp(zExp)!=0) {
+	if (x.Cmp(xExp)!=0 || y.Cmp(yExp)!=0 || z.Cmp(zExp)!=0) {
 		fmt.Printf("EXPECTED: %s\nEXPECTED: %s\nEXPECTED: %s\n", x.Text(16), y.Text(16), z.Text(16),)
 		fmt.Printf("ACTUAL:   %s\nACTUAL:   %s\nACTUAL:   %s\n", xExp.Text(16), yExp.Text(16), zExp.Text(16),)
 		t.Fail()
@@ -108,7 +118,7 @@ func TestAdd(t *testing.T) {
 	yExp, _ := new(big.Int).SetString("2c5f563ddc8a96fa250ab7d97a624d84206972dadd2c1548c29213deba3b5e11", 16)
 	zExp, _ := new(big.Int).SetString("20d428c1b39721225bda48531f6603eb0c14dfa13af43f4b8a3415d6d13a8cc0", 16)
 	
-		if (x.Cmp(xExp)!=0 || z.Cmp(xExp)!=0 || z.Cmp(zExp)!=0) {
+		if (x.Cmp(xExp)!=0 || y.Cmp(yExp)!=0 || z.Cmp(zExp)!=0) {
 		fmt.Printf("EXPECTED: %s\nEXPECTED: %s\nEXPECTED: %s\n", x.Text(16), y.Text(16), z.Text(16),)
 		fmt.Printf("ACTUAL:   %s\nACTUAL:   %s\nACTUAL:   %s\n", xExp.Text(16), yExp.Text(16), zExp.Text(16),)
 		t.Fail()
