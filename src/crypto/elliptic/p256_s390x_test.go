@@ -58,9 +58,11 @@ func BenchmarkInverse(b *testing.B) {
 
 func BenchmarkP256Mul(b *testing.B) {
     pp256, _ := P256().(p256Curve)
-    x, _ := rand.Int(rand.Reader, pp256.N)
+    //x, _ := rand.Int(rand.Reader, pp256.N)
     in := make([]byte, 32)
-    copy(in, x.Bytes())
+    //copy(in, x.Bytes())
+    in[0] = 20
+    in[2] = 42
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
 		pp256.BenchP256Mul(in);
