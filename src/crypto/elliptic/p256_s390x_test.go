@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"crypto/rand"
+	"bytes"
 )
 
 func TestP256Mul(t *testing.T) {
@@ -124,5 +125,26 @@ func TestAdd(t *testing.T) {
 		fmt.Printf("EXPECTED: %s\nEXPECTED: %s\nEXPECTED: %s\n", x.Text(16), y.Text(16), z.Text(16),)
 		fmt.Printf("ACTUAL:   %s\nACTUAL:   %s\nACTUAL:   %s\n", xExp.Text(16), yExp.Text(16), zExp.Text(16),)
 		t.Fail()
+	}
+}
+
+func TestMovCond(t *testing.T) {
+        if testing.Short() {
+	t.SkipNow()
+   }	
+   	a := make([]byte,32*3)
+   	b := make([]byte,32*3)
+   	t1 := make([]byte,32*3)
+   	t2 := make([]byte,32*3)
+
+	a[0] = 0xff
+	a[30] = 0xff
+	b[0] = 0x55
+      	b[30] = 0x55
+	p256MovCond(t1,a,b,0)
+	p256MovCond(t2,a,b,1)
+
+	if (!bytes.Equal(t1,b) || !bytes.Equal(t2,a)) {
+	t.Fail()
 	}
 }

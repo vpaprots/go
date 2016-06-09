@@ -69,7 +69,219 @@ GLOBL p256ord<>(SB), 8, $32
 GLOBL p256<>(SB), 8, $64
 GLOBL p256mul<>(SB), 8, $128
 
+/* ---------------------------------------*/
+// func p256MovCond(res, a, b []byte, cond int)
+// If cond == 0 res=b, else res=a
+TEXT ·p256MovCond(SB),NOSPLIT,$0
+	MOVD res+0(FP), res_ptr
+	MOVD a+24(FP), x_ptr
+	MOVD b+48(FP), y_ptr
 
+	VLREPG cond+72(FP), M0
+	VZERO  M1
+	VCEQG  M0,M1,M0
+
+	VL   (16*0)(x_ptr), X1
+	VL   (16*0)(y_ptr), Y1
+	VSEL  Y1,X1,M0,X1
+	VST   X1,(16*0)(res_ptr)
+
+	VL   (16*1)(x_ptr), X1
+	VL   (16*1)(y_ptr), Y1
+	VSEL  Y1,X1,M0,X1
+	VST   X1,(16*1)(res_ptr)
+
+	VL   (16*2)(x_ptr), X1
+	VL   (16*2)(y_ptr), Y1
+	VSEL  Y1,X1,M0,X1
+	VST   X1,(16*2)(res_ptr)
+
+	VL   (16*3)(x_ptr), X1
+	VL   (16*3)(y_ptr), Y1
+	VSEL  Y1,X1,M0,X1
+	VST   X1,(16*3)(res_ptr)
+
+	VL   (16*4)(x_ptr), X1
+	VL   (16*4)(y_ptr), Y1
+	VSEL  Y1,X1,M0,X1
+	VST   X1,(16*4)(res_ptr)
+
+	VL   (16*5)(x_ptr), X1
+	VL   (16*5)(y_ptr), Y1
+	VSEL  Y1,X1,M0,X1
+	VST   X1,(16*5)(res_ptr)
+
+	RET
+
+
+
+/* ---------------------------------------*/
+// func p256NegCond(val []byte, cond int)
+TEXT  ·p256NegCond(SB),NOSPLIT,$0
+	MOVD val+0(FP), res_ptr
+
+	VLREPG cond+24(FP), M0
+	//compare with 1 to generate and mask
+	VREPIG $1, M1
+	VCEQG M0, M1, M0
+
+	VGBM $0xff0f, T0
+	MOVD p256<>(SB),R6
+	VL   0x10(R6),T1
+
+	VN   T0,M0,T0
+	VN   T1,M0,T1
+
+	VL   (16*0)(res_ptr), X1
+	VL   (16*1)(res_ptr), X0
+
+	VSCBIQ  X0,T0,M1
+	VSQ     X0,T0,X0
+	VSBIQ   X1,T1,M1,X1
+
+	VST     X1, (16*0)(res_ptr)
+	VST     X0, (16*1)(res_ptr)
+
+	RET
+
+/* ---------------------------------------*/
+	// Constant time point access to arbitrary point table.
+	// Indexed from 1 to 15, with -1 offset
+	// (index 0 is implicitly point at infinity)
+	// func p256Select(point, table []byte, idx int)
+TEXT ·p256Select(SB),NOSPLIT,$0
+	VLREPG idx+48(FP),V16  // V16 = {idx,idx}
+	MOVD table+24(FP),R2
+	MOVD point+0(FP),R3
+
+	VREPIF $1, V17   // V17 = {1,1}
+
+	VZERO V20
+	VZERO V21
+	VZERO V22
+	VZERO V23
+	VZERO V24
+	VZERO V25
+
+
+	MOVD $16, R4
+
+	VLR V17, V18  // Initialize cur_idx = 1
+
+loop_select:
+
+		VCEQG V16, V18, V19
+		VAG   V18, V18, V17
+
+
+		VL (16*0)(R2), V26
+		VL (16*1)(R2), V27
+		VL (16*2)(R2), V28
+		VL (16*3)(R2), V29
+		VL (16*4)(R2), V30
+		VL (16*5)(R2), V31
+		ADD $(16*6), R2
+
+		VN   V19, V26, V26
+		VN   V19, V27, V27
+		VN   V19, V28, V28
+		VN   V19, V29, V29
+		VN   V19, V30, V30
+		VN   V19, V31, V31
+
+
+		VX   V26, V20, V20
+		VX   V27, V21, V21
+		VX   V28, V22, V22
+		VX   V29, V23, V23
+		VX   V30, V24, V24
+		VX   V31, V25, V25
+
+	        ADD  $-1,R4
+	        BLT  loop_select
+	        
+		//BRCTG R4, loop_select
+
+	VST   V20,(16*0)(R3)
+	VST   V21,(16*1)(R3)
+	VST   V22,(16*2)(R3)
+	VST   V23,(16*3)(R3)
+	VST   V24,(16*4)(R3)
+	VST   V25,(16*5)(R3)
+
+	RET
+
+/* ---------------------------------------*/
+	// Constant time point access to base point table.
+	// func p256SelectBase(point, table []uint64, idx int)
+TEXT ·p256SelectBase(SB),NOSPLIT,$0
+	VLREPG idx+48(FP),V16  
+	MOVD table+24(FP),R2
+	MOVD point+0(FP),R3
+
+	VREPIG   $1, V17
+
+	VZERO V20
+	VZERO V21
+	VZERO V22
+	VZERO V23
+
+	MOVD $32, R4
+
+	VLR V17, V18
+
+loop_select_base:
+
+		VCEQG V16, V18, V19
+		VAG   V18, V17, V18
+
+		VL (16*0)(R2), V24
+		VL (16*1)(R2), V25
+		VL (16*2)(R2), V26
+		VL (16*3)(R2), V27
+
+		VL (16*4)(R2), V28
+		VL (16*5)(R2), V29
+		VL (16*6)(R2), V30
+		VL (16*7)(R2), V31
+
+		ADD $(16*8), R2
+
+		VN   V19, V24, V24
+		VN   V19, V25, V25
+		VN   V19, V26, V26
+		VN   V19, V27, V27
+
+		VCEQG V16, V18, V19
+		VAG   V18, V17, V18
+
+		VN   V19, V28, V28
+		VN   V19, V29, V29
+		VN   V19, V30, V30
+		VN   V19, V31, V31
+
+		VX   V24, V24, V20
+		VX   V25, V25, V21
+	        VX   V26, V26, V22
+	        VX   V27, V27, V23
+
+		VX   V28, V28, V20
+		VX   V29, V29, V21
+	        VX   V30, V30, V22
+	        VX   V31, V31, V23
+	        ADD  $-1,R4
+	        BLT  loop_select_base
+	
+		//BRCTG R4, loop_select_base
+
+	VST   V20, (16*0)(R3)
+	VST   V21, (16*1)(R3)
+	VST   V22, (16*2)(R3)
+	VST   V23, (16*3)(R3)
+
+	RET
+	
+	
 /* ---------------------------------------*/
 // func p256OrdMul(res, in1, in2 []byte)
 TEXT ·p256OrdMul(SB),NOSPLIT,$0

@@ -1,3 +1,4 @@
+
 // Copyright 2015 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -114,14 +115,12 @@ func p256FromMont(res, in []uint64){
 }
 
 // iff cond == 1  val <- -val
-func p256NegCond(val []uint64, cond int){
+func p256NegCond(val []byte, cond int)
 	
-}
+
 
 // if cond == 0 res <- b; else res <- a
-func p256MovCond(res, a, b []uint64, cond int){
-	
-}
+func p256MovCond(res, a, b []byte, cond int)
 
 // Endianess swap
 func p256BigToLittle(res []uint64, in []byte){
@@ -132,12 +131,12 @@ func p256LittleToBig(res []byte, in []uint64) {
 }
 
 // Constant time table access
-func p256Select(point, table []uint64, idx int) {
+func p256Select(point, table []byte, idx int) 
 	
-}
-func p256SelectBase(point, table []uint64, idx int) {
+
+func p256SelectBase(point, table []byte, idx int) 
 	
-}
+
 
 // Montgomery multiplication modulo Ord(G)
 func p256OrdMul(res, in1, in2 []byte)
@@ -149,7 +148,7 @@ func p256OrdMulBig(res, in1, in2 []byte) {
 	temp := new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv)
 	t := make([]byte, 32)
 	p256OrdMul(t, in1, in2)
-	
+
 	copy(res, fromBig(new(big.Int).Mod(temp, p256.N)))
 
 	if (!bytes.Equal(t,res)) {
@@ -193,6 +192,8 @@ func (curve p256Curve) TestP256Mul() {
 	fmt.Printf("-EXPECTED %s\n", new(big.Int).SetBytes(res).Text(16))
 	fmt.Printf("-FOUND    %s\n", new(big.Int).SetBytes(t).Text(16))
 }
+
+
 
 func (curve p256Curve) BenchP256Mul(in []byte) {
 	p256Mul(in, in, in)
