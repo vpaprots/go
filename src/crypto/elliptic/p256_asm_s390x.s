@@ -57,11 +57,11 @@ DATA p256mul<>+0x38(SB)/8, $0x1c1d1e1f0c0d0e0f // SEL d0  0 d1 d0
 DATA p256mul<>+0x40(SB)/8, $0x040506071c1d1e1f // SEL  0 d1 d0 d1
 DATA p256mul<>+0x48(SB)/8, $0x0c0d0e0f1c1d1e1f // SEL  0 d1 d0 d1
 DATA p256mul<>+0x50(SB)/8, $0x0405060704050607 // SEL  0  0 d1 d0
-DATA p256mul<>+0x58(SB)/8, $0x141516170c0d0e0f // SEL  0  0 d1 d0
+DATA p256mul<>+0x58(SB)/8, $0x1c1d1e1f0c0d0e0f // SEL  0  0 d1 d0
 DATA p256mul<>+0x60(SB)/8, $0x0c0d0e0f1c1d1e1f // SEL d1 d0 d1 d0
 DATA p256mul<>+0x68(SB)/8, $0x0c0d0e0f1c1d1e1f // SEL d1 d0 d1 d0
-DATA p256mul<>+0x70(SB)/8, $0x0000000010111213 // SEL 0  d1 d0  0
-DATA p256mul<>+0x78(SB)/8, $0x1415161700000000 // SEL 0  d1 d0  0
+DATA p256mul<>+0x70(SB)/8, $0x141516170c0d0e0f // SEL 0  d1 d0  0
+DATA p256mul<>+0x78(SB)/8, $0x1c1d1e1f14151617 // SEL 0  d1 d0  0
 GLOBL p256const0<>(SB), 8, $8
 GLOBL p256const1<>(SB), 8, $8
 GLOBL p256ordK0<>(SB), 8, $4
@@ -812,6 +812,49 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
     *                                      ---+--------+--------+
     *
     *                                                                *Mi obra de arte de siglo XXI @vpaprots
+    *
+    *
+    * First group is special, doesnt get the two inputs:
+    *                                             +--------+--------+<-+
+    *                                     +-------|  ADD2  |  ADD1  |--|-----+
+    *                                     |       +--------+--------+  |     |
+    *                                     |     +--------+--------+<---+     |
+    *                                     |     | ADD2H  | ADD1H  |--+       |
+    *                                     |     +--------+--------+  |       |
+    *                                     |     +--------+--------+<-+       |
+    *                                     |     |  ADD4  |  ADD3  |--|-+     |
+    *                                     |     +--------+--------+  | |     |
+    *                                     |   +--------+--------+<---+ |     |
+    *                                     |   | ADD4H  | ADD3H  |------|-+   |(+vzero)
+    *                                     |   +--------+--------+      | |   V
+    *                                     | ------------------------   | | +--------+
+    *                                     |                            | | |  RED3  |  [d0 0 0 d0]
+    *                                     |                            | | +--------+
+    *                                     +---->+--------+--------+    | |   |
+    *   (T2[1w]||ADD2[4w]||ADD1[3w])            |   T1   |   T0   |----+ |   |
+    *                                           +--------+--------+    | |   |
+    *                                        ---+--------+--------+<---+ |   |
+    *                                    +--- T2|   T1   |   T0   |----------+
+    *                                    |   ---+--------+--------+      |   |
+    *                                    |  +--------+--------+<-------------+
+    *                                    |  |  RED2  |  RED1  |-----+    |   | [0 d1 d0 d1] [d0 0 d1 d0]
+    *                                    |  +--------+--------+     |    |   |
+    *                                    |  +--------+<----------------------+
+    *                                    |  |  RED3  |--------------+    |     [0 0 d1 d0]
+    *                                    |  +--------+              |    |
+    *                                    +--->+--------+--------+   |    |
+    *                                         |   T1   |   T0   |--------+
+    *                                         +--------+--------+   |    |
+    *                                   --------------------------- |    |
+    *                                                               |    |
+    *                                       +--------+--------+<----+    |
+    *                                       |  RED2  |  RED1  |          |
+    *                                       +--------+--------+          |
+    *                                      ---+--------+--------+<-------+
+    *                                       T2|   T1   |   T0   |            (H1P-H1P-H00RRAY!)
+    *                                      ---+--------+--------+
+    *
+    * Last 'group' needs to RED2||RED1 shifted less
     */
 
  TEXT ·p256Mul(SB),NOSPLIT,$0
@@ -819,7 +862,6 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 	MOVD in1+24(FP), x_ptr
 	MOVD in2+48(FP), y_ptr
 
-	//VZERO T2
 	VZERO ZER
 	MOVD $p256mul<>+0x00(SB), R4
 	VL	16(R4), M0
@@ -846,7 +888,7 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 	VMALF  X0,YDIG, ADD1H, ADD3
 	VMALF  X1,YDIG, ADD2H, ADD4
 	VMALHF X0,YDIG, ADD1H, ADD3H
-	VMALHF X1,YDIG, ADD2H, ADD2H
+	VMALHF X1,YDIG, ADD2H, ADD4H
 
 	VZERO ZER  // {YDIG,ADD1H,ADD2H}
 	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
@@ -884,7 +926,7 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 	VMALF  X0,YDIG, ADD1H, ADD3
 	VMALF  X1,YDIG, ADD2H, ADD4
 	VMALHF X0,YDIG, ADD1H, ADD3H
-	VMALHF X1,YDIG, ADD2H, ADD2H
+	VMALHF X1,YDIG, ADD2H, ADD4H
 
 	VZERO ZER  // {YDIG,ADD1H,ADD2H}
 	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
@@ -928,7 +970,7 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 	VMALF  X0,YDIG, ADD1H, ADD3
 	VMALF  X1,YDIG, ADD2H, ADD4
 	VMALHF X0,YDIG, ADD1H, ADD3H
-	VMALHF X1,YDIG, ADD2H, ADD2H
+	VMALHF X1,YDIG, ADD2H, ADD4H
 
 	VZERO ZER  // {YDIG,ADD1H,ADD2H}
 	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
@@ -972,7 +1014,7 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 	VMALF  X0,YDIG, ADD1H, ADD3
 	VMALF  X1,YDIG, ADD2H, ADD4
 	VMALHF X0,YDIG, ADD1H, ADD3H
-	VMALHF X1,YDIG, ADD2H, ADD2H
+	VMALHF X1,YDIG, ADD2H, ADD4H
 
 	VZERO ZER  // {YDIG,ADD1H,ADD2H}
 	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
@@ -994,9 +1036,6 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
     VPERM T0,  RED3, SEL5, RED2  // [d1 d0 d1 d0]
     VPERM T0,  RED3, SEL6, RED1  // [ 0 d1 d0  0]
     VSQ   RED1,RED2, RED2        // Guaranteed not to underflow
-
-	//VPERM T0,  ADD1, SEL5, RED2   // d1 d0 d1 d0
-	//VPERM ZER  RED2, SEL6, RED1   // 0  d1 d0  0
 
 	VSLDB  $12, T1,T0, T0
 	VSLDB  $12, T2,T1, T1
