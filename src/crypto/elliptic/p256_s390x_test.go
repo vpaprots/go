@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"crypto/rand"
+	"bytes"
 )
 
 func TestP256Mul(t *testing.T) {
@@ -120,9 +121,129 @@ func TestAdd(t *testing.T) {
 	yExp, _ := new(big.Int).SetString("2c5f563ddc8a96fa250ab7d97a624d84206972dadd2c1548c29213deba3b5e11", 16)
 	zExp, _ := new(big.Int).SetString("20d428c1b39721225bda48531f6603eb0c14dfa13af43f4b8a3415d6d13a8cc0", 16)
 	
-		if (x.Cmp(xExp)!=0 || y.Cmp(yExp)!=0 || z.Cmp(zExp)!=0) {
+	if (x.Cmp(xExp)!=0 || y.Cmp(yExp)!=0 || z.Cmp(zExp)!=0) {
 		fmt.Printf("EXPECTED: %s\nEXPECTED: %s\nEXPECTED: %s\n", x.Text(16), y.Text(16), z.Text(16),)
 		fmt.Printf("ACTUAL:   %s\nACTUAL:   %s\nACTUAL:   %s\n", xExp.Text(16), yExp.Text(16), zExp.Text(16),)
 		t.Fail()
+	}
+}
+
+func Compare(p1, p2 *p256Point) (int) {
+	if (bytes.Compare(p1.x[:], p2.x[:])==0 && 
+		bytes.Compare(p1.y[:], p2.y[:])==0 && 
+		bytes.Compare(p1.z[:], p2.z[:])==0) {
+		return 0
+	}
+	return 1
+}
+
+func Print(msg string, p1 *p256Point) {
+	fmt.Printf("INPUT %s.x:    %s\nINPUT %s.y:    %s\nINPUT %s.z:    %s\n\n", msg, new(big.Int).SetBytes(p1.x[:]).Text(16), 
+		                                                                       msg, new(big.Int).SetBytes(p1.y[:]).Text(16), 
+		                                                                       msg, new(big.Int).SetBytes(p1.z[:]).Text(16))
+}
+
+func TestAddAffine(t *testing.T) {
+	P256()
+	
+	basePoint := p256Point{ 
+		x: [32]byte{0x18, 0x90, 0x5f, 0x76, 0xa5, 0x37, 0x55, 0xc6, 0x79, 0xfb, 0x73, 0x2b, 0x77, 0x62, 0x25, 0x10, 
+			0x75, 0xba, 0x95, 0xfc, 0x5f, 0xed, 0xb6, 0x01, 0x79, 0xe7, 0x30, 0xd4, 0x18, 0xa9, 0x14, 0x3c}, //(p256.x*2^256)%p
+		y:[32]byte{0x85, 0x71, 0xff, 0x18, 0x25, 0x88, 0x5d, 0x85, 0xd2, 0xe8, 0x86, 0x88, 0xdd, 0x21, 0xf3, 0x25,
+			0x8b, 0x4a, 0xb8, 0xe4, 0xba, 0x19, 0xe4, 0x5c, 0xdd, 0xf2, 0x53, 0x57, 0xce, 0x95, 0x56, 0x0a}, //(p256.y*2^256)%p
+		z:[32]byte{0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},  //(p256.z*2^256)%p
+	}
+	p2 := &basePoint
+	p1  := new(p256Point)
+	res  := new(p256Point)
+	exp1 := new(p256Point)
+	exp2 := new(p256Point)
+	exp3 := new(p256Point)
+	
+	p256PointDoubleAsm(p1, p2)
+	xExp, _ := new(big.Int).SetString("46b25328fadd64b3d27a6dd305abf1aedb90d91e2b4557e0385baba2d08d581", 16)
+	yExp, _ := new(big.Int).SetString("8501da36024740683dc01b7ac378aaf0ada17e37f7d757024d3d8a1222392169", 16)
+	zExp, _ := new(big.Int).SetString("a544fc8b9b4e66fb3f7e28e7822754d67c47431d67b9c376b5098d22b457a054", 16)
+	copy(exp1.x[:], fromBig(xExp))
+	copy(exp1.y[:], fromBig(yExp))
+	copy(exp1.z[:], fromBig(zExp))
+	yExp, _ = new(big.Int).SetString("7a8e00e6da77a27b2d17797722de0cda74b5471c45e61ba3220daca8316aa9f5", 16)
+	copy(exp2.x[:], p2.x[:])
+	copy(exp2.y[:], fromBig(yExp))
+	copy(exp2.z[:], p2.z[:])
+	xExp, _ = new(big.Int).SetString("a16ecd2edf99bba8d6ad839e9d4d7ef17a0e7dd416e9f09fea66f67e26465c37", 16)
+	yExp, _ = new(big.Int).SetString("2d1bce3c02c56f7d94d97e00136ea2423688b905a687f94ff8b1364a1df174b", 16)
+	zExp, _ = new(big.Int).SetString("a544fc8b9b4e66fb3f7e28e7822754d67c47431d67b9c376b5098d22b457a054", 16)
+	copy(exp3.x[:], fromBig(xExp))
+	copy(exp3.y[:], fromBig(yExp))
+	copy(exp3.z[:], fromBig(zExp))
+	
+	// If sign == 1 -> P2 = -P2
+	// If sel == 0 -> P3 = P1
+	// if zero == 0 -> P3 = P2
+	//func p256PointAddAffineAsm(P3, P1, P2 *p256Point, sign, sel, zero int)
+	p256PointAddAffineAsm(res, p1, p2, 0, 0, 0)  // res = p2
+	if (Compare(res, p2)!=0) {
+		fmt.Printf("[@1] Expected res == in2)\n")
+		Print("in2", p2)
+		Print("res", res)
+		t.Fail();
+	}
+	
+	p256PointAddAffineAsm(res, p1, p2, 0, 0, 1)  // res = p1
+	if (Compare(res, p1)!=0) {
+		fmt.Printf("[@2] Expected res == in1)\n")
+		Print("in1", p1)
+		Print("res", res)
+		t.Fail();
+	}
+	p256PointAddAffineAsm(res, p1, p2, 0, 1, 0)  // res = p2
+	if (Compare(res, p2)!=0) {
+		fmt.Printf("[@3] Expected res == in2)\n")
+		Print("in2", p2)
+		Print("res", res)
+		t.Fail();
+	}
+	p256PointAddAffineAsm(res, p1, p2, 0, 1, 1)  // res = p1 + p2
+	if (Compare(res, exp1)!=0) {
+		fmt.Printf("[@4] Expected res == p1 + p2\n")
+		Print("exp", exp1)
+		Print("res", res)
+		Print("in1", p1)
+		Print("in2", p2)	
+		t.Fail();
+	}
+	
+	p256PointAddAffineAsm(res, p1, p2, 1, 0, 0)  // res = -p2
+	if (Compare(res, exp2)!=0) {
+		fmt.Printf("[@5] Expected res == -in2)\n")
+		Print("in2", exp2)
+		Print("res", res)
+		t.Fail();
+	}
+	
+	p256PointAddAffineAsm(res, p1, p2, 1, 0, 1)  // res = p1
+	if (Compare(res, p1)!=0) {
+		fmt.Printf("[@6] Expected res == in1)\n")
+		Print("in1", p1)
+		Print("res", res)
+		t.Fail();
+	}
+		
+	p256PointAddAffineAsm(res, p1, p2, 1, 1, 0)  // res = -p2
+	if (Compare(res, exp2)!=0) {
+		fmt.Printf("[@7] Expected res == -in2)\n")
+		Print("in2", p2)
+		Print("res", exp2)
+		t.Fail();
+	}
+		
+	p256PointAddAffineAsm(res, p1, p2, 1, 1, 1)  // res = p1 + (-p2)
+	if (Compare(res, exp3)!=0) {
+		fmt.Printf("[@8] Expected res == p1 + (-p2)\n")
+		Print("exp", exp3)
+		Print("res", res)	
+		t.Fail();
 	}
 }
