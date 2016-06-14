@@ -62,12 +62,15 @@ DATA p256mul<>+0x60(SB)/8, $0x0c0d0e0f1c1d1e1f // SEL d1 d0 d1 d0
 DATA p256mul<>+0x68(SB)/8, $0x0c0d0e0f1c1d1e1f // SEL d1 d0 d1 d0
 DATA p256mul<>+0x70(SB)/8, $0x141516170c0d0e0f // SEL 0  d1 d0  0
 DATA p256mul<>+0x78(SB)/8, $0x1c1d1e1f14151617 // SEL 0  d1 d0  0
+DATA p256mont<>+0x00(SB)/8,$0x1010101008090a0b
+DATA p256mont<>+0x08(SB)/8,$0x0c0d0e0f10101010
 GLOBL p256const0<>(SB), 8, $8
 GLOBL p256const1<>(SB), 8, $8
 GLOBL p256ordK0<>(SB), 8, $4
 GLOBL p256ord<>(SB), 8, $32
 GLOBL p256<>(SB), 8, $64
 GLOBL p256mul<>(SB), 8, $128
+GLOBL p256mont<>(SB),8,$16
 
 /* ---------------------------------------*/
 // func p256MovCond(res, a, b []byte, cond int)
@@ -125,7 +128,7 @@ TEXT  ·p256NegCond(SB),NOSPLIT,$0
 	VREPIG $1, M1
 	VCEQG M0, M1, M0
 
-	VGBM $0xff0f, T0
+	VGBM $0x0fff, T0
 	MOVD p256<>(SB),R6
 	VL   0x10(R6),T1
 
@@ -154,7 +157,7 @@ TEXT ·p256Select(SB),NOSPLIT,$0
 	MOVD table+24(FP),R2
 	MOVD point+0(FP),R3
 
-	VREPIF $1, V17   // V17 = {1,1}
+	VREPIG $1, V17   // V17 = {1,1}
 
 	VZERO V20
 	VZERO V21
@@ -1069,7 +1072,7 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
     * Last 'group' needs to RED2||RED1 shifted less
     */
 
- TEXT ·p256Mul(SB),NOSPLIT,$0
+TEXT ·p256Mul(SB),NOSPLIT,$0
 	MOVD res+0(FP), res_ptr
 	MOVD in1+24(FP), x_ptr
 	MOVD in2+48(FP), y_ptr
@@ -1277,4 +1280,455 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 
 	VST T0, (1*16)(res_ptr)
 	VST T1, (0*16)(res_ptr)
+	RET
+
+	
+#define IN1H    V0
+#define IN1L	V1
+#define IN2H	V2
+#define IN2L	V3
+#define OUTH	V6
+#define OUTL	V7
+#define POLYH	V4
+#define POLYL	V5
+	
+#define in1x_ptr R1
+#define in1y_ptr R2
+#define in1z_ptr R3
+#define in2x_ptr R4
+#define in2y_ptr R5
+#define in2z_ptr R6
+#define sign     R7
+#define sel      R8
+#define zero     R9
+#define GTMP	 R10
+
+#define p256MulBy2Inline\
+	VACCQ IN1L, IN2L, CAR1
+	VAQ   IN1L, IN2L, OUTL
+	VACCCQ IN1H, IN2H, CAR1, CAR2
+	VACQ   IN1H, IN2H, CAR1, OUTH
+	
+
+	
+TEXT ·p256MulInternal(SB),NOSPLIT,$0
+	MOVD $p256mul<>+0x00(SB), R4
+	VL	32(R4), SEL1
+	VL	48(R4), SEL2
+	VL	64(R4), SEL3
+	VL	80(R4), SEL4
+	VL	96(R4), SEL5
+	VL	112(R4), SEL6
+
+	
+
+	//---------------------------------------------------
+
+	VREPF $3,Y0, YDIG
+	VMLF  X0,YDIG, ADD1
+	VMLF  X1,YDIG, ADD2
+	VMLHF X0,YDIG, ADD1H
+	VMLHF X1,YDIG, ADD2H
+
+	VREPF  $2, Y0, YDIG
+	VMALF  X0,YDIG, ADD1H, ADD3
+	VMALF  X1,YDIG, ADD2H, ADD4
+	VMALHF X0,YDIG, ADD1H, ADD3H
+	VMALHF X1,YDIG, ADD2H, ADD4H
+
+
+	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
+
+	VSLDB  $12, ADD2,ADD1, T0
+	VSLDB  $12, ZER, ADD2, T1
+
+	VACCQ  T0, ADD3,CAR1
+	VAQ    T0, ADD3,T0
+	VACCCQ T1, ADD4,CAR1, T2
+	VACQ   T1, ADD4,CAR1, T1
+
+    VPERM RED3, T0, SEL2, RED1  // [d0  0 d1 d0]
+    VPERM RED3, T0, SEL3, RED2  // [ 0 d1 d0 d1]
+    VPERM RED3, T0, SEL4, RED3  // [ 0  0 d1 d0]
+    VSQ   RED3,RED2, RED2       // Guaranteed not to underflow
+
+	VSLDB  $12, T1,T0, T0
+	VSLDB  $12, T2,T1, T1
+
+	VACCQ  T0, ADD3H,CAR1
+	VAQ    T0, ADD3H,T0
+	VACCCQ T1, ADD4H,CAR1, T2
+	VACQ   T1, ADD4H,CAR1, T1
+
+	//---------------------------------------------------
+
+	VREPF  $1,Y0, YDIG
+	VMALF  X0,YDIG, T0, ADD1
+	VMALF  X1,YDIG, T1, ADD2
+	VMALHF X0,YDIG, T0, ADD1H
+	VMALHF X1,YDIG, T1, ADD2H
+
+	VREPF  $0,Y0, YDIG
+	VMALF  X0,YDIG, ADD1H, ADD3
+	VMALF  X1,YDIG, ADD2H, ADD4
+	VMALHF X0,YDIG, ADD1H, ADD3H
+	VMALHF X1,YDIG, ADD2H, ADD4H
+
+
+	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
+
+	VSLDB  $12, ADD2,ADD1, T0
+	VSLDB  $12, T2,  ADD2, T1
+
+	VACCQ  T0, RED1,CAR1
+	VAQ    T0, RED1,T0
+	VACCCQ T1, RED2,CAR1, T2
+	VACQ   T1, RED2,CAR1, T1
+
+	VACCQ  T0, ADD3,CAR1
+	VAQ    T0, ADD3,T0
+	VACCCQ T1, ADD4,CAR1, CAR2
+	VACQ   T1, ADD4,CAR1, T1
+	VAQ    T2, CAR2,T2
+
+    VPERM RED3, T0, SEL2, RED1  // [d0  0 d1 d0]
+    VPERM RED3, T0, SEL3, RED2  // [ 0 d1 d0 d1]
+    VPERM RED3, T0, SEL4, RED3  // [ 0  0 d1 d0]
+    VSQ   RED3,RED2, RED2       // Guaranteed not to underflow
+
+	VSLDB  $12, T1,T0, T0
+	VSLDB  $12, T2,T1, T1
+
+	VACCQ  T0, ADD3H,CAR1
+	VAQ    T0, ADD3H,T0
+	VACCCQ T1, ADD4H,CAR1, T2
+	VACQ   T1, ADD4H,CAR1, T1
+
+	//---------------------------------------------------
+
+	VREPF  $3,Y1, YDIG
+	VMALF  X0,YDIG, T0, ADD1
+	VMALF  X1,YDIG, T1, ADD2
+	VMALHF X0,YDIG, T0, ADD1H
+	VMALHF X1,YDIG, T1, ADD2H
+
+	VREPF $2,Y1, YDIG
+	VMALF  X0,YDIG, ADD1H, ADD3
+	VMALF  X1,YDIG, ADD2H, ADD4
+	VMALHF X0,YDIG, ADD1H, ADD3H
+	VMALHF X1,YDIG, ADD2H, ADD4H
+
+	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
+
+	VSLDB  $12, ADD2,ADD1, T0
+	VSLDB  $12, T2,  ADD2, T1
+
+	VACCQ  T0, RED1,CAR1
+	VAQ    T0, RED1,T0
+	VACCCQ T1, RED2,CAR1, T2
+	VACQ   T1, RED2,CAR1, T1
+
+	VACCQ  T0, ADD3,CAR1
+	VAQ    T0, ADD3,T0
+	VACCCQ T1, ADD4,CAR1, CAR2
+	VACQ   T1, ADD4,CAR1, T1
+	VAQ    T2, CAR2,T2
+
+    VPERM RED3, T0, SEL2, RED1  // [d0  0 d1 d0]
+    VPERM RED3, T0, SEL3, RED2  // [ 0 d1 d0 d1]
+    VPERM RED3, T0, SEL4, RED3  // [ 0  0 d1 d0]
+    VSQ   RED3,RED2, RED2       // Guaranteed not to underflow
+
+	VSLDB  $12, T1,T0, T0
+	VSLDB  $12, T2,T1, T1
+
+	VACCQ  T0, ADD3H,CAR1
+	VAQ    T0, ADD3H,T0
+	VACCCQ T1, ADD4H,CAR1, T2
+	VACQ   T1, ADD4H,CAR1, T1
+
+	//---------------------------------------------------
+
+	VREPF  $1,Y1, YDIG
+	VMALF  X0,YDIG, T0, ADD1
+	VMALF  X1,YDIG, T1, ADD2
+	VMALHF X0,YDIG, T0, ADD1H
+	VMALHF X1,YDIG, T1, ADD2H
+
+	VREPF  $0,Y1, YDIG
+	VMALF  X0,YDIG, ADD1H, ADD3
+	VMALF  X1,YDIG, ADD2H, ADD4
+	VMALHF X0,YDIG, ADD1H, ADD3H
+	VMALHF X1,YDIG, ADD2H, ADD4H
+
+	VZERO ZER  // {YDIG,ADD1H,ADD2H}
+	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
+
+	VSLDB  $12, ADD2,ADD1, T0
+	VSLDB  $12, T2,  ADD2, T1
+
+	VACCQ  T0, RED1,CAR1
+	VAQ    T0, RED1,T0
+	VACCCQ T1, RED2,CAR1, T2
+	VACQ   T1, RED2,CAR1, T1
+
+	VACCQ  T0, ADD3,CAR1
+	VAQ    T0, ADD3,T0
+	VACCCQ T1, ADD4,CAR1, CAR2
+	VACQ   T1, ADD4,CAR1, T1
+	VAQ    T2, CAR2,T2
+
+    VPERM T0,  RED3, SEL5, RED2  // [d1 d0 d1 d0]
+    VPERM T0,  RED3, SEL6, RED1  // [ 0 d1 d0  0]
+    VSQ   RED1,RED2, RED2        // Guaranteed not to underflow
+
+	VSLDB  $12, T1,T0, T0
+	VSLDB  $12, T2,T1, T1
+
+	VACCQ  T0, ADD3H,CAR1
+	VAQ    T0, ADD3H,T0
+	VACCCQ T1, ADD4H,CAR1, T2
+	VACQ   T1, ADD4H,CAR1, T1
+
+	VACCQ  T0, RED1,CAR1
+	VAQ    T0, RED1,T0
+	VACCCQ T1, RED2,CAR1, CAR2
+	VACQ   T1, RED2,CAR1, T1
+	VAQ    T2, CAR2,T2
+
+	//---------------------------------------------------
+
+	VSCBIQ  POLYL,T0, CAR1
+	VSQ     POLYL,T0, ADD1
+	VSBCBIQ T1,POLYH, CAR1, CAR2
+	VSBIQ   T1,POLYH, CAR1, ADD2
+	VSBIQ   T2,ZER,CAR2, T2
+
+	//what output to use, ADD2||ADD1 or T1||T0?
+	VSEL    T0,ADD1,T2, T0
+	VSEL    T1,ADD2,T2, T1
+
+	VST T0, (1*16)(res_ptr)
+	VST T1, (0*16)(res_ptr)
+
+	RET
+
+
+/* ---------------------------------------*/
+TEXT p256SubInternal(SB),NOSPLIT,$0
+	VSCBIQ   IN2L, IN1L, CAR1
+	VSQ	 IN2L, IN1L, OUTL
+	VSBIQ    IN2H, IN1H, CAR1, OUTH
+
+	VACCQ    OUTL,POLYL,CAR1
+	VAQ	 OUTL,POLYL,T0
+	VACCCQ   OUTH,POLYH,CAR1,CAR2
+	VACQ	 OUTH,POLYH,CAR1,T1
+
+	VSQ      CAR2,ZER,CAR2
+	VSEL     OUTL,T0,CAR2,OUTL
+	VSEL     OUTH,T1,CAR2,OUTH
+
+	RET
+
+
+	
+/* ---------------------------------------*/
+#define RS R7
+#define x1in(off) (32*0 + off)(RS)
+#define y1in(off) (32*1 + off)(RS)
+#define z1in(off) (32*2 + off)(RS)
+#define x2in(off) (32*3 + off)(RS)
+#define y2in(off) (32*4 + off)(RS)
+#define z2in(off) (32*5 + off)(RS)
+
+#define xout(off) (32*6 + off)(RS)
+#define yout(off) (32*7 + off)(RS)
+#define zout(off) (32*8 + off)(RS)
+
+#define u1(off)    (32*9 + off)(RS)
+#define u2(off)    (32*10 + off)(RS)
+#define s1(off)    (32*11 + off)(RS)
+#define s2(off)    (32*12 + off)(RS)
+#define z1sqr(off)  z1sqrv-(16-off)(SP)
+#define z2sqr(off)  z2sqrv-(32*14 + off)(SP)
+#define h(off)     (32*15 + off)(RS)
+#define r(off)     (32*16 + off)(RS)
+#define hsqr(off)  (32*17 + off)(RS)
+#define rsqr(off)  (32*18 + off)(RS)
+#define hcub(off)  (32*19 + off)(RS)
+#define rptr       (32*20)(RS)
+
+/*#define in1x_ptr  R1
+#define	in1y_ptr  R2
+#define in1z_ptr  R3
+#define in2x_ptr  R4
+#define in2y_ptr  R5
+#define in2z_ptr  R6
+*/
+
+
+// func p256PointAddAffineAsm(resx,resy,resz, in1x, in1y, in1z, in2x, in2y, in2z []byte)
+// FIXME: Does the $672-72 need to be updated for longer parm list??
+TEXT ·p256PointAddAsm2(SB),0,$672-72
+	MOVD  in1x+(3*24)(FP), in1x_ptr
+	MOVD  in1y+(4*24)(FP), in1y_ptr
+	MOVD  in1z+(5*24)(FP), in1z_ptr
+	MOVD  in2x+(6*24)(FP), in2x_ptr
+	MOVD  in2y+(7*24)(FP), in2y_ptr
+	MOVD  in2z+(8*24)(FP), in2z_ptr
+
+	VGBM $0x0fff,POLYL
+	MOVD p256<>(SB),GTMP
+	VL   0x10(GTMP),POLYH
+	VZERO ZER
+
+	ADD $8, R15, RS
+	
+	VL  0(in2z_ptr), IN1H
+	VL  16(in2z_ptr),IN1L
+	VLR IN1H, IN2H
+	VLR IN1L, IN2L
+	CALL p256MulInternal(SB)    // z2^2
+	VST OUTH, z2sqr(0)
+	VST OUTL, z2sqr(16)
+	VLR OUTH, IN1H
+	VLR OUTL, IN1L
+	CALL p256MulInternal(SB)    // z2^3
+	VL  0(in1y_ptr), IN1H
+	VL  16(in1y_ptr), IN1L
+	VLR OUTH, IN2H
+	VLR OUTL, IN2L
+	CALL p256MulInternal(SB)   // z2^3 * y1
+	VST OUTH, s1(0)
+	VST OUTL, s1(16)
+	VL  0(in1z_ptr), IN1H
+	VL  16(in1z_ptr), IN1L
+	VLR IN1H, IN2H
+	VLR IN1L, IN2L
+	CALL p256MulInternal(SB) 	//z1^2
+	VST OUTH, z1sqr(0)
+	VST OUTL, z1sqr(16)
+	VLR OUTH, IN2H
+	VLR OUTL, IN2L
+	CALL p256MulInternal(SB)	//z1^3
+	VL  0(in1y_ptr), IN1H
+	VL  16(in2y_ptr), IN1L
+	VLR OUTH, IN2H
+	VLR OUTL, IN2L
+	CALL p256MulInternal(SB)	//z1^3 * y2
+	VST OUTH, s2(0)
+	VST OUTL, s2(16)
+	
+	VLR OUTH, IN1H
+	VLR OUTL, IN1L
+	VL  s1(0), IN2H
+	VL  s1(16), IN2L
+	CALL p256SubInternal(SB)	// s2-s1
+	VST OUTH, r(0)
+	VST OUTL, r(16)
+
+	VL z2sqr(0), IN1H
+	VL z2sqr(16*1), IN1L
+	VL 0(in1x_ptr), IN2H
+	VL 16(in1x_ptr), IN2L
+	CALL p256MulInternal(SB)	// x1 * z2^2
+	VST OUTH, u1(0)
+	VST OUTL, u1(16)
+
+	VL z1sqr(0), IN1H
+	VL z1sqr(16), IN1L
+	VL 0(in2x_ptr), IN2H
+	VL 16(in2x_ptr), IN2L
+	CALL p256MulInternal(SB)	// u1 = x1 * z2^s
+	VST OUTH, u2(0)
+	VST OUTL, u2(16)
+
+	VLR OUTH, IN1H
+	VLR OUTL, IN1L
+	VL u1(0), IN2H
+	VL u1(16), IN2L
+	CALL p256SubInternal(SB)	// h = u2 - u1
+	VST OUTH, h(0)
+	VST OUTL, h(16)
+
+	VL r(0), IN1H
+	VL r(16), IN1L
+	//may be faster to just load so there is no dependency
+	//Then again these go away once there is an optimized squaring
+	VLR IN1H, IN2H
+	VLR IN1L, IN2L
+	CALL p256MulInternal(SB) 	// rsqr = r^2
+	VST OUTH, rsqr(0)
+	VST OUTL, rsqr(16)
+
+	VL h(0), IN1H
+	VL h(16), IN1L
+	VLR IN1H, IN2H
+	VLR IN1L, IN2L
+	CALL p256MulInternal(SB)	// hsqr = h^2
+	VST OUTH, hsqr(0)
+	VST OUTL, hsqr(16)
+
+	VLR OUTH, IN2H
+	VLR OUTL, IN2L
+	CALL p256MulInternal(SB)	// hcub = h^3
+	VST OUTH, hcub(0)
+	VST OUTL, hcub(16)
+
+	VL s1(0), IN1H
+	VL s1(16), IN1L
+	VLR OUTH, IN2H
+	VLR OUTL, IN2L
+	CALL p256MulInternal(SB)	// s2 = s1*h^3
+	VST OUTH, s2(0)
+	VST OUTL, s2(16)
+
+	VL 0(in1z_ptr), IN1H
+	VL 16(in1z_ptr), IN1L
+	VL 0(in2z_ptr), IN2H
+	VL 16(in2z_ptr), IN2L
+	CALL p256MulInternal(SB)
+
+	VL h(0), IN1H
+	VL h(16), IN1L
+	VLR OUTH, IN2H
+	VLR OUTL, IN2L
+	CALL p256MulInternal(SB)
+	VST OUTH, zout(0)
+	VST OUTL, zout(16)
+
+	VL hsqr(0), IN1H
+	VL hsqr(16), IN1L
+	VL u1(0), IN2H
+	VL u1(16), IN2L
+	CALL p256MulInternal(SB)
+	VST OUTH, u2(0)
+	VST OUTL, u2(16)
+
+	
+
+
+
+	
+	RET	
+
+// func p256PointAddAffineAsm(res, in1, in2 []uint64, sign, sel, zero int)
+TEXT ·p256PointAddAffineAsm(SB),0,$512-96
+	// Move input to stack in order to free registers
+	MOVD res+0(FP), R1
+	MOVD in1+24(FP), R2
+	MOVD in2+48(FP), R3
+//	MOVD sign+72(FP), R4
+//	MOVD sel+80(FP), R5
+//	MOVD zero+88(FP), R6
+
+	VL   16(R3), IN2L
+	VL   0(R3),  IN2H
+
+	VGBM $0x0fff,POLYL
+	MOVD p256<>(SB),GTMP
+	VL   0x10(GTMP),POLYH
+	VZERO ZER
+
 	RET
