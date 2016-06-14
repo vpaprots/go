@@ -720,40 +720,47 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 /* ---------------------------------------*/
 // func p256Mul(res, in1, in2 []byte)
 #define res_ptr R1
-#define x_ptr R2
-#define y_ptr R3
+#define x_ptr   R2
+#define y_ptr   R3
+#define CPOOL   R4
+
+// Parameters
 #define X0    V0
 #define X1    V1
 #define Y0    V2
 #define Y1    V3
-#define M0    V4
-#define M1    V5
-#define T0    V6
-#define T1    V7
-#define T2    V8
-#define YDIG1 V9
-#define YDIG2 V10
-#define ADD1  V12
-#define ADD1H V13
-#define ADD2  V14
-#define ADD2H V15
-#define ADD3  V16
-#define ADD3H V17
-#define ADD4  V18
-#define ADD4H V19
-#define RED1  V20
-#define RED2  V21
-#define RED3  V22
-#define CAR1  V23
-#define CAR2  V24
+#define T0    V4
+#define T1    V5
+#define P0    V30
+#define P1    V31
 
-#define SEL1  V25
-#define SEL2  V26
-#define SEL3  V27
-#define SEL4  V28
-#define SEL5  V29
-#define SEL6  V30
-#define ZER   V31
+// Constants
+#define SEL1  V26
+#define SEL2  V27
+#define SEL3  V28
+#define SEL4  V29
+#define SEL5  V28  // Overloaded with SEL4
+#define SEL6  V29  // Overloaded with SEL5
+
+// Temporaries
+#define YDIG  V6   //Overloaded with CAR2, ZER
+#define ADD1H V7   //Overloaded with ADD3H
+#define ADD2H V8   //Overloaded with ADD4H
+#define ADD3  V9
+#define ADD4  V10
+#define RED1  V11  //Overloaded with CAR2
+#define RED2  V12
+#define RED3  V13
+#define T2    V14
+// Overloaded temporaries
+#define ADD1  V4  //Overloaded with T0
+#define ADD2  V5  //Overloaded with T1
+#define ADD3H V7  //Overloaded with ADD1H
+#define ADD4H V8  //Overloaded with ADD2H
+#define ZER   V6  //Overloaded with YDIG, CAR2
+#define CAR1  V6  //Overloaded with YDIG, ZER
+#define CAR2  V11 //Overloaded with RED1
+
 
   /**
     * To follow the flow of bits, for your own sanity a stiff drink, need you shall.
@@ -857,55 +864,41 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
     * Last 'group' needs to RED2||RED1 shifted less
     */
 
- TEXT ·p256Mul(SB),NOSPLIT,$0
-	MOVD res+0(FP), res_ptr
-	MOVD in1+24(FP), x_ptr
-	MOVD in2+48(FP), y_ptr
+ TEXT p256MulInternal(SB),NOSPLIT,$0
+	VL	32(CPOOL), SEL1
+	VL	48(CPOOL), SEL2
+	VL	64(CPOOL), SEL3
+	VL	80(CPOOL), SEL4
 
-	VL (1*16)(x_ptr), X0
-	VL (0*16)(x_ptr), X1
-	VLREPF (12+1*16)(y_ptr), YDIG1
-	VLREPF (8+1*16)(y_ptr), YDIG2
+	//---------------------------------------------------
+
+	VREPF $3,Y0,   YDIG
+	VMLHF X0,YDIG, ADD1H
+	VMLHF X1,YDIG, ADD2H
+	VMLF  X0,YDIG, ADD1
+	VMLF  X1,YDIG, ADD2
+
+	VREPF  $2,Y0,   YDIG
+	VMALF  X0,YDIG, ADD1H, ADD3
+	VMALF  X1,YDIG, ADD2H, ADD4
+	VMALHF X0,YDIG, ADD1H, ADD3H  // ADD1H Free
+	VMALHF X1,YDIG, ADD2H, ADD4H  // ADD2H Free
 
 	VZERO ZER
-	MOVD $p256mul<>+0x00(SB), R4
-	VL	16(R4), M0
-	VL	0(R4),  M1
-	VL	32(R4), SEL1
-	VL	48(R4), SEL2
-	VL	64(R4), SEL3
-	VL	80(R4), SEL4
-	VL	96(R4), SEL5
-	VL	112(R4), SEL6
-
-	//---------------------------------------------------
-
-	VMLHF X0,YDIG1, ADD1H
-	VMLHF X1,YDIG1, ADD2H
-	VMLF  X0,YDIG1, ADD1
-	VMLF  X1,YDIG1, ADD2
-
-	VMALF  X0,YDIG2, ADD1H, ADD3
-	VMALF  X1,YDIG2, ADD2H, ADD4
-	VMALHF X0,YDIG2, ADD1H, ADD3H
-	VMALHF X1,YDIG2, ADD2H, ADD4H
-
-	VLREPF (4+1*16)(y_ptr), YDIG1
-	VLREPF (0+1*16)(y_ptr), YDIG2
 	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
 
-	VSLDB  $12, ADD2,ADD1, T0
-	VSLDB  $12, ZER, ADD2, T1
+	VSLDB  $12, ADD2,ADD1, T0  //ADD1 Free
+	VSLDB  $12, ZER, ADD2, T1  //ADD2 Free
 
 	VACCQ  T0, ADD3,CAR1
-	VAQ    T0, ADD3,T0
+	VAQ    T0, ADD3,T0         //ADD3 Free
 	VACCCQ T1, ADD4,CAR1, T2
-	VACQ   T1, ADD4,CAR1, T1
+	VACQ   T1, ADD4,CAR1, T1   //ADD4 Free
 
-    VPERM RED3, T0, SEL2, RED1  // [d0  0 d1 d0]
-    VPERM RED3, T0, SEL3, RED2  // [ 0 d1 d0 d1]
-    VPERM RED3, T0, SEL4, RED3  // [ 0  0 d1 d0]
-    VSQ   RED3,RED2, RED2       // Guaranteed not to underflow
+	VPERM RED3, T0, SEL2, RED1  // [d0  0 d1 d0]
+	VPERM RED3, T0, SEL3, RED2  // [ 0 d1 d0 d1]
+	VPERM RED3, T0, SEL4, RED3  // [ 0  0 d1 d0]
+	VSQ   RED3,RED2, RED2       // Guaranteed not to underflow
 
 	VSLDB  $12, T1,T0, T0
 	VSLDB  $12, T2,T1, T1
@@ -917,18 +910,110 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 
 	//---------------------------------------------------
 
-	VMALHF X0,YDIG1, T0, ADD1H
-	VMALHF X1,YDIG1, T1, ADD2H
-	VMALF  X0,YDIG1, T0, ADD1
-	VMALF  X1,YDIG1, T1, ADD2
+	VREPF  $1,Y0,   YDIG
+	VMALHF X0,YDIG, T0, ADD1H
+	VMALHF X1,YDIG, T1, ADD2H
+	VMALF  X0,YDIG, T0, ADD1      // T0 Free->ADD1
+	VMALF  X1,YDIG, T1, ADD2      // T1 Free->ADD2
 
-	VMALF  X0,YDIG2, ADD1H, ADD3
-	VMALF  X1,YDIG2, ADD2H, ADD4
-	VMALHF X0,YDIG2, ADD1H, ADD3H
-	VMALHF X1,YDIG2, ADD2H, ADD4H
+	VREPF  $0,Y0,   YDIG
+	VMALF  X0,YDIG, ADD1H, ADD3
+	VMALF  X1,YDIG, ADD2H, ADD4
+	VMALHF X0,YDIG, ADD1H, ADD3H  // ADD1H Free->ADD3H
+	VMALHF X1,YDIG, ADD2H, ADD4H  // ADD2H Free->ADD4H , YDIG Free->ZER
 
-	VLREPF (12+0*16)(y_ptr), YDIG1
-	VLREPF (8+0*16)(y_ptr), YDIG2
+	VZERO ZER
+	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
+
+	VSLDB  $12, ADD2,ADD1, T0     // ADD1 Free->T0
+	VSLDB  $12, T2,  ADD2, T1     // ADD2 Free->T1, T2 Free
+
+	VACCQ  T0, RED1,CAR1
+	VAQ    T0, RED1,T0
+	VACCCQ T1, RED2,CAR1, T2
+	VACQ   T1, RED2,CAR1, T1
+
+	VACCQ  T0, ADD3,CAR1
+	VAQ    T0, ADD3,T0
+	VACCCQ T1, ADD4,CAR1, CAR2
+	VACQ   T1, ADD4,CAR1, T1
+	VAQ    T2, CAR2,T2
+
+	VPERM RED3, T0, SEL2, RED1  // [d0  0 d1 d0]
+	VPERM RED3, T0, SEL3, RED2  // [ 0 d1 d0 d1]
+	VPERM RED3, T0, SEL4, RED3  // [ 0  0 d1 d0]
+	VSQ   RED3,RED2, RED2       // Guaranteed not to underflow
+
+	VSLDB  $12, T1,T0, T0
+	VSLDB  $12, T2,T1, T1
+
+	VACCQ  T0, ADD3H,CAR1
+	VAQ    T0, ADD3H,T0
+	VACCCQ T1, ADD4H,CAR1, T2
+	VACQ   T1, ADD4H,CAR1, T1
+
+	//---------------------------------------------------
+
+	VREPF  $3,Y1,   YDIG
+	VMALHF X0,YDIG, T0, ADD1H
+	VMALHF X1,YDIG, T1, ADD2H
+	VMALF  X0,YDIG, T0, ADD1
+	VMALF  X1,YDIG, T1, ADD2
+
+	VREPF  $2,Y1,   YDIG
+	VMALF  X0,YDIG, ADD1H, ADD3
+	VMALF  X1,YDIG, ADD2H, ADD4
+	VMALHF X0,YDIG, ADD1H, ADD3H  // ADD1H Free
+	VMALHF X1,YDIG, ADD2H, ADD4H  // ADD2H Free
+
+	VZERO ZER
+	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
+
+	VSLDB  $12, ADD2,ADD1, T0     // ADD1 Free
+	VSLDB  $12, T2,  ADD2, T1     // ADD2 Free
+
+	VACCQ  T0, RED1,CAR1
+	VAQ    T0, RED1,T0
+	VACCCQ T1, RED2,CAR1, T2
+	VACQ   T1, RED2,CAR1, T1
+
+	VACCQ  T0, ADD3,CAR1
+	VAQ    T0, ADD3,T0
+	VACCCQ T1, ADD4,CAR1, CAR2
+	VACQ   T1, ADD4,CAR1, T1
+	VAQ    T2, CAR2,T2
+
+	VPERM RED3, T0, SEL2, RED1  // [d0  0 d1 d0]
+	VPERM RED3, T0, SEL3, RED2  // [ 0 d1 d0 d1]
+	VPERM RED3, T0, SEL4, RED3  // [ 0  0 d1 d0]
+	VSQ   RED3,RED2, RED2       // Guaranteed not to underflow
+
+	VSLDB  $12, T1,T0, T0
+	VSLDB  $12, T2,T1, T1
+
+	VACCQ  T0, ADD3H,CAR1
+	VAQ    T0, ADD3H,T0
+	VACCCQ T1, ADD4H,CAR1, T2
+	VACQ   T1, ADD4H,CAR1, T1
+
+	//---------------------------------------------------
+
+	VL	96(CPOOL),  SEL5
+	VL	112(CPOOL), SEL6
+
+	VREPF  $1,Y1,   YDIG
+	VMALHF X0,YDIG, T0, ADD1H
+	VMALHF X1,YDIG, T1, ADD2H
+	VMALF  X0,YDIG, T0, ADD1
+	VMALF  X1,YDIG, T1, ADD2
+
+	VREPF  $0,Y1, YDIG
+	VMALF  X0,YDIG, ADD1H, ADD3
+	VMALF  X1,YDIG, ADD2H, ADD4
+	VMALHF X0,YDIG, ADD1H, ADD3H
+	VMALHF X1,YDIG, ADD2H, ADD4H
+
+	VZERO ZER
 	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
 
 	VSLDB  $12, ADD2,ADD1, T0
@@ -945,93 +1030,9 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 	VACQ   T1, ADD4,CAR1, T1
 	VAQ    T2, CAR2,T2
 
-    VPERM RED3, T0, SEL2, RED1  // [d0  0 d1 d0]
-    VPERM RED3, T0, SEL3, RED2  // [ 0 d1 d0 d1]
-    VPERM RED3, T0, SEL4, RED3  // [ 0  0 d1 d0]
-    VSQ   RED3,RED2, RED2       // Guaranteed not to underflow
-
-	VSLDB  $12, T1,T0, T0
-	VSLDB  $12, T2,T1, T1
-
-	VACCQ  T0, ADD3H,CAR1
-	VAQ    T0, ADD3H,T0
-	VACCCQ T1, ADD4H,CAR1, T2
-	VACQ   T1, ADD4H,CAR1, T1
-
-	//---------------------------------------------------
-
-	VMALHF X0,YDIG1, T0, ADD1H
-	VMALHF X1,YDIG1, T1, ADD2H
-	VMALF  X0,YDIG1, T0, ADD1
-	VMALF  X1,YDIG1, T1, ADD2
-
-	VMALF  X0,YDIG2, ADD1H, ADD3
-	VMALF  X1,YDIG2, ADD2H, ADD4
-	VMALHF X0,YDIG2, ADD1H, ADD3H
-	VMALHF X1,YDIG2, ADD2H, ADD4H
-
-	VLREPF (4+0*16)(y_ptr), YDIG1
-	VLREPF (0+0*16)(y_ptr), YDIG2
-	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
-
-	VSLDB  $12, ADD2,ADD1, T0
-	VSLDB  $12, T2,  ADD2, T1
-
-	VACCQ  T0, RED1,CAR1
-	VAQ    T0, RED1,T0
-	VACCCQ T1, RED2,CAR1, T2
-	VACQ   T1, RED2,CAR1, T1
-
-	VACCQ  T0, ADD3,CAR1
-	VAQ    T0, ADD3,T0
-	VACCCQ T1, ADD4,CAR1, CAR2
-	VACQ   T1, ADD4,CAR1, T1
-	VAQ    T2, CAR2,T2
-
-    VPERM RED3, T0, SEL2, RED1  // [d0  0 d1 d0]
-    VPERM RED3, T0, SEL3, RED2  // [ 0 d1 d0 d1]
-    VPERM RED3, T0, SEL4, RED3  // [ 0  0 d1 d0]
-    VSQ   RED3,RED2, RED2       // Guaranteed not to underflow
-
-	VSLDB  $12, T1,T0, T0
-	VSLDB  $12, T2,T1, T1
-
-	VACCQ  T0, ADD3H,CAR1
-	VAQ    T0, ADD3H,T0
-	VACCCQ T1, ADD4H,CAR1, T2
-	VACQ   T1, ADD4H,CAR1, T1
-
-	//---------------------------------------------------
-
-	VMALHF X0,YDIG1, T0, ADD1H
-	VMALHF X1,YDIG1, T1, ADD2H
-	VMALF  X0,YDIG1, T0, ADD1
-	VMALF  X1,YDIG1, T1, ADD2
-
-	VMALF  X0,YDIG2, ADD1H, ADD3
-	VMALF  X1,YDIG2, ADD2H, ADD4
-	VMALHF X0,YDIG2, ADD1H, ADD3H
-	VMALHF X1,YDIG2, ADD2H, ADD4H
-
-	VPERM ZER, ADD1, SEL1, RED3  // [d0 0 0 d0]
-
-	VSLDB  $12, ADD2,ADD1, T0
-	VSLDB  $12, T2,  ADD2, T1
-
-	VACCQ  T0, RED1,CAR1
-	VAQ    T0, RED1,T0
-	VACCCQ T1, RED2,CAR1, T2
-	VACQ   T1, RED2,CAR1, T1
-
-	VACCQ  T0, ADD3,CAR1
-	VAQ    T0, ADD3,T0
-	VACCCQ T1, ADD4,CAR1, CAR2
-	VACQ   T1, ADD4,CAR1, T1
-	VAQ    T2, CAR2,T2
-
-    VPERM T0,  RED3, SEL5, RED2  // [d1 d0 d1 d0]
-    VPERM T0,  RED3, SEL6, RED1  // [ 0 d1 d0  0]
-    VSQ   RED1,RED2, RED2        // Guaranteed not to underflow
+	VPERM T0,  RED3, SEL5, RED2  // [d1 d0 d1 d0]
+	VPERM T0,  RED3, SEL6, RED1  // [ 0 d1 d0  0]
+	VSQ   RED1,RED2, RED2        // Guaranteed not to underflow
 
 	VSLDB  $12, T1,T0, T0
 	VSLDB  $12, T2,T1, T1
@@ -1049,15 +1050,88 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 
 	//---------------------------------------------------
 
-	VSCBIQ  M0,T0, CAR1
-	VSQ     M0,T0, ADD1
-	VSBCBIQ T1,M1, CAR1, CAR2
-	VSBIQ   T1,M1, CAR1, ADD2
-	VSBIQ   T2,ZER,CAR2, T2
+	VZERO   RED3
+	VSCBIQ  P0,T0, CAR1
+	VSQ     P0,T0, ADD1H
+	VSBCBIQ T1,P1, CAR1, CAR2
+	VSBIQ   T1,P1, CAR1, ADD2H
+	VSBIQ   T2,RED3,CAR2, T2
 
-	//what output to use, ADD2||ADD1 or T1||T0?
-	VSEL    T0,ADD1,T2, T0
-	VSEL    T1,ADD2,T2, T1
+	//what output to use, ADD2H||ADD1H or T1||T0?
+	VSEL    T0,ADD1H,T2, T0
+	VSEL    T1,ADD2H,T2, T1
+ 	RET
+#undef res_ptr
+#undef x_ptr
+#undef y_ptr
+#undef CPOOL
+
+#undef X0
+#undef X1
+#undef Y0
+#undef Y1
+#undef T0
+#undef T1
+#undef P0
+#undef P1
+
+#undef SEL1
+#undef SEL2
+#undef SEL3
+#undef SEL4
+#undef SEL5
+#undef SEL6
+
+#undef YDIG
+#undef ADD1H
+#undef ADD2H
+#undef ADD3
+#undef ADD4
+#undef RED1
+#undef RED2
+#undef RED3
+#undef T2
+#undef ADD1
+#undef ADD2
+#undef ADD3H
+#undef ADD4H
+#undef ZER
+#undef CAR1
+#undef CAR2
+
+/* ---------------------------------------*/
+// func p256Mul(res, in1, in2 []byte)
+#define res_ptr R1
+#define x_ptr   R2
+#define y_ptr   R3
+#define CPOOL   R4
+
+// Parameters
+#define X0    V0
+#define X1    V1
+#define Y0    V2
+#define Y1    V3
+#define T0    V4
+#define T1    V5
+
+// Constants
+#define P0    V30
+#define P1    V31
+ TEXT ·p256Mul(SB),NOSPLIT,$0
+	MOVD res+0(FP), res_ptr
+	MOVD in1+24(FP), x_ptr
+	MOVD in2+48(FP), y_ptr
+
+	VL (1*16)(x_ptr), X0
+	VL (0*16)(x_ptr), X1
+	VL (1*16)(y_ptr), Y0
+	VL (0*16)(y_ptr), Y1
+
+	MOVD $p256mul<>+0x00(SB), CPOOL
+	VL	16(CPOOL), P0
+	VL	0(CPOOL),  P1
+
+	CALL p256MulInternal(SB)
 
 	VST T0, (1*16)(res_ptr)
 	VST T1, (0*16)(res_ptr)

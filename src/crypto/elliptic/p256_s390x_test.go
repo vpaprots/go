@@ -16,8 +16,112 @@ func TestP256Mul(t *testing.T) {
 	if testing.Short() {
         t.SkipNow()
     }
-	pp256, _ := P256().(p256Curve)
-	pp256.TestP256Mul();
+	P256()
+	
+	exp := make([]byte, 32)
+	res := make([]byte, 32)
+	x1, _ := new(big.Int).SetString("a007c8559316f82de3d5d9f28b8ffcdf5949bd551f7a1348b8acc00860e058", 16)
+	x2, _ := new(big.Int).SetString("66e12d94f3d956202845b2392b6bec594699799c49bd6fa683244c95be79eea2", 16)
+	Rinv, _ := new(big.Int).SetString("fffffffe00000003fffffffd0000000200000001fffffffe0000000300000000", 16)
+	
+	copy(exp, fromBig(new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv), p256.P)))
+	p256Mul(res, fromBig(x1), fromBig(x2))
+	
+	if (bytes.Compare(exp,res)!=0) {
+		fmt.Printf("-EXPECTED %s\n", new(big.Int).SetBytes(exp).Text(16))
+		fmt.Printf("-FOUND    %s\n", new(big.Int).SetBytes(res).Text(16))
+		fmt.Printf("-TEST in1 %s\n", new(big.Int).SetBytes(fromBig(x1)).Text(16))
+		fmt.Printf("-TEST in2 %s\n", new(big.Int).SetBytes(fromBig(x2)).Text(16))
+		t.Fail()
+	}
+}
+
+func TestStressP256Mul(t *testing.T) {
+	if testing.Short() {
+        t.SkipNow()
+    }
+	
+	P256()
+	for i:=0; i<1000000; i++ {
+		
+		exp := make([]byte, 32)
+		res := make([]byte, 32)
+		x1, _ := rand.Int(rand.Reader, p256.P)
+		x2, _ := rand.Int(rand.Reader, p256.P)
+		Rinv, _ := new(big.Int).SetString("fffffffe00000003fffffffd0000000200000001fffffffe0000000300000000", 16)
+		
+		copy(exp, fromBig(new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv), p256.P)))
+		p256Mul(res, fromBig(x1), fromBig(x2))
+		
+		if (bytes.Compare(exp,res)!=0) {
+			fmt.Printf("-EXPECTED %s\n", new(big.Int).SetBytes(exp).Text(16))
+			fmt.Printf("-FOUND    %s\n", new(big.Int).SetBytes(res).Text(16))
+			fmt.Printf("-TEST in1 %s\n", new(big.Int).SetBytes(fromBig(x1)).Text(16))
+			fmt.Printf("-TEST in2 %s\n", new(big.Int).SetBytes(fromBig(x2)).Text(16))
+			t.FailNow()
+		}
+		
+		if ( 0 == i%1000) {
+			fmt.Printf(".")
+		}
+	}
+	fmt.Printf("\n")
+}
+
+func TestP256OrdMul(t *testing.T) {
+	if testing.Short() {
+        t.SkipNow()
+    }
+	P256()
+	
+	exp := make([]byte, 32)
+	res := make([]byte, 32)
+	x1, _ := new(big.Int).SetString("a007c8559316f82de3d5d9f28b8ffcdf5949bd551f7a1348b8acc00860e058", 16)
+	x2, _ := new(big.Int).SetString("66e12d94f3d956202845b2392b6bec594699799c49bd6fa683244c95be79eea2", 16)
+	Rinv, _ := new(big.Int).SetString("60d066334905c1e907f8b6041e607725badef3e243566fafce1bc8f79c197c79", 16)
+	
+	copy(exp, fromBig(new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv), p256.N)))
+	p256OrdMul(res, fromBig(x1), fromBig(x2))
+	
+	if (bytes.Compare(exp,res)!=0) {
+		fmt.Printf("-EXPECTED %s\n", new(big.Int).SetBytes(exp).Text(16))
+		fmt.Printf("-FOUND    %s\n", new(big.Int).SetBytes(res).Text(16))
+		fmt.Printf("-TEST in1 %s\n", new(big.Int).SetBytes(fromBig(x1)).Text(16))
+		fmt.Printf("-TEST in2 %s\n", new(big.Int).SetBytes(fromBig(x2)).Text(16))
+		t.Fail()
+	}
+}
+
+func TestStressP256OrdMul(t *testing.T) {
+	if testing.Short() {
+        t.SkipNow()
+    }
+	
+	P256()
+	for i:=0; i<100000; i++ {
+		
+		exp := make([]byte, 32)
+		res := make([]byte, 32)
+		x1, _ := rand.Int(rand.Reader, p256.N)
+		x2, _ := rand.Int(rand.Reader, p256.N)
+		Rinv, _ := new(big.Int).SetString("60d066334905c1e907f8b6041e607725badef3e243566fafce1bc8f79c197c79", 16)
+		
+		copy(exp, fromBig(new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv), p256.N)))
+		p256OrdMul(res, fromBig(x1), fromBig(x2))
+		
+		if (bytes.Compare(exp,res)!=0) {
+			fmt.Printf("-EXPECTED %s\n", new(big.Int).SetBytes(exp).Text(16))
+			fmt.Printf("-FOUND    %s\n", new(big.Int).SetBytes(res).Text(16))
+			fmt.Printf("-TEST in1 %s\n", new(big.Int).SetBytes(fromBig(x1)).Text(16))
+			fmt.Printf("-TEST in2 %s\n", new(big.Int).SetBytes(fromBig(x2)).Text(16))
+			t.FailNow()
+		}
+		
+		if ( 0 == i%1000) {
+			fmt.Printf(".")
+		}
+	}
+	fmt.Printf("\n")
 }
 
 func TestStressInverse(t *testing.T) {
@@ -25,7 +129,7 @@ func TestStressInverse(t *testing.T) {
         t.SkipNow()
     }
 	pp256, _ := P256().(p256Curve)
-	for i:=0; i<100000; i++ {
+	for i:=0; i<10000; i++ {
 		x, _ := rand.Int(rand.Reader, pp256.N)
 		xInv := pp256.Inverse(x)
 		xInv2 := pp256.InverseBig(x)
@@ -40,14 +144,6 @@ func TestStressInverse(t *testing.T) {
 	fmt.Printf("\nSUCCESS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
 }
 
-func TestSpecificInverse(t *testing.T) {
-	if testing.Short() {
-        t.SkipNow()
-    }
-	pp256, _ := P256().(p256Curve)
-	pp256.TestOrdMul();
-}
-
 func BenchmarkInverse(b *testing.B) {
     pp256, _ := P256().(p256Curve)
     x, _ := rand.Int(rand.Reader, pp256.N)
@@ -58,7 +154,7 @@ func BenchmarkInverse(b *testing.B) {
 }
 
 func BenchmarkP256Mul(b *testing.B) {
-    pp256, _ := P256().(p256Curve)
+    P256()
     //x, _ := rand.Int(rand.Reader, pp256.N)
     in := make([]byte, 32)
     //copy(in, x.Bytes())
@@ -66,7 +162,7 @@ func BenchmarkP256Mul(b *testing.B) {
     in[2] = 42
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
-		pp256.BenchP256Mul(in);
+		p256Mul(in, in, in)
     }
 }
 
@@ -128,7 +224,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 
-func Compare(p1, p2 *p256Point) (int) {
+func ComparePoint(p1, p2 *p256Point) (int) {
 	if (bytes.Compare(p1.x[:], p2.x[:])==0 && 
 		bytes.Compare(p1.y[:], p2.y[:])==0 && 
 		bytes.Compare(p1.z[:], p2.z[:])==0) {
@@ -137,7 +233,7 @@ func Compare(p1, p2 *p256Point) (int) {
 	return 1
 }
 
-func Print(msg string, p1 *p256Point) {
+func PrintPoint(msg string, p1 *p256Point) {
 	fmt.Printf("INPUT %s.x:    %s\nINPUT %s.y:    %s\nINPUT %s.z:    %s\n\n", msg, new(big.Int).SetBytes(p1.x[:]).Text(16), 
 		                                                                      msg, new(big.Int).SetBytes(p1.y[:]).Text(16), 
 		                                                                      msg, new(big.Int).SetBytes(p1.z[:]).Text(16))
@@ -184,66 +280,66 @@ func TestAddAffine(t *testing.T) {
 	// if zero == 0 -> P3 = P2
 	//func p256PointAddAffineAsm(P3, P1, P2 *p256Point, sign, sel, zero int)
 	p256PointAddAffineAsm(res, p1, p2, 0, 0, 0)  // res = p2
-	if (Compare(res, p2)!=0) {
+	if (ComparePoint(res, p2)!=0) {
 		fmt.Printf("[@1] Expected res == in2)\n")
-		Print("in2", p2)
-		Print("res", res)
+		PrintPoint("in2", p2)
+		PrintPoint("res", res)
 		t.Fail();
 	}
 	
 	p256PointAddAffineAsm(res, p1, p2, 0, 0, 1)  // res = p1
-	if (Compare(res, p1)!=0) {
+	if (ComparePoint(res, p1)!=0) {
 		fmt.Printf("[@2] Expected res == in1)\n")
-		Print("in1", p1)
-		Print("res", res)
+		PrintPoint("in1", p1)
+		PrintPoint("res", res)
 		t.Fail();
 	}
 	p256PointAddAffineAsm(res, p1, p2, 0, 1, 0)  // res = p2
-	if (Compare(res, p2)!=0) {
+	if (ComparePoint(res, p2)!=0) {
 		fmt.Printf("[@3] Expected res == in2)\n")
-		Print("in2", p2)
-		Print("res", res)
+		PrintPoint("in2", p2)
+		PrintPoint("res", res)
 		t.Fail();
 	}
 	p256PointAddAffineAsm(res, p1, p2, 0, 1, 1)  // res = p1 + p2
-	if (Compare(res, exp1)!=0) {
+	if (ComparePoint(res, exp1)!=0) {
 		fmt.Printf("[@4] Expected res == p1 + p2\n")
-		Print("exp", exp1)
-		Print("res", res)
-		Print("in1", p1)
-		Print("in2", p2)	
+		PrintPoint("exp", exp1)
+		PrintPoint("res", res)
+		PrintPoint("in1", p1)
+		PrintPoint("in2", p2)	
 		t.Fail();
 	}
 	
 	p256PointAddAffineAsm(res, p1, p2, 1, 0, 0)  // res = -p2
-	if (Compare(res, exp2)!=0) {
+	if (ComparePoint(res, exp2)!=0) {
 		fmt.Printf("[@5] Expected res == -in2)\n")
-		Print("in2", exp2)
-		Print("res", res)
+		PrintPoint("in2", exp2)
+		PrintPoint("res", res)
 		t.Fail();
 	}
 	
 	p256PointAddAffineAsm(res, p1, p2, 1, 0, 1)  // res = p1
-	if (Compare(res, p1)!=0) {
+	if (ComparePoint(res, p1)!=0) {
 		fmt.Printf("[@6] Expected res == in1)\n")
-		Print("in1", p1)
-		Print("res", res)
+		PrintPoint("in1", p1)
+		PrintPoint("res", res)
 		t.Fail();
 	}
 		
 	p256PointAddAffineAsm(res, p1, p2, 1, 1, 0)  // res = -p2
-	if (Compare(res, exp2)!=0) {
+	if (ComparePoint(res, exp2)!=0) {
 		fmt.Printf("[@7] Expected res == -in2)\n")
-		Print("in2", p2)
-		Print("res", exp2)
+		PrintPoint("in2", p2)
+		PrintPoint("res", exp2)
 		t.Fail();
 	}
 		
 	p256PointAddAffineAsm(res, p1, p2, 1, 1, 1)  // res = p1 + (-p2)
-	if (Compare(res, exp3)!=0) {
+	if (ComparePoint(res, exp3)!=0) {
 		fmt.Printf("[@8] Expected res == p1 + (-p2)\n")
-		Print("exp", exp3)
-		Print("res", res)	
+		PrintPoint("exp", exp3)
+		PrintPoint("res", res)	
 		t.Fail();
 	}
 }
@@ -263,9 +359,9 @@ func TestInitTable(t *testing.T) {
 	copy(exp1.x[:], fromBig(xExp))
 	copy(exp1.y[:], fromBig(yExp))
 	
-	if (Compare(&p256Precomputed[36][63], exp1)!=0) {
-		Print("exp", exp1)
-		Print("res", &p256Precomputed[36][63])	
+	if (ComparePoint(&p256Precomputed[36][63], exp1)!=0) {
+		PrintPoint("exp", exp1)
+		PrintPoint("res", &p256Precomputed[36][63])	
 		t.Fail();
 	}
 

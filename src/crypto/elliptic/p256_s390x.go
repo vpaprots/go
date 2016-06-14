@@ -178,42 +178,6 @@ func p256OrdMulBig(res, in1, in2 []byte) {
 	}*/
 }
 
-func (curve p256Curve) TestOrdMul() {
-	res := make([]byte, 32)
-	x1, _ := new(big.Int).SetString("a007c8559316f82de3d5d9f28b8ffcdf5949bd551f7a1348b8acc00860e058", 16)
-	x2, _ := new(big.Int).SetString("66e12d94f3d956202845b2392b6bec594699799c49bd6fa683244c95be79eea2", 16)
-	Rinv, _ := new(big.Int).SetString("60d066334905c1e907f8b6041e607725badef3e243566fafce1bc8f79c197c79", 16)
-	temp := new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv)
-	copy(res, fromBig(new(big.Int).Mod(temp, p256.N)))
-	
-	t := make([]byte, 32)
-	p256OrdMul(t, fromBig(x1), fromBig(x2))
-	fmt.Printf("-TEST in1 %s\n", new(big.Int).SetBytes(fromBig(x1)).Text(16))
-	fmt.Printf("-TEST in2 %s\n", new(big.Int).SetBytes(fromBig(x2)).Text(16))
-	fmt.Printf("-EXPECTED %s\n", new(big.Int).SetBytes(res).Text(16))
-	fmt.Printf("-FOUND    %s\n", new(big.Int).SetBytes(t).Text(16))
-}
-
-func (curve p256Curve) TestP256Mul() {
-	res := make([]byte, 32)
-	x1, _ := new(big.Int).SetString("a007c8559316f82de3d5d9f28b8ffcdf5949bd551f7a1348b8acc00860e058", 16)
-	x2, _ := new(big.Int).SetString("66e12d94f3d956202845b2392b6bec594699799c49bd6fa683244c95be79eea2", 16)
-	Rinv, _ := new(big.Int).SetString("fffffffe00000003fffffffd0000000200000001fffffffe0000000300000000", 16)
-	temp := new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv)
-	copy(res, fromBig(new(big.Int).Mod(temp, p256.P)))
-	
-	t := make([]byte, 32)
-	p256Mul(t, fromBig(x1), fromBig(x2))
-	fmt.Printf("-TEST in1 %s\n", new(big.Int).SetBytes(fromBig(x1)).Text(16))
-	fmt.Printf("-TEST in2 %s\n", new(big.Int).SetBytes(fromBig(x2)).Text(16))
-	fmt.Printf("-EXPECTED %s\n", new(big.Int).SetBytes(res).Text(16))
-	fmt.Printf("-FOUND    %s\n", new(big.Int).SetBytes(t).Text(16))
-}
-
-func (curve p256Curve) BenchP256Mul(in []byte) {
-	p256Mul(in, in, in)
-}
-
 /*
 x=0xfef7163fe956730df28c999458d9c038a17b9500f51bd2f803cabdf9818bc253
 RR=0xa3ff46f14bce132cd59447e8378fe08999ca0e402b77090c7215405740ffd73b
