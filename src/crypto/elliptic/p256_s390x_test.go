@@ -139,8 +139,8 @@ func Compare(p1, p2 *p256Point) (int) {
 
 func Print(msg string, p1 *p256Point) {
 	fmt.Printf("INPUT %s.x:    %s\nINPUT %s.y:    %s\nINPUT %s.z:    %s\n\n", msg, new(big.Int).SetBytes(p1.x[:]).Text(16), 
-		                                                                       msg, new(big.Int).SetBytes(p1.y[:]).Text(16), 
-		                                                                       msg, new(big.Int).SetBytes(p1.z[:]).Text(16))
+		                                                                      msg, new(big.Int).SetBytes(p1.y[:]).Text(16), 
+		                                                                      msg, new(big.Int).SetBytes(p1.z[:]).Text(16))
 }
 
 func TestAddAffine(t *testing.T) {
@@ -246,4 +246,34 @@ func TestAddAffine(t *testing.T) {
 		Print("res", res)	
 		t.Fail();
 	}
+}
+
+
+func TestInitTable(t *testing.T) {
+	if testing.Short() {
+        t.SkipNow()
+    }
+	P256()
+	precomputeOnce.Do(initTable)
+	
+	exp1 := new(p256Point)
+	
+	xExp, _ := new(big.Int).SetString("14af860fcd26d2b48e525f1a46a5122924ae1c304ad63f99ab41b43a43228d83", 16)
+	yExp, _ := new(big.Int).SetString("82ceb1dd8a37b527d3e21fcee6a9d694f51865adeb78795ed6baef613f714aa1", 16)
+	copy(exp1.x[:], fromBig(xExp))
+	copy(exp1.y[:], fromBig(yExp))
+	
+	if (Compare(&p256Precomputed[36][63], exp1)!=0) {
+		Print("exp", exp1)
+		Print("res", &p256Precomputed[36][63])	
+		t.Fail();
+	}
+
+//	for j := 0; j < 64; j++ {
+//		for i := 0; i < 37; i++ {
+//			fmt.Printf("INPUT %d|%d.x:    %s\nINPUT %d|%d.y:    %s\n\n", i, j, new(big.Int).SetBytes(p256Precomputed[i][j].x[:]).Text(16), 
+//				                                                         i, j, new(big.Int).SetBytes(p256Precomputed[i][j].y[:]).Text(16))
+//		}
+//		fmt.Printf("=================================================\n")
+//	}
 }

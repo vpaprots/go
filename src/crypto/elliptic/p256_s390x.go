@@ -108,18 +108,32 @@ func p256Sqr(res, in []byte){
 }
 
 // Montgomery multiplication by 1
-func p256FromMont(res, in []uint64){
+func p256FromMont(res, in []byte){
+	x1 := new(big.Int).SetBytes(in)
+	Rinv, _ := new(big.Int).SetString("fffffffe00000003fffffffd0000000200000001fffffffe0000000300000000", 16) //minv(2^256,p)
+	temp := new(big.Int).Mul(x1, Rinv)
 	
+	copy(res, fromBig(new(big.Int).Mod(temp, p256.P)))
 }
 
 // iff cond == 1  val <- -val
-func p256NegCond(val []uint64, cond int){
-	
+func p256NegCond(val *p256Point, cond int){
+	if (cond == 1) {
+		copy(val.y[:], fromBig(new(big.Int).Mod(new(big.Int).Sub(p256.P, new(big.Int).SetBytes(val.y[:])), p256.P)))
+	}
 }
 
 // if cond == 0 res <- b; else res <- a
-func p256MovCond(res, a, b []uint64, cond int){
-	
+func p256MovCond(res, a, b *p256Point, cond int){
+	if (cond == 0) {
+		copy(res.x[:], b.x[:])
+		copy(res.y[:], b.y[:])
+		copy(res.z[:], b.z[:])
+	} else {
+		copy(res.x[:], a.x[:])
+		copy(res.y[:], a.y[:])
+		copy(res.z[:], a.z[:])
+	}
 }
 
 // Endianess swap
@@ -131,11 +145,14 @@ func p256LittleToBig(res []byte, in []uint64) {
 }
 
 // Constant time table access
-func p256Select(point, table []uint64, idx int) {
-	
+func p256Select(point p256Point, table []p256Point, idx int) {
+	copy(point.x[:], table[idx].x[:])
+	copy(point.y[:], table[idx].y[:])
 }
-func p256SelectBase(point, table []uint64, idx int) {
-	
+
+func p256SelectBase(point p256Point, table []p256Point, idx int) {
+	copy(point.x[:], table[idx].x[:])
+	copy(point.y[:], table[idx].y[:])
 }
 
 // Montgomery multiplication modulo Ord(G)
@@ -434,8 +451,8 @@ func p256PointAddAsm(P3, P1, P2 *p256Point) {
 	 * U1 = X1*T2
 	 * H  = X2*T1
 	 * H  = H-U1
-	 * Z3 = Z1*Z2off to 
-	 * Z3 = Z3*H << store-out Z3 result reg
+	 * Z3 = Z1*Z2
+	 * Z3 = Z3*H << store-out Z3 result reg.. could override Z1, if slices have same backing array
 	 * 
 	 * S1 = Z2*T2
 	 * S1 = Y1*S1
@@ -455,7 +472,7 @@ func p256PointAddAsm(P3, P1, P2 *p256Point) {
 	 * T2 = S1*T2
 	 * Y3 = U1-X3
 	 * Y3 = R*Y3
-	 * Y3 = Y3-T2 << store-out X3 result reg
+	 * Y3 = Y3-T2 << store-out Y3 result reg
 	 */
 	
 	// Note: This test code was not meant to be pretty! It is written in this convoluted fashion to help debug the real assembly code
@@ -481,8 +498,8 @@ func p256PointAddAsm(P3, P1, P2 *p256Point) {
 	p256Mul(U1, X1, T2) // U1 = X1*T2
 	p256Mul( H, X2, T1) // H  = X2*T1
 	copy(H, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(H), new(big.Int).SetBytes(U1)), p256.P))) // H  = H-U1
-	p256Mul(Z3, Z1, Z2) // Z3 = Z1*Z2
-	p256Mul(Z3, Z3,  H) // Z3 = Z3*H << store-out Z3 result reg
+	//p256Mul(Z3, Z1, Z2) // Z3 = Z1*Z2
+	//p256Mul(Z3, Z3,  H) // Z3 = Z3*H << store-out Z3 result reg
 	
 	p256Mul(S1, Z2, T2) // S1 = Z2*T2
 	p256Mul(S1, Y1, S1) // S1 = Y1*S1
@@ -493,6 +510,9 @@ func p256PointAddAsm(P3, P1, P2 *p256Point) {
 	p256Mul(T1,  H,  H) // T1 = H*H
 	p256Mul(T2,  H, T1) // T2 = H*T1
 	p256Mul(U1, U1, T1) // U1 = U1*T1
+	
+	p256Mul(Z3, Z1, Z2) // Z3 = Z1*Z2
+	p256Mul(Z3, Z3,  H) // Z3 = Z3*H << store-out Z3 result reg
 	
 	p256Mul(X3,  R,  R) // X3 = R*R
 	//fmt.Printf(" --TEST R^2: %s\n", new(big.Int).SetBytes(X3).Text(16),)
@@ -916,13 +936,13 @@ func p256Inverse(out, in []byte) {
 	p256Sqr(out, out)
 	p256Mul(out, out, in)
 	
-	fmt.Printf("-TEST in  %s\n", new(big.Int).SetBytes(in).Text(16))
-	fmt.Printf("-TEST out %s\n", new(big.Int).SetBytes(out).Text(16))
-	fmt.Printf("-TEST p2  %s\n", new(big.Int).SetBytes(p2).Text(16))
-	fmt.Printf("-TEST p4  %s\n", new(big.Int).SetBytes(p4).Text(16))
-	fmt.Printf("-TEST p8  %s\n", new(big.Int).SetBytes(p8).Text(16))
-	fmt.Printf("-TEST p16 %s\n", new(big.Int).SetBytes(p16).Text(16))
-	fmt.Printf("-TEST p32 %s\n", new(big.Int).SetBytes(p32).Text(16))
+//	fmt.Printf("-TEST in  %s\n", new(big.Int).SetBytes(in).Text(16))
+//	fmt.Printf("-TEST out %s\n", new(big.Int).SetBytes(out).Text(16))
+//	fmt.Printf("-TEST p2  %s\n", new(big.Int).SetBytes(p2).Text(16))
+//	fmt.Printf("-TEST p4  %s\n", new(big.Int).SetBytes(p4).Text(16))
+//	fmt.Printf("-TEST p8  %s\n", new(big.Int).SetBytes(p8).Text(16))
+//	fmt.Printf("-TEST p16 %s\n", new(big.Int).SetBytes(p16).Text(16))
+//	fmt.Printf("-TEST p32 %s\n", new(big.Int).SetBytes(p32).Text(16))
 }
 
 /*func (p *p256Point) p256StorePoint(r *[16 * 4 * 3]uint64, index int) {
@@ -957,12 +977,13 @@ func initTable() {
 	}
 
 	t1 := new(p256Point)
-	t2 := p256Point{basePoint.x,basePoint.y, basePoint.z} 
+	t2 := new(p256Point)
+	*t2 = basePoint
 
 	zInv := make([]byte, 32)
 	zInvSq := make([]byte, 32)
 	for j := 0; j < 64; j++ {
-		*t1 = t2
+		*t1 = *t2
 		for i := 0; i < 37; i++ {
 			// The window size is 7 so we need to double 7 times.
 			if i != 0 {
@@ -985,9 +1006,9 @@ func initTable() {
 			copy(p256Precomputed[i][j].y[:], t1.y[:])
 		}
 		if j == 0 {
-			p256PointDoubleAsm(&t2, &basePoint)
+			p256PointDoubleAsm(t2, &basePoint)
 		} else {
-			p256PointAddAsm(&t2, &t2, &basePoint)
+			p256PointAddAsm(t2, t2, &basePoint)
 		}
 	}
 }
