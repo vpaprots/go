@@ -12,6 +12,109 @@ import (
 	"bytes"
 )
 
+/*
+X=Z1; Y=Z1; MUL;T-   // T1 = Z1²      T1
+X=T ; Y-  ; MUL;T2=T // T2 = T1*Z1    T1   T2
+X-  ; Y=X2; MUL;T1=T // T1 = T1*X2    T1   T2
+X=T2; Y=Y2; MUL;T-   // T2 = T2*Y2    T1   T2
+SUB(T2<T-Y1)         // T2 = T2-Y1    T1   T2
+SUB(Y<T1-X1)         // T1 = T1-X1    T1   T2
+X=Z1; Y- ;  MUL;Z3:=T// Z3 = Z1*T1         T2
+X=Y;  Y- ;  MUL;X=T  // T3 = T1*T1         T2
+X- ;  Y- ;  MUL;T4=T // T4 = T3*T1         T2        T4
+X- ;  Y=X1; MUL;T3=T // T3 = T3*X1         T2   T3   T4
+ADD(T1<T+T)          // T1 = T3+T3    T1   T2   T3   T4
+X=T2; Y=T2; MUL;T-   // X3 = T2*T2    T1   T2   T3   T4
+SUB(T<T-T1)          // X3 = X3-T1    T1   T2   T3   T4
+SUB(T<T-T4) X3:=T    // X3 = X3-T4         T2   T3   T4
+SUB(X<T3-T)          // T3 = T3-X3         T2   T3   T4
+X- ;  Y- ;  MUL;T3=T // T3 = T3*T2         T2   T3   T4
+X=T4; Y=Y1; MUL;T-   // T4 = T4*Y1              T3   T4
+SUB(T<T3-T) Y3:=T    // Y3 = T3-T4              T3   T4
+*/
+func p256PointAddAffineAsmBig(P3, P1, P2 *p256Point, sign, sel, zero int) {
+	/**
+	 * Three operand formula:
+	 * Source: 2004 Hankerson–Menezes–Vanstone, page 91. 
+	 * T1 = Z1²
+     * T2 = T1*Z1
+     * T1 = T1*X2
+     * T2 = T2*Y2
+     * T1 = T1-X1
+     * T2 = T2-Y1
+     * Z3 = Z1*T1
+     * T3 = T1²
+     * T4 = T3*T1
+     * T3 = T3*X1
+     * T1 = 2*T3
+     * X3 = T2²
+     * X3 = X3-T1
+     * X3 = X3-T4
+     * T3 = T3-X3
+     * T3 = T3*T2
+     * T4 = T4*Y1
+     * Y3 = T3-T4
+	 */
+	
+	X1 := P1.x[:]
+	Y1 := P1.y[:]
+	Z1 := P1.z[:]
+	X2 := P2.x[:]
+	Y2 := P2.y[:]
+	X3 := P3.x[:]
+	Y3 := P3.y[:]
+	Z3 := P3.z[:]
+	
+	T1 := make([]byte, 32)
+	T2 := make([]byte, 32)
+	T3 := make([]byte, 32)
+	T4 := make([]byte, 32)
+	
+	if (sign == 1) {
+		Y2 = fromBig(new(big.Int).Mod(new(big.Int).Sub(p256.P, new(big.Int).SetBytes(Y2)), p256.P)) // Y2  = P-Y2
+	}
+
+	p256Mul(T1, Z1, Z1) // T1 = Z1²
+	//fmt.Printf(" --T1 = Z1²  : %s\n", new(big.Int).SetBytes(T1).Text(16))
+	p256Mul(T2, T1, Z1) // T2 = T1*Z1
+	//fmt.Printf(" --T2 = T1*Z1: %s\n", new(big.Int).SetBytes(T2).Text(16))
+	p256Mul(T1, T1, X2) // T1 = T1*X2
+	//fmt.Printf(" --T1 = T1*X2: %s\n", new(big.Int).SetBytes(T1).Text(16))
+	p256Mul(T2, T2, Y2) // T2 = T2*Y2
+	//fmt.Printf(" --T2 = T2*Y2: %s\n", new(big.Int).SetBytes(T2).Text(16))
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T1), new(big.Int).SetBytes(X1)), p256.P))) // T1 = T1-X1
+	//fmt.Printf(" --T1 = T1-X1: %s\n", new(big.Int).SetBytes(T1).Text(16))
+	copy(T2, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T2), new(big.Int).SetBytes(Y1)), p256.P))) // T2 = T2-Y1
+	//fmt.Printf(" --T2 = T2-Y1: %s\n", new(big.Int).SetBytes(T2).Text(16))
+	p256Mul(Z3, Z1, T1) // Z3 = Z1*T1
+	p256Mul(T3, T1, T1) // T3 = T1²
+	p256Mul(T4, T3, T1) // T4 = T3*T1
+	p256Mul(T3, T3, X1) // T3 = T3*X1
+	//fmt.Printf(" --T3 = T3*X1: %s\n", new(big.Int).SetBytes(T3).Text(16))
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(T3)), p256.P))) // T1 = 2*T3
+	//fmt.Printf(" --T1 = 2*T3:  %s\n", new(big.Int).SetBytes(T1).Text(16))
+	p256Mul(X3, T2, T2) // X3 = T2²
+	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T1)), p256.P))) // X3 = X3-T1
+	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T4)), p256.P))) // X3 = X3-T4
+	copy(T3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(X3)), p256.P))) // T3 = T3-X3
+	p256Mul(T3, T3, T2) // T3 = T3*T2
+	p256Mul(T4, T4, Y1) // T4 = T4*Y1
+	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(T4)), p256.P))) // Y3 = T3-T4
+	
+	if (sel == 0) {
+		copy(P3.x[:], X1)
+		copy(P3.y[:], Y1)
+		copy(P3.z[:], Z1)
+	}
+
+	if (zero == 0) {
+		copy(P3.x[:], X2)
+		copy(P3.y[:], Y2)
+		copy(P3.z[:], []byte{0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01})  //(p256.z*2^256)%p
+	}
+}
+
 func TestP256Mul(t *testing.T) {
 	if testing.Short() {
         t.SkipNow()
@@ -344,6 +447,127 @@ func TestAddAffine(t *testing.T) {
 	}
 }
 
+func TestAddAffineFine(t *testing.T) {
+	t.SkipNow()
+	
+	P256()
+	
+	basePoint := p256Point{ 
+		x: [32]byte{0x18, 0x90, 0x5f, 0x76, 0xa5, 0x37, 0x55, 0xc6, 0x79, 0xfb, 0x73, 0x2b, 0x77, 0x62, 0x25, 0x10, 
+			0x75, 0xba, 0x95, 0xfc, 0x5f, 0xed, 0xb6, 0x01, 0x79, 0xe7, 0x30, 0xd4, 0x18, 0xa9, 0x14, 0x3c}, //(p256.x*2^256)%p
+		y:[32]byte{0x85, 0x71, 0xff, 0x18, 0x25, 0x88, 0x5d, 0x85, 0xd2, 0xe8, 0x86, 0x88, 0xdd, 0x21, 0xf3, 0x25,
+			0x8b, 0x4a, 0xb8, 0xe4, 0xba, 0x19, 0xe4, 0x5c, 0xdd, 0xf2, 0x53, 0x57, 0xce, 0x95, 0x56, 0x0a}, //(p256.y*2^256)%p
+		z:[32]byte{0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},  //(p256.z*2^256)%p
+	}
+	p2 := &basePoint
+	p1  := new(p256Point)
+	res  := new(p256Point)
+	exp1 := new(p256Point)
+	exp2 := new(p256Point)
+	exp3 := new(p256Point)
+	
+	p256PointDoubleAsm(p1, p2)
+	xExp, _ := new(big.Int).SetString("46b25328fadd64b3d27a6dd305abf1aedb90d91e2b4557e0385baba2d08d581", 16)
+	yExp, _ := new(big.Int).SetString("8501da36024740683dc01b7ac378aaf0ada17e37f7d757024d3d8a1222392169", 16)
+	zExp, _ := new(big.Int).SetString("a544fc8b9b4e66fb3f7e28e7822754d67c47431d67b9c376b5098d22b457a054", 16)
+	copy(exp1.x[:], fromBig(xExp))
+	copy(exp1.y[:], fromBig(yExp))
+	copy(exp1.z[:], fromBig(zExp))
+	yExp, _ = new(big.Int).SetString("7a8e00e6da77a27b2d17797722de0cda74b5471c45e61ba3220daca8316aa9f5", 16)
+	copy(exp2.x[:], p2.x[:])
+	copy(exp2.y[:], fromBig(yExp))
+	copy(exp2.z[:], p2.z[:])
+	xExp, _ = new(big.Int).SetString("a16ecd2edf99bba8d6ad839e9d4d7ef17a0e7dd416e9f09fea66f67e26465c37", 16)
+	yExp, _ = new(big.Int).SetString("2d1bce3c02c56f7d94d97e00136ea2423688b905a687f94ff8b1364a1df174b", 16)
+	zExp, _ = new(big.Int).SetString("a544fc8b9b4e66fb3f7e28e7822754d67c47431d67b9c376b5098d22b457a054", 16)
+	copy(exp3.x[:], fromBig(xExp))
+	copy(exp3.y[:], fromBig(yExp))
+	copy(exp3.z[:], fromBig(zExp))
+	
+	// If sign == 1 -> P2 = -P2
+	// If sel == 0 -> P3 = P1
+	// if zero == 0 -> P3 = P2
+	//func p256PointAddAffineAsm(P3, P1, P2 *p256Point, sign, sel, zero int)
+
+	p256PointAddAffineAsmBig(res, p1, p2, 0, 1, 1)  // res = p1 + p2
+	p256PointAddAffineAsm(res, p1, p2, 0, 1, 1)  // res = p1 + p2
+	if (ComparePoint(res, exp1)!=0) {
+		fmt.Printf("[@4] Expected res == p1 + p2\n")
+		PrintPoint("exp", exp1)
+		PrintPoint("res", res)
+		PrintPoint("in1", p1)
+		PrintPoint("in2", p2)	
+		t.Fail();
+	}
+	
+}
+
+func TestStressP256AddAffine(t *testing.T) {
+	if testing.Short() {
+        t.SkipNow()
+    }
+	
+	P256()
+	
+	basePoint := p256Point{ 
+		x: [32]byte{0x18, 0x90, 0x5f, 0x76, 0xa5, 0x37, 0x55, 0xc6, 0x79, 0xfb, 0x73, 0x2b, 0x77, 0x62, 0x25, 0x10, 
+			0x75, 0xba, 0x95, 0xfc, 0x5f, 0xed, 0xb6, 0x01, 0x79, 0xe7, 0x30, 0xd4, 0x18, 0xa9, 0x14, 0x3c}, //(p256.x*2^256)%p
+		y:[32]byte{0x85, 0x71, 0xff, 0x18, 0x25, 0x88, 0x5d, 0x85, 0xd2, 0xe8, 0x86, 0x88, 0xdd, 0x21, 0xf3, 0x25,
+			0x8b, 0x4a, 0xb8, 0xe4, 0xba, 0x19, 0xe4, 0x5c, 0xdd, 0xf2, 0x53, 0x57, 0xce, 0x95, 0x56, 0x0a}, //(p256.y*2^256)%p
+		z:[32]byte{0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},  //(p256.z*2^256)%p
+	}
+	p2 := &basePoint
+	res  := new(p256Point)
+	exp1 := new(p256Point)
+	
+	p256PointDoubleAsm(res, p2)
+	
+	for i:=0; i<100000; i++ {
+		cond, _ := rand.Int(rand.Reader, big.NewInt(3))
+		if (cond.Int64() == 2) {  
+			p256PointDoubleAsm(res, res)
+		}
+		
+		p256PointAddAffineAsmBig(exp1, res, p2, 0, 1, 1)  // res = p1 + p2
+		p256PointAddAffineAsm(res, res, p2, 0, 1, 1)  // res = p1 + p2
+		if (ComparePoint(res, exp1)!=0) {
+			fmt.Printf("[@4] Expected res == p1 + p2\n")
+			PrintPoint("exp", exp1)
+			PrintPoint("res", res)
+			//PrintPoint("in1", p1)
+			//PrintPoint("in2", p2)	
+			t.FailNow();
+		}
+		
+		if ( 0 == i%1000) {
+			fmt.Printf(".")
+		}
+	}
+	fmt.Printf("\n")
+}
+
+func BenchmarkP256AddAffine(b *testing.B) {
+    P256()
+    
+    basePoint := p256Point{ 
+		x: [32]byte{0x18, 0x90, 0x5f, 0x76, 0xa5, 0x37, 0x55, 0xc6, 0x79, 0xfb, 0x73, 0x2b, 0x77, 0x62, 0x25, 0x10, 
+			0x75, 0xba, 0x95, 0xfc, 0x5f, 0xed, 0xb6, 0x01, 0x79, 0xe7, 0x30, 0xd4, 0x18, 0xa9, 0x14, 0x3c}, //(p256.x*2^256)%p
+		y:[32]byte{0x85, 0x71, 0xff, 0x18, 0x25, 0x88, 0x5d, 0x85, 0xd2, 0xe8, 0x86, 0x88, 0xdd, 0x21, 0xf3, 0x25,
+			0x8b, 0x4a, 0xb8, 0xe4, 0xba, 0x19, 0xe4, 0x5c, 0xdd, 0xf2, 0x53, 0x57, 0xce, 0x95, 0x56, 0x0a}, //(p256.y*2^256)%p
+		z:[32]byte{0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},  //(p256.z*2^256)%p
+	}
+	p2 := &basePoint
+	res  := new(p256Point)
+	p256PointDoubleAsm(res, p2)
+	
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+		p256PointAddAffineAsm(res, res, p2, 0, 1, 1)
+    }
+}
 
 func TestInitTable(t *testing.T) {
 	if testing.Short() {

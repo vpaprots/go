@@ -5,34 +5,6 @@
 
 #include "textflag.h"
 
-#define res_ptr R1
-#define x_ptr R2
-#define y_ptr R3
-#define X0    V0
-#define X1    V1
-#define Y0    V2
-#define Y1    V3
-#define M0    V4
-#define M1    V5
-#define T0    V6
-#define T1    V7
-#define T2    V8
-#define YDIG  V9
-
-#define ADD1  V16
-#define ADD1H V17
-#define ADD2  V18
-#define ADD2H V19
-#define RED1  V20
-#define RED1H V21
-#define RED2  V22
-#define RED2H V23
-#define CAR1  V24
-#define CAR1M V25
-
-#define MK0   V30
-#define K0    V31
-
 DATA p256ordK0<>+0x00(SB)/4, $0xee00bc4f
 DATA p256ord<>+0x00(SB)/8, $0xffffffff00000000
 DATA p256ord<>+0x08(SB)/8, $0xffffffffffffffff
@@ -62,16 +34,45 @@ DATA p256mul<>+0x60(SB)/8, $0x0c0d0e0f1c1d1e1f // SEL d1 d0 d1 d0
 DATA p256mul<>+0x68(SB)/8, $0x0c0d0e0f1c1d1e1f // SEL d1 d0 d1 d0
 DATA p256mul<>+0x70(SB)/8, $0x141516170c0d0e0f // SEL 0  d1 d0  0
 DATA p256mul<>+0x78(SB)/8, $0x1c1d1e1f14151617 // SEL 0  d1 d0  0
-GLOBL p256const0<>(SB), 8, $8
-GLOBL p256const1<>(SB), 8, $8
+DATA p256mul<>+0x80(SB)/8, $0x00000000fffffffe // (1*2^256)%P256
+DATA p256mul<>+0x88(SB)/8, $0xffffffffffffffff // (1*2^256)%P256
+DATA p256mul<>+0x90(SB)/8, $0xffffffff00000000 // (1*2^256)%P256
+DATA p256mul<>+0x98(SB)/8, $0x0000000000000001 // (1*2^256)%P256
 GLOBL p256ordK0<>(SB), 8, $4
 GLOBL p256ord<>(SB), 8, $32
 GLOBL p256<>(SB), 8, $64
-GLOBL p256mul<>(SB), 8, $128
+GLOBL p256mul<>(SB), 8, $160
 
 
 /* ---------------------------------------*/
 // func p256OrdMul(res, in1, in2 []byte)
+#define res_ptr R1
+#define x_ptr R2
+#define y_ptr R3
+#define X0    V0
+#define X1    V1
+#define Y0    V2
+#define Y1    V3
+#define M0    V4
+#define M1    V5
+#define T0    V6
+#define T1    V7
+#define T2    V8
+#define YDIG  V9
+
+#define ADD1  V16
+#define ADD1H V17
+#define ADD2  V18
+#define ADD2H V19
+#define RED1  V20
+#define RED1H V21
+#define RED2  V22
+#define RED2H V23
+#define CAR1  V24
+#define CAR1M V25
+
+#define MK0   V30
+#define K0    V31
 TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	MOVD res+0(FP), res_ptr
 	MOVD in1+24(FP), x_ptr
@@ -1099,6 +1100,37 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 #undef CAR1
 #undef CAR2
 
+#define p256SubInternal(T1,T0, X1,X0, Y1,Y0) \
+	VZERO   ZER\
+	VSCBIQ  Y0,X0, CAR1\
+	VSQ     Y0,X0, T0\
+	VSBCBIQ X1,Y1, CAR1, SEL1\
+	VSBIQ   X1,Y1, CAR1, T1\
+	VSQ     SEL1,ZER, SEL1\
+	\
+	VACCQ    T0,PL,CAR1\
+	VAQ	     T0,PL,TT0\
+	VACQ	 T1,PH,CAR1,TT1\
+	\
+	VSEL     T0,TT0,SEL1,T0\
+	VSEL     T1,TT1,SEL1,T1\
+
+#define p256AddInternal(T1,T0, X1,X0, Y1,Y0)\
+	VACCQ X0, Y0, CAR1\
+	VAQ   X0, Y0, T0\
+	VACCCQ X1, Y1, CAR1, T2\
+	VACQ   X1, Y1, CAR1, T1\
+	\
+	VZERO   ZER\
+	VSCBIQ  PL,T0, CAR1\
+	VSQ     PL,T0, TT0\
+	VSBCBIQ T1,PH, CAR1, CAR2\
+	VSBIQ   T1,PH, CAR1, TT1\
+	VSBIQ   T2,ZER,CAR2, SEL1\
+	\
+	VSEL    T0,TT0,SEL1, T0\
+	VSEL    T1,TT1,SEL1, T1
+
 /* ---------------------------------------*/
 // func p256Mul(res, in1, in2 []byte)
 #define res_ptr R1
@@ -1136,3 +1168,267 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 	VST T0, (1*16)(res_ptr)
 	VST T1, (0*16)(res_ptr)
 	RET
+#undef res_ptr
+#undef x_ptr
+#undef y_ptr
+#undef CPOOL
+
+#undef X0
+#undef X1
+#undef Y0
+#undef Y1
+#undef T0
+#undef T1
+#undef P0
+#undef P1
+
+// p256PointAddAffineAsm(P3, P1, P2 *p256Point, sign, sel, zero int)
+#define P3ptr   R1
+#define P1ptr   R2
+#define P2ptr   R3
+#define CPOOL   R4
+
+// Temporaries in REGs
+#define Y2L    V15
+#define Y2H    V16
+#define T1L    V17
+#define T1H    V18
+#define T2L    V19
+#define T2H    V20
+#define T3L    V21
+#define T3H    V22
+#define T4L    V23
+#define T4H    V24
+
+// Temps for Sub and Add
+#define TT0  V11
+#define TT1  V12
+#define T2   V13
+
+// P256Mul Parameters
+#define X0    V0
+#define X1    V1
+#define Y0    V2
+#define Y1    V3
+#define T0    V4
+#define T1    V5
+
+#define PL    V30
+#define PH    V31
+
+// Names for zero/sel selects
+#define X1L    V0
+#define X1H    V1
+#define Y1L    V2 // P256MulParmY
+#define Y1H    V3 // P256MulParmY
+#define Z1L    V4
+#define Z1H    V5
+#define X2L    V0
+#define X2H    V1
+#define Z2L    V4
+#define Z2H    V5
+#define X3L    V17 //T1L
+#define X3H    V18 //T1H
+#define Y3L    V21 //T3L
+#define Y3H    V22 //T3H
+#define Z3L    V23
+#define Z3H    V24
+
+#define ZER   V26
+#define SEL1  V27
+#define CAR1  V28
+#define CAR2  V29
+
+TEXT ·p256PointAddAffineAsm(SB),NOSPLIT,$0
+	MOVD P3+0(FP),  P3ptr
+	MOVD P1+8(FP),  P1ptr
+	MOVD P2+16(FP), P2ptr
+
+	MOVD $p256mul<>+0x00(SB), CPOOL
+	VL	16(CPOOL), PL
+	VL	0(CPOOL),  PH
+
+//	if (sign == 1) {
+//		Y2 = fromBig(new(big.Int).Mod(new(big.Int).Sub(p256.P, new(big.Int).SetBytes(Y2)), p256.P)) // Y2  = P-Y2
+//	}
+
+	VL	32(P2ptr), Y2H
+	VL	48(P2ptr), Y2L
+
+	VLREPG sign+24(FP), SEL1
+	VZERO  ZER
+	VCEQG  SEL1,ZER,SEL1
+
+	VSCBIQ  Y2L, PL, CAR1
+	VSQ     Y2L, PL, T1L
+	VSBIQ   PH,  Y2H, CAR1, T1H
+
+	VSEL Y2L,T1L,SEL1,Y2L
+	VSEL Y2H,T1H,SEL1,Y2H
+
+	/**
+	 * Three operand formula:
+	 * Source: 2004 Hankerson–Menezes–Vanstone, page 91.
+	 */
+	// X=Z1; Y=Z1; MUL; T-   // T1 = Z1²      T1
+		VL	 64(P1ptr), X1  //Z1H
+		VL	 80(P1ptr), X0  //Z1L
+		VLR  X0, Y0
+		VLR  X1, Y1
+		CALL p256MulInternal(SB)
+
+	// X=T ; Y-  ; MUL; T2=T // T2 = T1*Z1    T1   T2
+		VLR T0, X0
+		VLR T1, X1
+		CALL p256MulInternal(SB)
+		VLR T0, T2L
+		VLR T1, T2H
+
+	// X-  ; Y=X2; MUL; T1=T // T1 = T1*X2    T1   T2
+		VL	 0(P2ptr), Y1 //X2H
+		VL	16(P2ptr), Y0 //X2L
+		CALL p256MulInternal(SB)
+		VLR T0, T1L
+		VLR T1, T1H
+
+	// X=T2; Y=Y2; MUL; T-   // T2 = T2*Y2    T1   T2
+		VLR T2L, X0
+		VLR T2H, X1
+		VLR Y2L, Y0
+		VLR Y2H, Y1
+		CALL p256MulInternal(SB)
+
+	// SUB(T2<T-Y1)          // T2 = T2-Y1    T1   T2
+		VL	32(P1ptr), Y1H
+		VL	48(P1ptr), Y1L
+		p256SubInternal(T2H,T2L,T1,T0,Y1H,Y1L)
+
+	// SUB(Y<T1-X1)          // T1 = T1-X1    T1   T2
+		VL	 0(P1ptr), X1H
+		VL	16(P1ptr), X1L
+		p256SubInternal(Y1,Y0,T1H,T1L,X1H,X1L)
+
+	// X=Z1; Y- ;  MUL; Z3:=T// Z3 = Z1*T1         T2
+		VL	 64(P1ptr), X1  //Z1H
+		VL	 80(P1ptr), X0  //Z1L
+		CALL p256MulInternal(SB)
+		VST T1, 64(P3ptr)
+		VST T0, 80(P3ptr)
+
+	// X=Y;  Y- ;  MUL; X=T  // T3 = T1*T1         T2
+		VLR  Y0, X0
+		VLR  Y1, X1
+		CALL p256MulInternal(SB)
+		VLR  T0, X0
+		VLR  T1, X1
+
+	// X- ;  Y- ;  MUL; T4=T // T4 = T3*T1         T2        T4
+		CALL p256MulInternal(SB)
+		VLR  T0, T4L
+		VLR  T1, T4H
+
+	// X- ;  Y=X1; MUL; T3=T // T3 = T3*X1         T2   T3   T4
+		VL	 0(P1ptr), Y1 //X1H
+		VL	16(P1ptr), Y0 //X1L
+		CALL p256MulInternal(SB)
+		VLR  T0, T3L
+		VLR  T1, T3H
+
+	// ADD(T1<T+T)           // T1 = T3+T3    T1   T2   T3   T4
+		p256AddInternal(T1H,T1L, T1,T0,T1,T0)
+
+	// X=T2; Y=T2; MUL; T-   // X3 = T2*T2    T1   T2   T3   T4
+		VLR  T2L, X0
+		VLR  T2H, X1
+		VLR  T2L, Y0
+		VLR  T2H, Y1
+		CALL p256MulInternal(SB)
+
+	// SUB(T<T-T1)           // X3 = X3-T1    T1   T2   T3   T4  (T1 = X3)
+		p256SubInternal(T1,T0,T1,T0,T1H,T1L)
+
+	// SUB(T<T-T4) X3:=T     // X3 = X3-T4         T2   T3   T4
+		p256SubInternal(T1,T0,T1,T0,T4H,T4L)
+		VLR T0, X3L
+		VLR T1, X3H
+
+	// SUB(X<T3-T)           // T3 = T3-X3         T2   T3   T4
+		p256SubInternal(X1,X0,T3H,T3L,T1,T0)
+
+	// X- ;  Y- ;  MUL; T3=T // T3 = T3*T2         T2   T3   T4
+		CALL p256MulInternal(SB)
+		VLR  T0, T3L
+		VLR  T1, T3H
+
+	// X=T4; Y=Y1; MUL; T-   // T4 = T4*Y1              T3   T4
+		VLR  T4L, X0
+		VLR  T4H, X1
+		VL	32(P1ptr), Y1 //Y1H
+		VL	48(P1ptr), Y0 //Y1L
+		CALL p256MulInternal(SB)
+
+	// SUB(T<T3-T) Y3:=T     // Y3 = T3-T4              T3   T4  (T3 = Y3)
+		p256SubInternal(Y3H,Y3L,T3H,T3L,T1,T0)
+
+	VL 64(P3ptr), Z3H
+	VL 80(P3ptr), Z3L
+	// P3 = {x:{T1H||T1L},y:{T3H||T3L},z{Z3H||Z3L}}
+
+//	if (sel == 0) {
+//		copy(P3.x[:], X1)
+//		copy(P3.y[:], Y1)
+//		copy(P3.z[:], Z1)
+//	}
+
+	VL	 0(P1ptr), X1H
+	VL	16(P1ptr), X1L
+	//Y1 already loaded, left over from addition
+	VL	64(P1ptr), Z1H
+	VL	80(P1ptr), Z1L
+
+	VLREPG sel+32(FP), SEL1
+	VZERO  ZER
+	VCEQG  SEL1,ZER,SEL1
+
+	VSEL X1L,X3L,SEL1,X3L
+	VSEL X1H,X3H,SEL1,X3H
+	VSEL Y1L,Y3L,SEL1,Y3L
+	VSEL Y1H,Y3H,SEL1,Y3H
+	VSEL Z1L,Z3L,SEL1,Z3L
+	VSEL Z1H,Z3H,SEL1,Z3H
+
+//	if (zero == 0) {
+//		copy(P3.x[:], X2)
+//		copy(P3.y[:], Y2)
+//		copy(P3.z[:], []byte{0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+//			0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01})  //(p256.z*2^256)%p
+//	}
+	VL	 0(P2ptr), X2H
+	VL	16(P2ptr), X2L
+	//Y2 already loaded
+	VL	128(CPOOL), Z2H
+	VL	144(CPOOL), Z2L
+
+	VLREPG zero+40(FP), SEL1
+	VZERO  ZER
+	VCEQG  SEL1,ZER,SEL1
+
+	VSEL X2L,X3L,SEL1,X3L
+	VSEL X2H,X3H,SEL1,X3H
+	VSEL Y2L,Y3L,SEL1,Y3L
+	VSEL Y2H,Y3H,SEL1,Y3H
+	VSEL Z2L,Z3L,SEL1,Z3L
+	VSEL Z2H,Z3H,SEL1,Z3H
+
+	// All done, store out the result!!!
+	VST X3H,  0(P3ptr)
+	VST X3L, 16(P3ptr)
+	VST Y3H, 32(P3ptr)
+	VST Y3L, 48(P3ptr)
+	VST Z3H, 64(P3ptr)
+	VST Z3L, 80(P3ptr)
+
+	RET
+
+	#undef TT1
+#undef TT0
