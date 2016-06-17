@@ -420,78 +420,7 @@ func p256PointAddAsm(P3, P1, P2 *p256Point) {
 	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(Y3), new(big.Int).SetBytes(T2)), p256.P))) // Y3 = Y3-T2 << store-out X3 result reg
 }
 
-// Point double
-//http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl
-//http://www.hyperelliptic.org/EFD/g1p/auto-shortw.html
-//http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective-3.html
-func p256PointDoubleAsm(P3, P1 *p256Point) {
-	/*
-	 * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#doubling-dbl-2004-hmv	
-	 * Cost: 4M + 4S + 1*half + 5add + 2*2 + 1*3.
-	 * Source: 2004 Hankerson–Menezes–Vanstone, page 91.
-	 * 	A  = 3(X₁-Z₁²)×(X₁+Z₁²)
-	 * 	B  = 2Y₁
-	 * 	Z₃ = B×Z₁
-	 * 	C  = B²
-	 * 	D  = C×X₁
-	 * 	X₃ = A²-2D
-	 * 	Y₃ = (D-X₃)×A-C²/2
-	 * 
-	 * Three-operand formula:
-	 *       T1 = Z1²
-	 *       T2 = X1-T1
-	 *       T1 = X1+T1
-	 *       T2 = T2*T1
-	 *       T2 = 3*T2
-	 *       Y3 = 2*Y1
-	 *       Z3 = Y3*Z1
-	 *       Y3 = Y3²
-	 *       T3 = Y3*X1
-	 *       Y3 = Y3²
-	 *       Y3 = half*Y3
-	 *       X3 = T2²
-	 *       T1 = 2*T3
-	 *       X3 = X3-T1
-	 *       T1 = T3-X3
-	 *       T1 = T1*T2
-	 *       Y3 = T1-Y3
-	 */
-	
-	// Note: This test code was not meant to be pretty! It is written in this convoluted fashion to help debug the real assembly code
-	X1 := P1.x[:]
-	Y1 := P1.y[:]
-	Z1 := P1.z[:]
-	X3 := P3.x[:]
-	Y3 := P3.y[:]
-	Z3 := P3.z[:]
-	
-	T1 := make([]byte, 32)
-	T2 := make([]byte, 32)
-	T3 := make([]byte, 32)
-	
-	p256Mul(T1, Z1, Z1) //T1 = Z1²
-	copy(T2, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X1), new(big.Int).SetBytes(T1)), p256.P))) //T2 = X1-T1
-	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(X1), new(big.Int).SetBytes(T1)), p256.P))) //T1 = X1+T1
-	p256Mul(T2, T2, T1) //T2 = T2*T1
-	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T2), new(big.Int).SetBytes(T2)), p256.P))) //T2 = 3*T2
-	copy(T2, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T1), new(big.Int).SetBytes(T2)), p256.P)))
-	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(Y1), new(big.Int).SetBytes(Y1)), p256.P))) // Y3 = 2*Y1
-	p256Mul(Z3, Y3, Z1) // Z3 = Y3*Z1
-	p256Mul(Y3, Y3, Y3) // Y3 = Y3²
-	p256Mul(T3, Y3, X1) // T3 = Y3*X1
-	p256Mul(Y3, Y3, Y3) // Y3 = Y3²
-	if (1 == Y3[31]&0x01) { // Y3 = half*Y3
-		copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Rsh(new(big.Int).Add(new(big.Int).SetBytes(Y3), p256.P), 1), p256.P)))
-	} else {
-		copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Rsh(new(big.Int).SetBytes(Y3), 1), p256.P)))
-	}
-	p256Mul(X3, T2, T2) // X3 = T2²
-	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(T3)), p256.P))) // T1 = 2*T3
-	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T1)), p256.P))) // X3 = X3-T1
-	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(X3)), p256.P))) // T1 = T3-X3
-	p256Mul(T1, T1, T2) // T1 = T1*T2
-	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T1), new(big.Int).SetBytes(Y3)), p256.P))) // Y3 = T1-Y3
-}
+func p256PointDoubleAsm(P3, P1 *p256Point)
 
 func (curve p256Curve) Inverse(k *big.Int) *big.Int {
 	if k.Cmp(p256.N) >= 0 {
