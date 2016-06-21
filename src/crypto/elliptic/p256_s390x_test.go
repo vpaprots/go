@@ -972,7 +972,7 @@ func BenchmarkP256AddAffine(b *testing.B) {
     }
 }
 
-func BenchmarkP256AddAffine(b *testing.B) {
+func BenchmarkP256Add(b *testing.B) {
     P256()
     
     basePoint := p256Point{ 
