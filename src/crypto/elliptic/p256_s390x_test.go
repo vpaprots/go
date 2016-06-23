@@ -32,6 +32,10 @@ X- ;  Y- ;  MUL;T3=T // T3 = T3*T2         T2   T3   T4
 X=T4; Y=Y1; MUL;T-   // T4 = T4*Y1              T3   T4
 SUB(T<T3-T) Y3:=T    // Y3 = T3-T4              T3   T4
 */
+// Point add with P2 being affine point
+// If sign == 1 -> P2 = -P2
+// If sel == 0 -> P3 = P1
+// if zero == 0 -> P3 = P2
 func p256PointAddAffineAsmBig(P3, P1, P2 *p256Point, sign, sel, zero int) {
 	/**
 	 * Three operand formula:
@@ -61,9 +65,9 @@ func p256PointAddAffineAsmBig(P3, P1, P2 *p256Point, sign, sel, zero int) {
 	Z1 := P1.z[:]
 	X2 := P2.x[:]
 	Y2 := P2.y[:]
-	X3 := P3.x[:]
-	Y3 := P3.y[:]
-	Z3 := P3.z[:]
+	X3 := make([]byte, 32) //P3.x[:]
+	Y3 := make([]byte, 32) //P3.y[:]
+	Z3 := make([]byte, 32) //P3.z[:]
 	
 	T1 := make([]byte, 32)
 	T2 := make([]byte, 32)
@@ -112,6 +116,11 @@ func p256PointAddAffineAsmBig(P3, P1, P2 *p256Point, sign, sel, zero int) {
 		copy(P3.y[:], Y2)
 		copy(P3.z[:], []byte{0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 			0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01})  //(p256.z*2^256)%p
+	}
+	if (zero != 0 && sel != 0) {
+		copy(P3.x[:], X3)
+		copy(P3.y[:], Y3)
+		copy(P3.z[:], Z3)
 	}
 }
 
@@ -477,7 +486,6 @@ func TestStressInverse(t *testing.T) {
 			fmt.Printf(".")
 		}
 	}
-	fmt.Printf("\nSUCCESS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
 }
 
 func BenchmarkInverse(b *testing.B) {
@@ -1041,6 +1049,77 @@ func TestDoubleFine2(t *testing.T) {
 		t.Fail();
 	}
 	
+}
+
+//func TestLoopBooth(t *testing.T) {
+//	// (This is one, in the Montgomery domain.)
+//	scalar1 := [32]byte{0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+//			        0xff, 0xff, 0xff, 0xff, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01}
+//	
+//	wvalue := (uint64(scalar1[31]) << 1) & 0xff
+//	sel, sign := boothW7(uint(wvalue))
+//	fmt.Printf("+sel %d, sign %d, wvalue %d\n", sel, sign, wvalue)
+//
+//	scalar2 := make([]uint64, 4)
+//	// (This is one, in the Montgomery domain.)
+//	scalar2[0] = 0x0807060504030201
+//	scalar2[1] = 0xffffffff0c0b0a09
+//	scalar2[2] = 0xffffffffffffffff
+//	scalar2[3] = 0x00000000fffffffe
+//	
+//	
+//	wvalue2 := (scalar2[0] << 1) & 0xff
+//	sel, sign = boothW7(uint(wvalue2))
+//	fmt.Printf("-sel %d, sign %d, wvalue %d\n\n", sel, sign, wvalue2)
+//	
+//	index := uint(6)
+//	for i := 1; i < 37; i++ {
+//		if index < 247 {
+//			wvalue = ((uint64(scalar1[31-index/8]) >> (index % 8)) + (uint64(scalar1[31-index/8-1]) << (8 - (index % 8)))) & 0xff
+//		} else {
+//			wvalue = (uint64(scalar1[31-index/8]) >> (index % 8)) & 0xff
+//		}
+//		sel, sign = boothW7(uint(wvalue))
+//		fmt.Printf("+[%d] sel %d, sign %d, wvalue %d scalar1[%d]) >> (%d)) + ((scalar1[%d]) << (%d)\n", index, sel, sign, wvalue, 31-index/8-1, index % 8, 31-index/8,8 - (index % 8))
+//		
+//		
+//		if index < 192 {
+//			wvalue2 = ((scalar2[index/64] >> (index % 64)) + (scalar2[index/64+1] << (64 - (index % 64)))) & 0xff
+//			sel, sign = boothW7(uint(wvalue2))
+//			fmt.Printf("-[%d] sel %d, sign %d, wvalue %d   (scalar2[%d] >> (%d)) + (scalar2[%d] << (%d))\n\n", index, sel, sign, wvalue2, index/64, index % 64, index/64+1, 64 - (index % 64))
+//		} else {
+//			wvalue2 = (scalar2[index/64] >> (index % 64)) & 0xff
+//			sel, sign = boothW7(uint(wvalue2))
+//			fmt.Printf("-[%d] sel %d, sign %d, wvalue %d   scalar2[%d] >> (%d)\n\n", index, sel, sign, wvalue2, index/64, index % 64)
+//		}
+//		index += 7
+//	}
+//}
+
+//func TestBaseMult2(t *testing.T) {
+//	if testing.Short() {
+//        t.SkipNow()
+//    }
+//	pp256, _ := P256().(p256Curve)
+//	
+//	k, _ := new(big.Int).SetString("a544fc8b9b4e66fb3f7e28e7822754d67c47431d67b9c376b5098d22b457a054", 16)
+//	x, y := pp256.ScalarBaseMult(k.Bytes())
+//	fmt.Printf("x %s\ny %s\n", x.Text(16), y.Text(16))
+//}
+
+func TestMult2(t *testing.T) {
+	if testing.Short() {
+        t.SkipNow()
+    }
+	pp256, _ := P256().(p256Curve)
+	
+	xExp, _ := new(big.Int).SetString("b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21", 16)
+	yExp, _ := new(big.Int).SetString("bd376388b5f723fb4c22dfe6cd4375a05a07476444d5819985007e34", 16)
+	
+	//k, _ := new(big.Int).SetString("a544fc8b9b4e66fb3f7e28e7822754d67c47431d67b9c376b5098d22b457a054", 16)
+	k, _ := new(big.Int).SetString("2", 16)
+	x, y := pp256.ScalarMult(xExp, yExp, k.Bytes())
+	fmt.Printf("x %s\ny %s\n", x.Text(16), y.Text(16))
 }
 
 func TestInitTable(t *testing.T) {

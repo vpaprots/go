@@ -121,23 +121,27 @@ func p256MovCond(res, a, b *p256Point, cond int){
 	}
 }
 
-// Endianess swap
-func p256BigToLittle(res []uint64, in []byte){
-	
-}
-func p256LittleToBig(res []byte, in []uint64) {
-	
-}
-
 // Constant time table access
-func p256Select(point p256Point, table []p256Point, idx int) {
-	copy(point.x[:], table[idx].x[:])
-	copy(point.y[:], table[idx].y[:])
+func p256Select(point *p256Point, table []p256Point, idx int) {
+	if idx==0 {
+		copy(point.x[:], make([]byte, 32))
+		copy(point.y[:], make([]byte, 32))
+		copy(point.z[:], make([]byte, 32))
+	} else {
+		copy(point.x[:], table[idx-1].x[:])
+		copy(point.y[:], table[idx-1].y[:])
+		copy(point.z[:], table[idx-1].z[:])
+	}
 }
 
-func p256SelectBase(point p256Point, table []p256Point, idx int) {
-	copy(point.x[:], table[idx].x[:])
-	copy(point.y[:], table[idx].y[:])
+func p256SelectBase(point *p256Point, table []p256Point, idx int) {
+	if idx==0 {
+		copy(point.x[:], table[0].z[:])
+		copy(point.y[:], table[0].z[:])
+	} else {
+		copy(point.x[:], table[idx-1].x[:])
+		copy(point.y[:], table[idx-1].y[:])
+	}
 }
 
 // Montgomery multiplication modulo Ord(G)
@@ -471,16 +475,15 @@ func fromBigDel(out []uint64, big *big.Int) {
 	}
 }
 
-// p256GetScalar endian-swaps the big-endian scalar value from in and writes it
-// to out. If the scalar is equal or greater than the order of the group, it's
-// reduced modulo that order.
-func p256GetScalar(out []uint64, in []byte) {
+// p256GetScalar makes sure byte array will have 32 byte elements, If the scalar
+// is equal or greater than the order of the group, it's reduced modulo that order.
+func p256GetScalar(in []byte) ([]byte) {
 	n := new(big.Int).SetBytes(in)
 
 	if n.Cmp(p256.N) >= 0 {
 		n.Mod(n, p256.N)
 	}
-	fromBigDel(out, n)
+	return fromBig(n)
 }
 
 // p256Mul operates in a Montgomery domain with R = 2^256 mod p, where p is the
@@ -489,6 +492,10 @@ func p256GetScalar(out []uint64, in []byte) {
 var rr = []byte{  0x00, 0x00, 0x00, 0x04, 0xff, 0xff, 0xff, 0xfd, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
 	              0xff, 0xff, 0xff, 0xfb, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03}
 
+// (This is one, in the Montgomery domain.)
+var one = []byte{0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			        0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+
 func maybeReduceModP(in *big.Int) *big.Int {
 	if in.Cmp(p256.P) < 0 {
 		return in
@@ -496,77 +503,56 @@ func maybeReduceModP(in *big.Int) *big.Int {
 	return new(big.Int).Mod(in, p256.P)
 }
 
-/*func (curve p256Curve) CombinedMult(bigX, bigY *big.Int, baseScalar, scalar []byte) (x, y *big.Int) {
-	scalarReversed := make([]uint64, 4)
+func (curve p256Curve) CombinedMult(bigX, bigY *big.Int, baseScalar, scalar []byte) (x, y *big.Int) {
 	var r1, r2 p256Point
-	p256GetScalar(scalarReversed, baseScalar)
-	r1.p256BaseMult(scalarReversed)
+	r1.p256BaseMult(p256GetScalar(baseScalar))
 
-	p256GetScalar(scalarReversed, scalar)
-	fromBigDel(r2.xyz[0:4], maybeReduceModP(bigX))
-	fromBigDel(r2.xyz[4:8], maybeReduceModP(bigY))
-	p256Mul(r2.xyz[0:4], r2.xyz[0:4], rr[:])
-	p256Mul(r2.xyz[4:8], r2.xyz[4:8], rr[:])
+	copy(r2.x[:], fromBig(maybeReduceModP(bigX)))
+	copy(r2.y[:], fromBig(maybeReduceModP(bigY)))
+	copy(r2.z[:], one)
+	p256Mul(r2.x[:], r2.x[:], rr[:])
+	p256Mul(r2.y[:], r2.y[:], rr[:])
 
-	// This sets r2's Z value to 1, in the Montgomery domain.
-	r2.xyz[8] = 0x0000000000000001
-	r2.xyz[9] = 0xffffffff00000000
-	r2.xyz[10] = 0xffffffffffffffff
-	r2.xyz[11] = 0x00000000fffffffe
-
-	r2.p256ScalarMult(scalarReversed)
-	p256PointAddAsm(r1.xyz[:], r1.xyz[:], r2.xyz[:])
+	r2.p256ScalarMult(p256GetScalar(scalar))
+	p256PointAddAsm(&r1, &r1, &r2)
 	return r1.p256PointToAffine()
 }
 
 func (curve p256Curve) ScalarBaseMult(scalar []byte) (x, y *big.Int) {
-	scalarReversed := make([]uint64, 4)
-	p256GetScalar(scalarReversed, scalar)
-
 	var r p256Point
-	r.p256BaseMult(scalarReversed)
+	r.p256BaseMult(p256GetScalar(scalar))
 	return r.p256PointToAffine()
 }
 
 func (curve p256Curve) ScalarMult(bigX, bigY *big.Int, scalar []byte) (x, y *big.Int) {
-	scalarReversed := make([]uint64, 4)
-	p256GetScalar(scalarReversed, scalar)
-
 	var r p256Point
-	fromBigDel(r.xyz[0:4], maybeReduceModP(bigX))
-	fromBigDel(r.xyz[4:8], maybeReduceModP(bigY))
-	p256Mul(r.xyz[0:4], r.xyz[0:4], rr[:])
-	p256Mul(r.xyz[4:8], r.xyz[4:8], rr[:])
-	// This sets r2's Z value to 1, in the Montgomery domain.
-	r.xyz[8] = 0x0000000000000001
-	r.xyz[9] = 0xffffffff00000000
-	r.xyz[10] = 0xffffffffffffffff
-	r.xyz[11] = 0x00000000fffffffe
-
-	r.p256ScalarMult(scalarReversed)
+	copy(r.x[:], fromBig(maybeReduceModP(bigX)))
+	copy(r.y[:], fromBig(maybeReduceModP(bigY)))
+	//PrintPoint("r", &r)
+	copy(r.z[:], one)
+	p256Mul(r.x[:], r.x[:], rr[:])
+	p256Mul(r.y[:], r.y[:], rr[:])
+	//PrintPoint("r", &r)
+	r.p256ScalarMult(p256GetScalar(scalar))
 	return r.p256PointToAffine()
 }
 
 func (p *p256Point) p256PointToAffine() (x, y *big.Int) {
-	zInv := make([]uint64, 4)
-	zInvSq := make([]uint64, 4)
-	p256Inverse(zInv, p.xyz[8:12])
+	zInv := make([]byte, 32)
+	zInvSq := make([]byte, 32)
+	p256Inverse(zInv, p.z[:])
+	//fmt.Printf("zInv %s\n", new(big.Int).SetBytes(zInv).Text(16))
 	p256Sqr(zInvSq, zInv)
 	p256Mul(zInv, zInv, zInvSq)
 
-	p256Mul(zInvSq, p.xyz[0:4], zInvSq)
-	p256Mul(zInv, p.xyz[4:8], zInv)
+	p256Mul(zInvSq, p.x[:], zInvSq)
+	p256Mul(zInv, p.y[:], zInv)
 
 	p256FromMont(zInvSq, zInvSq)
 	p256FromMont(zInv, zInv)
 
-	xOut := make([]byte, 32)
-	yOut := make([]byte, 32)
-	p256LittleToBig(xOut, zInvSq)
-	p256LittleToBig(yOut, zInv)
-
-	return new(big.Int).SetBytes(xOut), new(big.Int).SetBytes(yOut)
-}*/
+	return new(big.Int).SetBytes(zInvSq), new(big.Int).SetBytes(zInv)
+}
 
 // p256Inverse sets out to in^-1 mod p.
 func p256Inverse(out, in []byte) {
@@ -643,19 +629,7 @@ func p256Inverse(out, in []byte) {
 	p256Sqr(out, out)
 	p256Sqr(out, out)
 	p256Mul(out, out, in)
-	
-//	fmt.Printf("-TEST in  %s\n", new(big.Int).SetBytes(in).Text(16))
-//	fmt.Printf("-TEST out %s\n", new(big.Int).SetBytes(out).Text(16))
-//	fmt.Printf("-TEST p2  %s\n", new(big.Int).SetBytes(p2).Text(16))
-//	fmt.Printf("-TEST p4  %s\n", new(big.Int).SetBytes(p4).Text(16))
-//	fmt.Printf("-TEST p8  %s\n", new(big.Int).SetBytes(p8).Text(16))
-//	fmt.Printf("-TEST p16 %s\n", new(big.Int).SetBytes(p16).Text(16))
-//	fmt.Printf("-TEST p32 %s\n", new(big.Int).SetBytes(p32).Text(16))
 }
-
-/*func (p *p256Point) p256StorePoint(r *[16 * 4 * 3]uint64, index int) {
-	copy(r[index*12:], p.xyz[:])
-}*/
 
 func boothW5(in uint) (int, int) {
 	var s uint = ^((in >> 5) - 1)
@@ -721,136 +695,140 @@ func initTable() {
 	}
 }
 
-/*func (p *p256Point) p256BaseMult(scalar []uint64) {
+func (p *p256Point) p256BaseMult(scalar []byte) {
 	precomputeOnce.Do(initTable)
-
-	wvalue := (scalar[0] << 1) & 0xff
+	//fmt.Printf("%s\n", new(big.Int).SetBytes(scalar).Text(16))
+	wvalue := (uint(scalar[31]) << 1) & 0xff
 	sel, sign := boothW7(uint(wvalue))
-	p256SelectBase(p.xyz[0:8], p256Precomputed[0][0:], sel)
-	p256NegCond(p.xyz[4:8], sign)
+	//fmt.Printf("sel %d sign %d wval %d\n", sel, sign, wvalue)
+	p256SelectBase(p, p256Precomputed[0][:], sel)
+	for i := 0; i < 37; i++ {
+		//PrintPoint("p", &p256Precomputed[0][i])
+	}
+	
+	p256NegCond(p, sign)
 
-	// (This is one, in the Montgomery domain.)
-	p.xyz[8] = 0x0000000000000001
-	p.xyz[9] = 0xffffffff00000000
-	p.xyz[10] = 0xffffffffffffffff
-	p.xyz[11] = 0x00000000fffffffe
-
+	copy(p.z[:], one[:])
+	//PrintPoint("p", p)
 	var t0 p256Point
-	// (This is one, in the Montgomery domain.)
-	t0.xyz[8] = 0x0000000000000001
-	t0.xyz[9] = 0xffffffff00000000
-	t0.xyz[10] = 0xffffffffffffffff
-	t0.xyz[11] = 0x00000000fffffffe
+	copy(t0.z[:], one[:])
 
 	index := uint(6)
 	zero := sel
 
 	for i := 1; i < 37; i++ {
-		if index < 192 {
-			wvalue = ((scalar[index/64] >> (index % 64)) + (scalar[index/64+1] << (64 - (index % 64)))) & 0xff
+		if index < 247 {
+			wvalue = ((uint(scalar[31-index/8]) >> (index % 8)) + (uint(scalar[31-index/8-1]) << (8 - (index % 8)))) & 0xff
 		} else {
-			wvalue = (scalar[index/64] >> (index % 64)) & 0xff
+			wvalue = (uint(scalar[31-index/8]) >> (index % 8)) & 0xff
 		}
 		index += 7
 		sel, sign = boothW7(uint(wvalue))
-		p256SelectBase(t0.xyz[0:8], p256Precomputed[i][0:], sel)
-		p256PointAddAffineAsm(p.xyz[0:12], p.xyz[0:12], t0.xyz[0:8], sign, sel, zero)
+		//fmt.Printf("sel %d sign %d zero %d wval %d\n", sel, sign, zero, wvalue)
+		p256SelectBase(&t0, p256Precomputed[i][:], sel)
+		//PrintPoint("t0", &t0)
+		p256PointAddAffineAsm(p, p, &t0, sign, sel, zero)
+		//PrintPoint("p", p)
 		zero |= sel
 	}
 }
 
-func (p *p256Point) p256ScalarMult(scalar []uint64) {
+func (p *p256Point) p256ScalarMult(scalar []byte) {
 	// precomp is a table of precomputed points that stores powers of p
 	// from p^1 to p^16.
-	var precomp [16 * 4 * 3]uint64
+	//var precomp [16 * 4 * 3]uint64
+	var precomp [16]p256Point
 	var t0, t1, t2, t3 p256Point
 
 	// Prepare the table
-	p.p256StorePoint(&precomp, 0) // 1
+	//p.p256StorePoint(&precomp, 0) // 1
+	*&precomp[0] = *p
+	
+	p256PointDoubleAsm(&t0, p)
+	p256PointDoubleAsm(&t1, &t0)
+	p256PointDoubleAsm(&t2, &t1)
+	p256PointDoubleAsm(&t3, &t2)
+	*&precomp[1] = t0  // 2
+	*&precomp[3] = t1  // 4
+	*&precomp[7] = t2  // 8
+	*&precomp[15]= t3  // 16
 
-	p256PointDoubleAsm(t0.xyz[:], p.xyz[:])
-	p256PointDoubleAsm(t1.xyz[:], t0.xyz[:])
-	p256PointDoubleAsm(t2.xyz[:], t1.xyz[:])
-	p256PointDoubleAsm(t3.xyz[:], t2.xyz[:])
-	t0.p256StorePoint(&precomp, 1)  // 2
-	t1.p256StorePoint(&precomp, 3)  // 4
-	t2.p256StorePoint(&precomp, 7)  // 8
-	t3.p256StorePoint(&precomp, 15) // 16
+	p256PointAddAsm(&t0, &t0, p)
+	p256PointAddAsm(&t1, &t1, p)
+	p256PointAddAsm(&t2, &t2, p)
+	*&precomp[2] = t0  // 3
+	*&precomp[4] = t1  // 5
+	*&precomp[8] = t2  // 9
 
-	p256PointAddAsm(t0.xyz[:], t0.xyz[:], p.xyz[:])
-	p256PointAddAsm(t1.xyz[:], t1.xyz[:], p.xyz[:])
-	p256PointAddAsm(t2.xyz[:], t2.xyz[:], p.xyz[:])
-	t0.p256StorePoint(&precomp, 2) // 3
-	t1.p256StorePoint(&precomp, 4) // 5
-	t2.p256StorePoint(&precomp, 8) // 9
+	p256PointDoubleAsm(&t0, &t0)
+	p256PointDoubleAsm(&t1, &t1)
+	*&precomp[5] = t0  // 6
+	*&precomp[9] = t1  // 10
 
-	p256PointDoubleAsm(t0.xyz[:], t0.xyz[:])
-	p256PointDoubleAsm(t1.xyz[:], t1.xyz[:])
-	t0.p256StorePoint(&precomp, 5) // 6
-	t1.p256StorePoint(&precomp, 9) // 10
+	p256PointAddAsm(&t2, &t0, p)
+	p256PointAddAsm(&t1, &t1, p)
+	*&precomp[6] = t2  // 7
+	*&precomp[10]= t1  // 11
 
-	p256PointAddAsm(t2.xyz[:], t0.xyz[:], p.xyz[:])
-	p256PointAddAsm(t1.xyz[:], t1.xyz[:], p.xyz[:])
-	t2.p256StorePoint(&precomp, 6)  // 7
-	t1.p256StorePoint(&precomp, 10) // 11
+	p256PointDoubleAsm(&t0, &t0)
+	p256PointDoubleAsm(&t2, &t2)
+	*&precomp[11] = t0  // 12
+	*&precomp[13] = t2  // 14
 
-	p256PointDoubleAsm(t0.xyz[:], t0.xyz[:])
-	p256PointDoubleAsm(t2.xyz[:], t2.xyz[:])
-	t0.p256StorePoint(&precomp, 11) // 12
-	t2.p256StorePoint(&precomp, 13) // 14
-
-	p256PointAddAsm(t0.xyz[:], t0.xyz[:], p.xyz[:])
-	p256PointAddAsm(t2.xyz[:], t2.xyz[:], p.xyz[:])
-	t0.p256StorePoint(&precomp, 12) // 13
-	t2.p256StorePoint(&precomp, 14) // 15
-
+	p256PointAddAsm(&t0, &t0, p)
+	p256PointAddAsm(&t2, &t2, p)
+	*&precomp[12] = t0  // 13
+	*&precomp[14] = t2  // 15
+	//PrintPoint("t2", &t2)
 	// Start scanning the window from top bit
 	index := uint(254)
 	var sel, sign int
 
-	wvalue := (scalar[index/64] >> (index % 64)) & 0x3f
+	wvalue := (uint(scalar[31-index/8]) >> (index % 8)) & 0x3f
 	sel, _ = boothW5(uint(wvalue))
-
-	p256Select(p.xyz[0:12], precomp[0:], sel)
+	//PrintPoint("p", p)
+	p256Select(p, precomp[:], sel)
 	zero := sel
-
+	//PrintPoint("p", p)
+	//fmt.Printf("sel %d sign %d zero %d wval %d\n", sel, sign, zero, wvalue)
 	for index > 4 {
 		index -= 5
-		p256PointDoubleAsm(p.xyz[:], p.xyz[:])
-		p256PointDoubleAsm(p.xyz[:], p.xyz[:])
-		p256PointDoubleAsm(p.xyz[:], p.xyz[:])
-		p256PointDoubleAsm(p.xyz[:], p.xyz[:])
-		p256PointDoubleAsm(p.xyz[:], p.xyz[:])
-
-		if index < 192 {
-			wvalue = ((scalar[index/64] >> (index % 64)) + (scalar[index/64+1] << (64 - (index % 64)))) & 0x3f
+		//PrintPoint("p", p)
+		p256PointDoubleAsm(p, p)
+		//PrintPoint("p", p)
+		p256PointDoubleAsm(p, p)
+		p256PointDoubleAsm(p, p)
+		p256PointDoubleAsm(p, p)
+		p256PointDoubleAsm(p, p)
+		//PrintPoint("p", p)
+		if index < 247 {
+			wvalue = ((uint(scalar[31-index/8]) >> (index % 8)) + (uint(scalar[31-index/8-1]) << (8 - (index % 8)))) & 0x3f
 		} else {
-			wvalue = (scalar[index/64] >> (index % 64)) & 0x3f
+			wvalue = (uint(scalar[31-index/8]) >> (index % 8)) & 0x3f
 		}
 
 		sel, sign = boothW5(uint(wvalue))
 
-		p256Select(t0.xyz[0:], precomp[0:], sel)
-		p256NegCond(t0.xyz[4:8], sign)
-		p256PointAddAsm(t1.xyz[:], p.xyz[:], t0.xyz[:])
-		p256MovCond(t1.xyz[0:12], t1.xyz[0:12], p.xyz[0:12], sel)
-		p256MovCond(p.xyz[0:12], t1.xyz[0:12], t0.xyz[0:12], zero)
+		p256Select(&t0, precomp[:], sel)
+		p256NegCond(&t0, sign)
+		p256PointAddAsm(&t1, p, &t0)
+		p256MovCond(&t1, &t1, p, sel)
+		p256MovCond(p, &t1, &t0, zero)
 		zero |= sel
 	}
 
-	p256PointDoubleAsm(p.xyz[:], p.xyz[:])
-	p256PointDoubleAsm(p.xyz[:], p.xyz[:])
-	p256PointDoubleAsm(p.xyz[:], p.xyz[:])
-	p256PointDoubleAsm(p.xyz[:], p.xyz[:])
-	p256PointDoubleAsm(p.xyz[:], p.xyz[:])
+	p256PointDoubleAsm(p, p)
+	p256PointDoubleAsm(p, p)
+	p256PointDoubleAsm(p, p)
+	p256PointDoubleAsm(p, p)
+	p256PointDoubleAsm(p, p)
 
-	wvalue = (scalar[0] << 1) & 0x3f
+	wvalue = (uint(scalar[31]) << 1) & 0x3f
 	sel, sign = boothW5(uint(wvalue))
 
-	p256Select(t0.xyz[0:], precomp[0:], sel)
-	p256NegCond(t0.xyz[4:8], sign)
-	p256PointAddAsm(t1.xyz[:], p.xyz[:], t0.xyz[:])
-	p256MovCond(t1.xyz[0:12], t1.xyz[0:12], p.xyz[0:12], sel)
-	p256MovCond(p.xyz[0:12], t1.xyz[0:12], t0.xyz[0:12], zero)
+	p256Select(&t0, precomp[:], sel)
+	p256NegCond(&t0, sign)
+	p256PointAddAsm(&t1, p, &t0)
+	p256MovCond(&t1, &t1, p, sel)
+	p256MovCond(p, &t1, &t0, zero)
 }
-*/

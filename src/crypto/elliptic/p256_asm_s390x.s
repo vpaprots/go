@@ -1263,13 +1263,13 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 #define X3H    V18 //T1H
 #define Y3L    V21 //T3L
 #define Y3H    V22 //T3H
-#define Z3L    V23
-#define Z3H    V24
+#define Z3L    V28
+#define Z3H    V29
 
-#define ZER   V26
-#define SEL1  V27
-#define CAR1  V28
-#define CAR2  V29
+#define ZER   V6
+#define SEL1  V7
+#define CAR1  V8
+#define CAR2  V9
 
 TEXT ·p256PointAddAffineAsm(SB),NOSPLIT,$0
 	MOVD P3+0(FP),  P3ptr
@@ -1344,8 +1344,10 @@ TEXT ·p256PointAddAffineAsm(SB),NOSPLIT,$0
 		VL	 64(P1ptr), X1  //Z1H
 		VL	 80(P1ptr), X0  //Z1L
 		CALL p256MulInternal(SB)
-		VST T1, 64(P3ptr)
-		VST T0, 80(P3ptr)
+		//VST T1, 64(P3ptr)
+		//VST T0, 80(P3ptr)
+		VLR  T0, Z3L
+		VLR  T1, Z3H
 
 	// X=Y;  Y- ;  MUL; X=T  // T3 = T1*T1         T2
 		VLR  Y0, X0
@@ -1402,8 +1404,8 @@ TEXT ·p256PointAddAffineAsm(SB),NOSPLIT,$0
 	// SUB(T<T3-T) Y3:=T     // Y3 = T3-T4              T3   T4  (T3 = Y3)
 		p256SubInternal(Y3H,Y3L,T3H,T3L,T1,T0)
 
-	VL 64(P3ptr), Z3H
-	VL 80(P3ptr), Z3L
+	//VL 64(P3ptr), Z3H
+	//VL 80(P3ptr), Z3L
 	// P3 = {x:{T1H||T1L},y:{T3H||T3L},z{Z3H||Z3L}}
 
 //	if (sel == 0) {
