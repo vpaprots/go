@@ -75,35 +75,35 @@ func p256PointAddAffineAsmBig(P3, P1, P2 *p256Point, sign, sel, zero int) {
 	T4 := make([]byte, 32)
 	
 	if (sign == 1) {
-		Y2 = fromBig(new(big.Int).Mod(new(big.Int).Sub(p256.P, new(big.Int).SetBytes(Y2)), p256.P)) // Y2  = P-Y2
+		Y2 = fromBig(new(big.Int).Mod(new(big.Int).Sub(p256Params.P, new(big.Int).SetBytes(Y2)), p256Params.P)) // Y2  = P-Y2
 	}
 
-	p256Mul(T1, Z1, Z1) // T1 = Z1²
+	p256MulAsm(T1, Z1, Z1) // T1 = Z1²
 	//fmt.Printf(" --T1 = Z1²  : %s\n", new(big.Int).SetBytes(T1).Text(16))
-	p256Mul(T2, T1, Z1) // T2 = T1*Z1
+	p256MulAsm(T2, T1, Z1) // T2 = T1*Z1
 	//fmt.Printf(" --T2 = T1*Z1: %s\n", new(big.Int).SetBytes(T2).Text(16))
-	p256Mul(T1, T1, X2) // T1 = T1*X2
+	p256MulAsm(T1, T1, X2) // T1 = T1*X2
 	//fmt.Printf(" --T1 = T1*X2: %s\n", new(big.Int).SetBytes(T1).Text(16))
-	p256Mul(T2, T2, Y2) // T2 = T2*Y2
+	p256MulAsm(T2, T2, Y2) // T2 = T2*Y2
 	//fmt.Printf(" --T2 = T2*Y2: %s\n", new(big.Int).SetBytes(T2).Text(16))
-	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T1), new(big.Int).SetBytes(X1)), p256.P))) // T1 = T1-X1
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T1), new(big.Int).SetBytes(X1)), p256Params.P))) // T1 = T1-X1
 	//fmt.Printf(" --T1 = T1-X1: %s\n", new(big.Int).SetBytes(T1).Text(16))
-	copy(T2, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T2), new(big.Int).SetBytes(Y1)), p256.P))) // T2 = T2-Y1
+	copy(T2, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T2), new(big.Int).SetBytes(Y1)), p256Params.P))) // T2 = T2-Y1
 	//fmt.Printf(" --T2 = T2-Y1: %s\n", new(big.Int).SetBytes(T2).Text(16))
-	p256Mul(Z3, Z1, T1) // Z3 = Z1*T1
-	p256Mul(T3, T1, T1) // T3 = T1²
-	p256Mul(T4, T3, T1) // T4 = T3*T1
-	p256Mul(T3, T3, X1) // T3 = T3*X1
+	p256MulAsm(Z3, Z1, T1) // Z3 = Z1*T1
+	p256MulAsm(T3, T1, T1) // T3 = T1²
+	p256MulAsm(T4, T3, T1) // T4 = T3*T1
+	p256MulAsm(T3, T3, X1) // T3 = T3*X1
 	//fmt.Printf(" --T3 = T3*X1: %s\n", new(big.Int).SetBytes(T3).Text(16))
-	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(T3)), p256.P))) // T1 = 2*T3
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(T3)), p256Params.P))) // T1 = 2*T3
 	//fmt.Printf(" --T1 = 2*T3:  %s\n", new(big.Int).SetBytes(T1).Text(16))
-	p256Mul(X3, T2, T2) // X3 = T2²
-	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T1)), p256.P))) // X3 = X3-T1
-	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T4)), p256.P))) // X3 = X3-T4
-	copy(T3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(X3)), p256.P))) // T3 = T3-X3
-	p256Mul(T3, T3, T2) // T3 = T3*T2
-	p256Mul(T4, T4, Y1) // T4 = T4*Y1
-	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(T4)), p256.P))) // Y3 = T3-T4
+	p256MulAsm(X3, T2, T2) // X3 = T2²
+	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T1)), p256Params.P))) // X3 = X3-T1
+	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T4)), p256Params.P))) // X3 = X3-T4
+	copy(T3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(X3)), p256Params.P))) // T3 = T3-X3
+	p256MulAsm(T3, T3, T2) // T3 = T3*T2
+	p256MulAsm(T4, T4, Y1) // T4 = T4*Y1
+	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(T4)), p256Params.P))) // Y3 = T3-T4
 	
 	if (sel == 0) {
 		copy(P3.x[:], X1)
@@ -173,44 +173,44 @@ func p256PointDoubleAsmBig(P3, P1 *p256Point) {
 	T2 := make([]byte, 32)
 	T3 := make([]byte, 32)
 	
-	p256Mul(T1, Z1, Z1) //T1 = Z1²
+	p256MulAsm(T1, Z1, Z1) //T1 = Z1²
 	//fmt.Printf(" --T1 = Z1²  : %s\n", new(big.Int).SetBytes(T1).Text(16))
-	copy(T2, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X1), new(big.Int).SetBytes(T1)), p256.P))) //T2 = X1-T1
+	copy(T2, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X1), new(big.Int).SetBytes(T1)), p256Params.P))) //T2 = X1-T1
 	//fmt.Printf(" --T2 = X1-T1: %s\n", new(big.Int).SetBytes(T2).Text(16))
-	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(X1), new(big.Int).SetBytes(T1)), p256.P))) //T1 = X1+T1
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(X1), new(big.Int).SetBytes(T1)), p256Params.P))) //T1 = X1+T1
 	//fmt.Printf(" --T1 = X1+T1: %s\n", new(big.Int).SetBytes(T1).Text(16))
-	p256Mul(T2, T2, T1) //T2 = T2*T1
+	p256MulAsm(T2, T2, T1) //T2 = T2*T1
 	//fmt.Printf(" --T2 = T2*T1: %s\n", new(big.Int).SetBytes(T2).Text(16))
-	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T2), new(big.Int).SetBytes(T2)), p256.P))) //T2 = 3*T2
-	copy(T2, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T1), new(big.Int).SetBytes(T2)), p256.P)))
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T2), new(big.Int).SetBytes(T2)), p256Params.P))) //T2 = 3*T2
+	copy(T2, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T1), new(big.Int).SetBytes(T2)), p256Params.P)))
 	//fmt.Printf(" --T2 = 3*T2 : %s\n", new(big.Int).SetBytes(T2).Text(16))
-	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(Y1), new(big.Int).SetBytes(Y1)), p256.P))) // Y3 = 2*Y1
+	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(Y1), new(big.Int).SetBytes(Y1)), p256Params.P))) // Y3 = 2*Y1
 	//fmt.Printf(" --Y3 = 2*Y1 : %s\n", new(big.Int).SetBytes(Y3).Text(16))
-	p256Mul(Z3, Y3, Z1) // Z3 = Y3*Z1
+	p256MulAsm(Z3, Y3, Z1) // Z3 = Y3*Z1
 	//fmt.Printf(" --Z3 = Y3*Z1: %s\n", new(big.Int).SetBytes(Z3).Text(16))
-	p256Mul(Y3, Y3, Y3) // Y3 = Y3²
+	p256MulAsm(Y3, Y3, Y3) // Y3 = Y3²
 	//fmt.Printf(" --Y3 = Y3²  : %s\n", new(big.Int).SetBytes(Y3).Text(16))
-	p256Mul(T3, Y3, X1) // T3 = Y3*X1
+	p256MulAsm(T3, Y3, X1) // T3 = Y3*X1
 	//fmt.Printf(" --T3 = Y3*X1: %s\n", new(big.Int).SetBytes(T3).Text(16))
-	p256Mul(Y3, Y3, Y3) // Y3 = Y3²
+	p256MulAsm(Y3, Y3, Y3) // Y3 = Y3²
 	//fmt.Printf(" --Y3 = Y3²  : %s\n", new(big.Int).SetBytes(Y3).Text(16))
 	if (1 == Y3[31]&0x01) { // Y3 = half*Y3
-		copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Rsh(new(big.Int).Add(new(big.Int).SetBytes(Y3), p256.P), 1), p256.P)))
+		copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Rsh(new(big.Int).Add(new(big.Int).SetBytes(Y3), p256Params.P), 1), p256Params.P)))
 	} else {
-		copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Rsh(new(big.Int).SetBytes(Y3), 1), p256.P)))
+		copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Rsh(new(big.Int).SetBytes(Y3), 1), p256Params.P)))
 	}
 	//fmt.Printf(" --Y3 = hal*Y3: %s\n", new(big.Int).SetBytes(Y3).Text(16))
-	p256Mul(X3, T2, T2) // X3 = T2²
+	p256MulAsm(X3, T2, T2) // X3 = T2²
 	//fmt.Printf(" --X3 = T2²   : %s\n", new(big.Int).SetBytes(X3).Text(16))
-	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(T3)), p256.P))) // T1 = 2*T3
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(T3)), p256Params.P))) // T1 = 2*T3
 	//fmt.Printf(" --T1 = 2*T3 : %s\n", new(big.Int).SetBytes(T1).Text(16))
-	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T1)), p256.P))) // X3 = X3-T1
+	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T1)), p256Params.P))) // X3 = X3-T1
 	//fmt.Printf(" --X3 = X3-T1: %s\n", new(big.Int).SetBytes(X3).Text(16))
-	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(X3)), p256.P))) // T1 = T3-X3
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T3), new(big.Int).SetBytes(X3)), p256Params.P))) // T1 = T3-X3
 	//fmt.Printf(" --T1 = T3-X3: %s\n", new(big.Int).SetBytes(T1).Text(16))
-	p256Mul(T1, T1, T2) // T1 = T1*T2
+	p256MulAsm(T1, T1, T2) // T1 = T1*T2
 	//fmt.Printf(" --T1 = T1*T2: %s\n", new(big.Int).SetBytes(T1).Text(16))
-	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T1), new(big.Int).SetBytes(Y3)), p256.P))) // Y3 = T1-Y3
+	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(T1), new(big.Int).SetBytes(Y3)), p256Params.P))) // Y3 = T1-Y3
 	//fmt.Printf(" --Y3 = T1-Y3: %s\n", new(big.Int).SetBytes(Y3).Text(16))
 }
 
@@ -276,60 +276,60 @@ func p256PointAddAsmBig(P3, P1, P2 *p256Point) {
 	H := make([]byte, 32)
 	R := make([]byte, 32)
 	
-	p256Mul(T1, Z1, Z1) // T1 = Z1*Z1
+	p256MulAsm(T1, Z1, Z1) // T1 = Z1*Z1
 	//fmt.Printf(" --T1 = Z1*Z1: %s\n", new(big.Int).SetBytes(T1).Text(16))
-	p256Mul( R, Z1, T1) // R  = Z1*T1
+	p256MulAsm( R, Z1, T1) // R  = Z1*T1
 	//fmt.Printf(" --R  = Z1*T1: %s\n", new(big.Int).SetBytes(R).Text(16))
-	p256Mul( H, X2, T1) // H  = X2*T1
+	p256MulAsm( H, X2, T1) // H  = X2*T1
 	//fmt.Printf(" --H  = X2*T1: %s\n", new(big.Int).SetBytes(H).Text(16))
-	p256Mul(T2, Z2, Z2) // T2 = Z2*Z2
+	p256MulAsm(T2, Z2, Z2) // T2 = Z2*Z2
 	//fmt.Printf(" --T2 = Z2*Z2: %s\n", new(big.Int).SetBytes(T2).Text(16))
-	p256Mul(S1, Z2, T2) // S1 = Z2*T2
+	p256MulAsm(S1, Z2, T2) // S1 = Z2*T2
 	//fmt.Printf(" --S1 = Z2*T2: %s\n", new(big.Int).SetBytes(S1).Text(16))
-	p256Mul(U1, X1, T2) // U1 = X1*T2
+	p256MulAsm(U1, X1, T2) // U1 = X1*T2
 	//fmt.Printf(" --U1 = X1*T2: %s\n", new(big.Int).SetBytes(U1).Text(16))
 	
-	copy(H, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(H), new(big.Int).SetBytes(U1)), p256.P))) // H  = H-U1
+	copy(H, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(H), new(big.Int).SetBytes(U1)), p256Params.P))) // H  = H-U1
 	//fmt.Printf(" --H  = H-U1 : %s\n", new(big.Int).SetBytes(H).Text(16))
-	p256Mul(Z3, Z1, Z2) // Z3 = Z1*Z2
+	p256MulAsm(Z3, Z1, Z2) // Z3 = Z1*Z2
 	//fmt.Printf(" --Z3 = Z1*Z2: %s\n", new(big.Int).SetBytes(Z3).Text(16))
-	p256Mul(Z3, Z3,  H) // Z3 = Z3*H << store-out Z3 result reg
+	p256MulAsm(Z3, Z3,  H) // Z3 = Z3*H << store-out Z3 result reg
 	//fmt.Printf(" --Z3 = Z3*H : %s\n", new(big.Int).SetBytes(Z3).Text(16))
 	
-	p256Mul(S1, Y1, S1) // S1 = Y1*S1
+	p256MulAsm(S1, Y1, S1) // S1 = Y1*S1
 	//fmt.Printf(" --S1 = Y1*S1: %s\n", new(big.Int).SetBytes(S1).Text(16))
-	p256Mul( R, Y2,  R) // R  = Y2*R
+	p256MulAsm( R, Y2,  R) // R  = Y2*R
 	//fmt.Printf(" --R  = Y2*R : %s\n", new(big.Int).SetBytes(R).Text(16))
-	copy( R, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(R), new(big.Int).SetBytes(S1)), p256.P))) // R  = R-S1
+	copy( R, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(R), new(big.Int).SetBytes(S1)), p256Params.P))) // R  = R-S1
 	//fmt.Printf(" --R  = R-S1 : %s\n", new(big.Int).SetBytes(R).Text(16))
 	
-	p256Mul(T1,  H,  H) // T1 = H*H
+	p256MulAsm(T1,  H,  H) // T1 = H*H
 	//fmt.Printf(" --T1 = H*H  : %s\n", new(big.Int).SetBytes(T1).Text(16))
-	p256Mul(T2,  H, T1) // T2 = H*T1
+	p256MulAsm(T2,  H, T1) // T2 = H*T1
 	//fmt.Printf(" --T2 = H*T1 : %s\n", new(big.Int).SetBytes(T2).Text(16))
-	p256Mul(U1, U1, T1) // U1 = U1*T1
+	p256MulAsm(U1, U1, T1) // U1 = U1*T1
 	//fmt.Printf(" --U1 = U1*T1: %s\n", new(big.Int).SetBytes(U1).Text(16))
 	
-	p256Mul(X3,  R,  R) // X3 = R*R
+	p256MulAsm(X3,  R,  R) // X3 = R*R
 	//fmt.Printf(" --X3 = R*R  : %s\n", new(big.Int).SetBytes(X3).Text(16))
 	//fmt.Printf(" --TEST R^2: %s\n", new(big.Int).SetBytes(X3).Text(16),)
 	//fmt.Printf(" --TEST  T2: %s\n", new(big.Int).SetBytes(T2).Text(16),)
-	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T2)), p256.P))) // X3 = X3-T2
+	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T2)), p256Params.P))) // X3 = X3-T2
 	//fmt.Printf(" --X3 = X3-T2: %s\n", new(big.Int).SetBytes(X3).Text(16))
-	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(U1), new(big.Int).SetBytes(U1)), p256.P))) // T1 = 2*U1
+	copy(T1, fromBig(new(big.Int).Mod(new(big.Int).Add(new(big.Int).SetBytes(U1), new(big.Int).SetBytes(U1)), p256Params.P))) // T1 = 2*U1
 	//fmt.Printf(" --T1 = 2*U1 : %s\n", new(big.Int).SetBytes(T1).Text(16))
 	//fmt.Printf(" --TEST  T1: %s\n", new(big.Int).SetBytes(T1).Text(16),)
-	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T1)), p256.P))) // X3 = X3-T1 << store-out X3 result reg
+	copy(X3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(X3), new(big.Int).SetBytes(T1)), p256Params.P))) // X3 = X3-T1 << store-out X3 result reg
 	//fmt.Printf(" --X3 = X3-T1: %s\n", new(big.Int).SetBytes(X3).Text(16))
 	//fmt.Printf(" --TEST  X3: %s\n", new(big.Int).SetBytes(X3).Text(16),)
 	
-	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(U1), new(big.Int).SetBytes(X3)), p256.P))) // Y3 = U1-X3
+	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(U1), new(big.Int).SetBytes(X3)), p256Params.P))) // Y3 = U1-X3
 	//fmt.Printf(" --Y3 = U1-X3: %s\n", new(big.Int).SetBytes(Y3).Text(16))
-	p256Mul(Y3, R, Y3) // Y3 = R*Y3
+	p256MulAsm(Y3, R, Y3) // Y3 = R*Y3
 	//fmt.Printf(" --Y3 = R*Y3 : %s\n", new(big.Int).SetBytes(Y3).Text(16))
-	p256Mul(T2, S1, T2) // T2 = S1*T2
+	p256MulAsm(T2, S1, T2) // T2 = S1*T2
 	//fmt.Printf(" --T2 = S1*T2: %s\n", new(big.Int).SetBytes(T2).Text(16))
-	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(Y3), new(big.Int).SetBytes(T2)), p256.P))) // Y3 = Y3-T2 << store-out X3 result reg
+	copy(Y3, fromBig(new(big.Int).Mod(new(big.Int).Sub(new(big.Int).SetBytes(Y3), new(big.Int).SetBytes(T2)), p256Params.P))) // Y3 = Y3-T2 << store-out X3 result reg
 	//fmt.Printf(" --Y3 = Y3-T2: %s\n", new(big.Int).SetBytes(Y3).Text(16))
 	
 	// X=Z1; Y=Z1; MUL; T-   // T1 = Z1*Z1
@@ -357,7 +357,7 @@ func p256PointAddAsmBig(P3, P1, P2 *p256Point) {
 	// SUB(T<U1-T); Y3:=T    // Y3 = Y3-T2 << store-out Y3 result reg
 }
 
-func TestP256Mul(t *testing.T) {
+func Testp256MulAsm(t *testing.T) {
 	if testing.Short() {
         t.SkipNow()
     }
@@ -369,8 +369,8 @@ func TestP256Mul(t *testing.T) {
 	x2, _ := new(big.Int).SetString("66e12d94f3d956202845b2392b6bec594699799c49bd6fa683244c95be79eea2", 16)
 	Rinv, _ := new(big.Int).SetString("fffffffe00000003fffffffd0000000200000001fffffffe0000000300000000", 16)
 	
-	copy(exp, fromBig(new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv), p256.P)))
-	p256Mul(res, fromBig(x1), fromBig(x2))
+	copy(exp, fromBig(new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv), p256Params.P)))
+	p256MulAsm(res, fromBig(x1), fromBig(x2))
 	
 	if (bytes.Compare(exp,res)!=0) {
 		fmt.Printf("-EXPECTED %s\n", new(big.Int).SetBytes(exp).Text(16))
@@ -381,7 +381,7 @@ func TestP256Mul(t *testing.T) {
 	}
 }
 
-func TestStressP256Mul(t *testing.T) {
+func TestStressp256MulAsm(t *testing.T) {
 	if testing.Short() {
         t.SkipNow()
     }
@@ -391,12 +391,12 @@ func TestStressP256Mul(t *testing.T) {
 		
 		exp := make([]byte, 32)
 		res := make([]byte, 32)
-		x1, _ := rand.Int(rand.Reader, p256.P)
-		x2, _ := rand.Int(rand.Reader, p256.P)
+		x1, _ := rand.Int(rand.Reader, p256Params.P)
+		x2, _ := rand.Int(rand.Reader, p256Params.P)
 		Rinv, _ := new(big.Int).SetString("fffffffe00000003fffffffd0000000200000001fffffffe0000000300000000", 16)
 		
-		copy(exp, fromBig(new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv), p256.P)))
-		p256Mul(res, fromBig(x1), fromBig(x2))
+		copy(exp, fromBig(new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv), p256Params.P)))
+		p256MulAsm(res, fromBig(x1), fromBig(x2))
 		
 		if (bytes.Compare(exp,res)!=0) {
 			fmt.Printf("-EXPECTED %s\n", new(big.Int).SetBytes(exp).Text(16))
@@ -425,7 +425,7 @@ func TestP256OrdMul(t *testing.T) {
 	x2, _ := new(big.Int).SetString("66e12d94f3d956202845b2392b6bec594699799c49bd6fa683244c95be79eea2", 16)
 	Rinv, _ := new(big.Int).SetString("60d066334905c1e907f8b6041e607725badef3e243566fafce1bc8f79c197c79", 16)
 	
-	copy(exp, fromBig(new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv), p256.N)))
+	copy(exp, fromBig(new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv), p256Params.N)))
 	p256OrdMul(res, fromBig(x1), fromBig(x2))
 	
 	if (bytes.Compare(exp,res)!=0) {
@@ -447,11 +447,11 @@ func TestStressP256OrdMul(t *testing.T) {
 		
 		exp := make([]byte, 32)
 		res := make([]byte, 32)
-		x1, _ := rand.Int(rand.Reader, p256.N)
-		x2, _ := rand.Int(rand.Reader, p256.N)
+		x1, _ := rand.Int(rand.Reader, p256Params.N)
+		x2, _ := rand.Int(rand.Reader, p256Params.N)
 		Rinv, _ := new(big.Int).SetString("60d066334905c1e907f8b6041e607725badef3e243566fafce1bc8f79c197c79", 16)
 		
-		copy(exp, fromBig(new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv), p256.N)))
+		copy(exp, fromBig(new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv), p256Params.N)))
 		p256OrdMul(res, fromBig(x1), fromBig(x2))
 		
 		if (bytes.Compare(exp,res)!=0) {
@@ -473,9 +473,9 @@ func TestStressInverse(t *testing.T) {
 	if testing.Short() {
         t.SkipNow()
     }
-	pp256, _ := P256().(p256Curve)
+	pp256, _ := P256().(p256CurveFast)
 	for i:=0; i<10000; i++ {
-		x, _ := rand.Int(rand.Reader, pp256.N)
+		x, _ := rand.Int(rand.Reader, p256Params.N)
 		xInv := pp256.Inverse(x)
 		xInv2 := pp256.InverseBig(x)
 		if (xInv.Cmp(xInv2)!=0) {
@@ -489,15 +489,15 @@ func TestStressInverse(t *testing.T) {
 }
 
 func BenchmarkInverse(b *testing.B) {
-    pp256, _ := P256().(p256Curve)
-    x, _ := rand.Int(rand.Reader, pp256.N)
+    pp256, _ := P256().(p256CurveFast)
+    x, _ := rand.Int(rand.Reader, p256Params.N)
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
         pp256.Inverse(x)
     }
 }
 
-func BenchmarkP256Mul(b *testing.B) {
+func Benchmarkp256MulAsm(b *testing.B) {
     P256()
     //x, _ := rand.Int(rand.Reader, pp256.N)
     in := make([]byte, 32)
@@ -506,7 +506,7 @@ func BenchmarkP256Mul(b *testing.B) {
     in[2] = 42
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
-		p256Mul(in, in, in)
+		p256MulAsm(in, in, in)
     }
 }
 
@@ -519,7 +519,7 @@ func BenchmarkP256Sqr(b *testing.B) {
     in[2] = 42
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
-		p256Mul(in, in, in)
+		p256MulAsm(in, in, in)
     }
 }
 
@@ -531,7 +531,7 @@ func TestInverse(t *testing.T) {
 	x, _ := new(big.Int).SetString("15792089210356248762697446949407573530086143415290314195533631308867097853951", 10)
 	xInvExp, _ := new(big.Int).SetString("78239946472340125005789637834181368510016866213607708536507216111758801279690", 10)
 	
-	pp256, _ := P256().(p256Curve)
+	pp256, _ := P256().(p256CurveFast)
 	xInv := pp256.TestInv(x)
 	
 	if (xInv.Cmp(xInvExp)!=0) {
@@ -545,9 +545,9 @@ func TestDouble(t *testing.T) {
         t.SkipNow()
     }
 	
-	pp256, _ := P256().(p256Curve)
+	pp256, _ := P256().(p256CurveFast)
 	z, _ := new(big.Int).SetString("1", 10)
-	x, y, z := pp256.TestDouble(pp256.Gx, pp256.Gy, z)
+	x, y, z := pp256.TestDouble(p256Params.Gx, p256Params.Gy, z)
 	
 	xExp, _ := new(big.Int).SetString("3ac62a6b166498176eb40d98a27587d8d7c97ac5f11ca1d8d851202b22c3f5c8", 16)
 	yExp, _ := new(big.Int).SetString("234aabe92636af27ea8edcd2392f97839c5a74b7ddea27bce94c2d270fb65157", 16)
@@ -1107,27 +1107,26 @@ func TestDoubleFine2(t *testing.T) {
 //	fmt.Printf("x %s\ny %s\n", x.Text(16), y.Text(16))
 //}
 
-func TestMult2(t *testing.T) {
-	if testing.Short() {
-        t.SkipNow()
-    }
-	pp256, _ := P256().(p256Curve)
-	
-	xExp, _ := new(big.Int).SetString("b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21", 16)
-	yExp, _ := new(big.Int).SetString("bd376388b5f723fb4c22dfe6cd4375a05a07476444d5819985007e34", 16)
-	
-	//k, _ := new(big.Int).SetString("a544fc8b9b4e66fb3f7e28e7822754d67c47431d67b9c376b5098d22b457a054", 16)
-	k, _ := new(big.Int).SetString("2", 16)
-	x, y := pp256.ScalarMult(xExp, yExp, k.Bytes())
-	fmt.Printf("x %s\ny %s\n", x.Text(16), y.Text(16))
-}
+//func TestMult2(t *testing.T) {
+//	if testing.Short() {
+//        t.SkipNow()
+//    }
+//	pp256, _ := P256().(p256Curve)
+//	
+//	xExp, _ := new(big.Int).SetString("b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21", 16)
+//	yExp, _ := new(big.Int).SetString("bd376388b5f723fb4c22dfe6cd4375a05a07476444d5819985007e34", 16)
+//	
+//	//k, _ := new(big.Int).SetString("a544fc8b9b4e66fb3f7e28e7822754d67c47431d67b9c376b5098d22b457a054", 16)
+//	k, _ := new(big.Int).SetString("2", 16)
+//	x, y := pp256.ScalarMult(xExp, yExp, k.Bytes())
+//	fmt.Printf("x %s\ny %s\n", x.Text(16), y.Text(16))
+//}
 
 func TestInitTable(t *testing.T) {
 	if testing.Short() {
         t.SkipNow()
     }
 	P256()
-	precomputeOnce.Do(initTable)
 	
 	exp1 := new(p256Point)
 	
@@ -1136,9 +1135,9 @@ func TestInitTable(t *testing.T) {
 	copy(exp1.x[:], fromBig(xExp))
 	copy(exp1.y[:], fromBig(yExp))
 	
-	if (ComparePoint(&p256Precomputed[36][63], exp1)!=0) {
+	if (ComparePoint(&p256PreFast[36][63], exp1)!=0) {
 		PrintPoint("exp", exp1)
-		PrintPoint("res", &p256Precomputed[36][63])	
+		PrintPoint("res", &p256PreFast[36][63])	
 		t.Fail();
 	}
 

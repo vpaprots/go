@@ -43,6 +43,26 @@ GLOBL p256ord<>(SB), 8, $32
 GLOBL p256<>(SB), 8, $64
 GLOBL p256mul<>(SB), 8, $160
 
+// func hasVectorFacility() bool
+TEXT ·hasVectorFacility(SB),NOSPLIT,$24-1
+	MOVD    $x-24(SP), R1
+	XC      $24, 0(R1), 0(R1) // clear the storage
+	MOVD    $2, R0            // R0 is the number of double words stored -1
+	WORD    $0xB2B01000       // STFLE 0(R1)
+	XOR     R0, R0            // reset the value of R0
+	MOVBZ   z-8(SP), R1
+	AND     $0x40, R1
+	BEQ     novector
+vectorinstalled:
+	// check if the vector instruction has been enabled
+	VLEIB   $0, $0xF, V16
+	VLGVB   $0, V16, R1
+	CMPBNE  R1, $0xF, novector
+	MOVB    $1, ret+0(FP) // have vx
+	RET
+novector:
+	MOVB    $0, ret+0(FP) // no vx
+	RET
 
 /* ---------------------------------------*/
 // func p256OrdMul(res, in1, in2 []byte)
@@ -423,7 +443,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 #undef K0
 
 /* ---------------------------------------*/
-// func p256Mul(res, in1, in2 []byte)
+// func p256MulAsm(res, in1, in2 []byte)
 #define res_ptr R1
 #define x_ptr R2
 #define y_ptr R3
@@ -1164,7 +1184,7 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 	VO       T1,TT1, T1
 
 /* ---------------------------------------*/
-// func p256Mul(res, in1, in2 []byte)
+// func p256MulAsm(res, in1, in2 []byte)
 #define res_ptr R1
 #define x_ptr   R2
 #define y_ptr   R3
@@ -1181,7 +1201,7 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 // Constants
 #define P0    V30
 #define P1    V31
- TEXT ·p256Mul(SB),NOSPLIT,$0
+ TEXT ·p256MulAsm(SB),NOSPLIT,$0
 	MOVD res+0(FP), res_ptr
 	MOVD in1+24(FP), x_ptr
 	MOVD in2+48(FP), y_ptr
@@ -1237,7 +1257,7 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 #define TT1  V12
 #define T2   V13
 
-// P256Mul Parameters
+// p256MulAsm Parameters
 #define X0    V0
 #define X1    V1
 #define Y0    V2
@@ -1251,8 +1271,8 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 // Names for zero/sel selects
 #define X1L    V0
 #define X1H    V1
-#define Y1L    V2 // P256MulParmY
-#define Y1H    V3 // P256MulParmY
+#define Y1L    V2 // p256MulAsmParmY
+#define Y1H    V3 // p256MulAsmParmY
 #define Z1L    V4
 #define Z1H    V5
 #define X2L    V0
@@ -1546,7 +1566,7 @@ TEXT ·p256PointAddAffineAsm(SB),NOSPLIT,$0
 #define TT1  V12
 #define T2   V13
 
-// P256Mul Parameters
+// p256MulAsm Parameters
 #define X0    V0
 #define X1    V1
 #define Y0    V2
@@ -1722,7 +1742,7 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$0
 #define TT1  V12
 #define T2   V13
 
-// P256Mul Parameters
+// p256MulAsm Parameters
 #define X0    V0
 #define X1    V1
 #define Y0    V2
