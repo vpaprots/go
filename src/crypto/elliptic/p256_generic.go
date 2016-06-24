@@ -8,13 +8,10 @@ package elliptic
 
 import (
 	"math/big"
-//	"sync"
-//	"fmt"
-//	"bytes"
 )
 
 var (
-	p256            p256Curve
+	p256 p256Curve
 )
 
 func initP256() {

@@ -18,7 +18,7 @@ type p256Curve struct {
 
 var (
 	p256Params *CurveParams
-	
+
 	// RInverse contains 1/R mod p - the inverse of the Montgomery constant
 	// (2**257).
 	p256RInverse *big.Int
