@@ -65,6 +65,136 @@ novector:
 	RET
 
 /* ---------------------------------------*/
+// iff cond == 1  val <- -val
+// func p256NegCond(val *p256Point, cond int)
+#define P1ptr   R1
+#define CPOOL   R4
+
+#define Y1L   V0
+#define Y1H   V1
+#define T1L   V2
+#define T1H   V3
+
+#define PL    V30
+#define PH    V31
+
+#define ZER   V4
+#define SEL1  V5
+#define CAR1  V6
+TEXT ·p256NegCond(SB),NOSPLIT,$0
+	MOVD val+0(FP),  P1ptr
+
+	MOVD $p256mul<>+0x00(SB), CPOOL
+	VL	16(CPOOL), PL
+	VL	0(CPOOL),  PH
+
+	VL	32(P1ptr), Y1H
+	VL	48(P1ptr), Y1L
+
+	VLREPG cond+8(FP), SEL1
+	VZERO  ZER
+	VCEQG  SEL1,ZER,SEL1
+
+	VSCBIQ  Y1L, PL, CAR1
+	VSQ     Y1L, PL, T1L
+	VSBIQ   PH,  Y1H, CAR1, T1H
+
+	VSEL Y1L,T1L,SEL1,Y1L
+	VSEL Y1H,T1H,SEL1,Y1H
+
+	VST Y1H, 32(P1ptr)
+	VST Y1L, 48(P1ptr)
+	RET
+#undef P1ptr
+#undef CPOOL
+#undef Y1L
+#undef Y1H
+#undef T1L
+#undef T1H
+#undef PL
+#undef PH
+#undef ZER
+#undef SEL1
+#undef CAR1
+
+/* ---------------------------------------*/
+// if cond == 0 res <- b; else res <- a
+// func p256MovCond(res, a, b *p256Point, cond int)
+#define P3ptr   R1
+#define P1ptr   R2
+#define P2ptr   R3
+
+#define X1L    V0
+#define X1H    V1
+#define Y1L    V2
+#define Y1H    V3
+#define Z1L    V4
+#define Z1H    V5
+#define X2L    V6
+#define X2H    V7
+#define Y2L    V8
+#define Y2H    V9
+#define Z2L    V10
+#define Z2H    V11
+
+#define ZER   V18
+#define SEL1  V19
+TEXT ·p256MovCond(SB),NOSPLIT,$0
+	MOVD res+0(FP),  P3ptr
+	MOVD a+8(FP),  P1ptr
+	MOVD b+16(FP), P2ptr
+	VLREPG cond+24(FP), SEL1
+	VZERO  ZER
+	VCEQG  SEL1,ZER,SEL1
+
+	VL	 0(P1ptr), X1H
+	VL	16(P1ptr), X1L
+	VL	32(P1ptr), Y1H
+	VL	48(P1ptr), Y1L
+	VL	64(P1ptr), Z1H
+	VL	80(P1ptr), Z1L
+
+	VL	 0(P2ptr), X2H
+	VL	16(P2ptr), X2L
+	VL	32(P2ptr), Y2H
+	VL	48(P2ptr), Y2L
+	VL	64(P2ptr), Z2H
+	VL	80(P2ptr), Z2L
+
+	VSEL X2L,X1L,SEL1,X1L
+	VSEL X2H,X1H,SEL1,X1H
+	VSEL Y2L,Y1L,SEL1,Y1L
+	VSEL Y2H,Y1H,SEL1,Y1H
+	VSEL Z2L,Z1L,SEL1,Z1L
+	VSEL Z2H,Z1H,SEL1,Z1H
+
+	VST X1H,  0(P3ptr)
+	VST X1L, 16(P3ptr)
+	VST Y1H, 32(P3ptr)
+	VST Y1L, 48(P3ptr)
+	VST Z1H, 64(P3ptr)
+	VST Z1L, 80(P3ptr)
+
+	RET
+#undef P3ptr
+#undef P1ptr
+#undef P2ptr
+#undef X1L
+#undef X1H
+#undef Y1L
+#undef Y1H
+#undef Z1L
+#undef Z1H
+#undef X2L
+#undef X2H
+#undef Y2L
+#undef Y2H
+#undef Z2L
+#undef Z2H
+#undef ZER
+#undef SEL1
+
+/* ---------------------------------------*/
 // func p256OrdMul(res, in1, in2 []byte)
 #define res_ptr R1
 #define x_ptr R2

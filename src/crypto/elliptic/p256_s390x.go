@@ -117,14 +117,16 @@ func p256FromMont(res, in []byte) {
 }
 
 // iff cond == 1  val <- -val
-func p256NegCond(val *p256Point, cond int) {
+func p256NegCond(val *p256Point, cond int)
+func p256NegCondBig(val *p256Point, cond int) {
 	if cond == 1 {
 		copy(val.y[:], fromBig(new(big.Int).Mod(new(big.Int).Sub(p256Params.P, new(big.Int).SetBytes(val.y[:])), p256Params.P)))
 	}
 }
 
 // if cond == 0 res <- b; else res <- a
-func p256MovCond(res, a, b *p256Point, cond int) {
+func p256MovCond(res, a, b *p256Point, cond int)
+func p256MovCondBig(res, a, b *p256Point, cond int) {
 	if cond == 0 {
 		copy(res.x[:], b.x[:])
 		copy(res.y[:], b.y[:])
