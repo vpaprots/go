@@ -195,6 +195,192 @@ TEXT ·p256MovCond(SB),NOSPLIT,$0
 #undef SEL1
 
 /* ---------------------------------------*/
+// Constant time table access
+// Indexed from 1 to 15, with -1 offset
+// (index 0 is implicitly point at infinity)
+// func p256Select(point *p256Point, table []p256Point, idx int)
+#define P3ptr   R1
+#define P1ptr   R2
+#define COUNT   R4
+
+#define X1L    V0
+#define X1H    V1
+#define Y1L    V2
+#define Y1H    V3
+#define Z1L    V4
+#define Z1H    V5
+#define X2L    V6
+#define X2H    V7
+#define Y2L    V8
+#define Y2H    V9
+#define Z2L    V10
+#define Z2H    V11
+
+#define ONE   V18
+#define IDX   V19
+#define SEL1  V20
+#define SEL2  V21
+TEXT ·p256Select(SB),NOSPLIT,$0
+	MOVD point+0(FP),  P3ptr
+	MOVD table+8(FP),  P1ptr
+	VLREPB idx+39(FP), IDX
+	VREPIB   $1, ONE
+	VREPIB   $1, SEL2
+	MOVD $1, COUNT
+
+	VZERO X1H
+	VZERO X1L
+	VZERO Y1H
+	VZERO Y1L
+	VZERO Z1H
+	VZERO Z1L
+
+loop_select:
+	VL	 0(P1ptr), X2H
+	VL	16(P1ptr), X2L
+	VL	32(P1ptr), Y2H
+	VL	48(P1ptr), Y2L
+	VL	64(P1ptr), Z2H
+	VL	80(P1ptr), Z2L
+
+	VCEQG  SEL2,IDX,SEL1
+
+	VSEL X2L,X1L,SEL1,X1L
+	VSEL X2H,X1H,SEL1,X1H
+	VSEL Y2L,Y1L,SEL1,Y1L
+	VSEL Y2H,Y1H,SEL1,Y1H
+	VSEL Z2L,Z1L,SEL1,Z1L
+	VSEL Z2H,Z1H,SEL1,Z1H
+
+	VAB  SEL2,ONE,SEL2
+    ADD  $1,COUNT
+    ADD  $96,P1ptr
+    WORD $0xA74E0011 // CHI R4,17
+    BLT  loop_select
+
+	VST X1H,  0(P3ptr)
+	VST X1L, 16(P3ptr)
+	VST Y1H, 32(P3ptr)
+	VST Y1L, 48(P3ptr)
+	VST Z1H, 64(P3ptr)
+	VST Z1L, 80(P3ptr)
+	RET
+
+#undef P3ptr
+#undef P1ptr
+#undef COUNT
+#undef X1L
+#undef X1H
+#undef Y1L
+#undef Y1H
+#undef Z1L
+#undef Z1H
+#undef X2L
+#undef X2H
+#undef Y2L
+#undef Y2H
+#undef Z2L
+#undef Z2H
+#undef ONE
+#undef IDX
+#undef SEL1
+#undef SEL2
+
+
+/* ---------------------------------------*/
+// Constant time table access
+// Indexed from 1 to 15, with -1 offset
+// (index 0 is implicitly point at infinity)
+//func p256SelectBase(point *p256Point, table []p256Point, idx int)
+#define P3ptr   R1
+#define P1ptr   R2
+#define COUNT   R4
+
+#define X1L    V0
+#define X1H    V1
+#define Y1L    V2
+#define Y1H    V3
+#define Z1L    V4
+#define Z1H    V5
+#define X2L    V6
+#define X2H    V7
+#define Y2L    V8
+#define Y2H    V9
+#define Z2L    V10
+#define Z2H    V11
+
+#define ONE   V18
+#define IDX   V19
+#define SEL1  V20
+#define SEL2  V21
+TEXT ·p256SelectBase(SB),NOSPLIT,$0
+	MOVD point+0(FP),  P3ptr
+	MOVD table+8(FP),  P1ptr
+	VLREPB idx+39(FP), IDX
+	VREPIB   $1, ONE
+	VREPIB   $1, SEL2
+	MOVD $1, COUNT
+
+	VZERO X1H
+	VZERO X1L
+	VZERO Y1H
+	VZERO Y1L
+	VZERO Z1H
+	VZERO Z1L
+
+loop_select:
+	VL	 0(P1ptr), X2H
+	VL	16(P1ptr), X2L
+	VL	32(P1ptr), Y2H
+	VL	48(P1ptr), Y2L
+	VL	64(P1ptr), Z2H
+	VL	80(P1ptr), Z2L
+
+	VCEQG  SEL2,IDX,SEL1
+
+	VSEL X2L,X1L,SEL1,X1L
+	VSEL X2H,X1H,SEL1,X1H
+	VSEL Y2L,Y1L,SEL1,Y1L
+	VSEL Y2H,Y1H,SEL1,Y1H
+	VSEL Z2L,Z1L,SEL1,Z1L
+	VSEL Z2H,Z1H,SEL1,Z1H
+
+	VAB  SEL2,ONE,SEL2
+    ADD  $1,COUNT
+    ADD  $96,P1ptr
+    WORD $0xA74E0041 // CHI R4,65
+    BLT  loop_select
+
+	VST X1H,  0(P3ptr)
+	VST X1L, 16(P3ptr)
+	VST Y1H, 32(P3ptr)
+	VST Y1L, 48(P3ptr)
+	VST Z1H, 64(P3ptr)
+	VST Z1L, 80(P3ptr)
+	RET
+
+#undef P3ptr
+#undef P1ptr
+#undef COUNT
+#undef X1L
+#undef X1H
+#undef Y1L
+#undef Y1H
+#undef Z1L
+#undef Z1H
+#undef X2L
+#undef X2H
+#undef Y2L
+#undef Y2H
+#undef Z2L
+#undef Z2H
+#undef ONE
+#undef IDX
+#undef SEL1
+#undef SEL2
+
+
+/* ---------------------------------------*/
 // func p256OrdMul(res, in1, in2 []byte)
 #define res_ptr R1
 #define x_ptr R2

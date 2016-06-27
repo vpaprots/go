@@ -139,7 +139,8 @@ func p256MovCondBig(res, a, b *p256Point, cond int) {
 }
 
 // Constant time table access
-func p256Select(point *p256Point, table []p256Point, idx int) {
+func p256Select(point *p256Point, table []p256Point, idx int)
+func p256SelectBig(point *p256Point, table []p256Point, idx int) {
 	if idx == 0 {
 		copy(point.x[:], make([]byte, 32))
 		copy(point.y[:], make([]byte, 32))
@@ -151,7 +152,8 @@ func p256Select(point *p256Point, table []p256Point, idx int) {
 	}
 }
 
-func p256SelectBase(point *p256Point, table []p256Point, idx int) {
+func p256SelectBase(point *p256Point, table []p256Point, idx int) 
+func p256SelectBaseBig(point *p256Point, table []p256Point, idx int) {
 	if idx == 0 {
 		copy(point.x[:], table[0].z[:])
 		copy(point.y[:], table[0].z[:])
@@ -712,20 +714,14 @@ func initTable() {
 }
 
 func (p *p256Point) p256BaseMult(scalar []byte) {
-	//fmt.Printf("%s\n", new(big.Int).SetBytes(scalar).Text(16))
 	wvalue := (uint(scalar[31]) << 1) & 0xff
 	sel, sign := boothW7(uint(wvalue))
-	//fmt.Printf("sel %d sign %d wval %d\n", sel, sign, wvalue)
 	p256SelectBase(p, p256PreFast[0][:], sel)
-	for i := 0; i < 37; i++ {
-		//PrintPoint("p", &p256PreFast[0][i])
-	}
-
 	p256NegCond(p, sign)
 
 	copy(p.z[:], one[:])
-	//PrintPoint("p", p)
 	var t0 p256Point
+	
 	copy(t0.z[:], one[:])
 
 	index := uint(6)
@@ -739,11 +735,8 @@ func (p *p256Point) p256BaseMult(scalar []byte) {
 		}
 		index += 7
 		sel, sign = boothW7(uint(wvalue))
-		//fmt.Printf("sel %d sign %d zero %d wval %d\n", sel, sign, zero, wvalue)
 		p256SelectBase(&t0, p256PreFast[i][:], sel)
-		//PrintPoint("t0", &t0)
 		p256PointAddAffineAsm(p, p, &t0, sign, sel, zero)
-		//PrintPoint("p", p)
 		zero |= sel
 	}
 }
@@ -801,7 +794,6 @@ func (p *p256Point) p256ScalarMult(scalar []byte) {
 
 	wvalue := (uint(scalar[31-index/8]) >> (index % 8)) & 0x3f
 	sel, _ = boothW5(uint(wvalue))
-	//PrintPoint("p", p)
 	p256Select(p, precomp[:], sel)
 	zero := sel
 	//PrintPoint("p", p)
@@ -840,7 +832,7 @@ func (p *p256Point) p256ScalarMult(scalar []byte) {
 
 	wvalue = (uint(scalar[31]) << 1) & 0x3f
 	sel, sign = boothW5(uint(wvalue))
-
+	
 	p256Select(&t0, precomp[:], sel)
 	p256NegCond(&t0, sign)
 	p256PointAddAsm(&t1, p, &t0)
