@@ -1678,6 +1678,10 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 #undef P0
 #undef P1
 
+// Point add with P2 being affine point
+// If sign == 1 -> P2 = -P2
+// If sel == 0 -> P3 = P1
+// if zero == 0 -> P3 = P2
 // p256PointAddAffineAsm(P3, P1, P2 *p256Point, sign, sel, zero int)
 #define P3ptr   R1
 #define P1ptr   R2
@@ -1734,7 +1738,49 @@ TEXT ·p256MulSane(SB),NOSPLIT,$0
 #define SEL1  V7
 #define CAR1  V8
 #define CAR2  V9
+	/**
+	 * Three operand formula:
+	 * Source: 2004 Hankerson–Menezes–Vanstone, page 91.
+	 * T1 = Z1²
+     * T2 = T1*Z1
+     * T1 = T1*X2
+     * T2 = T2*Y2
+     * T1 = T1-X1
+     * T2 = T2-Y1
+     * Z3 = Z1*T1
+     * T3 = T1²
+     * T4 = T3*T1
+     * T3 = T3*X1
+     * T1 = 2*T3
+     * X3 = T2²
+     * X3 = X3-T1
+     * X3 = X3-T4
+     * T3 = T3-X3
+     * T3 = T3*T2
+     * T4 = T4*Y1
+     * Y3 = T3-T4
 
+* Three operand formulas, but with MulInternal X,Y used to store temps
+X=Z1; Y=Z1; MUL;T-   // T1 = Z1²      T1
+X=T ; Y-  ; MUL;T2=T // T2 = T1*Z1    T1   T2
+X-  ; Y=X2; MUL;T1=T // T1 = T1*X2    T1   T2
+X=T2; Y=Y2; MUL;T-   // T2 = T2*Y2    T1   T2
+SUB(T2<T-Y1)         // T2 = T2-Y1    T1   T2
+SUB(Y<T1-X1)         // T1 = T1-X1    T1   T2
+X=Z1; Y- ;  MUL;Z3:=T// Z3 = Z1*T1         T2
+X=Y;  Y- ;  MUL;X=T  // T3 = T1*T1         T2
+X- ;  Y- ;  MUL;T4=T // T4 = T3*T1         T2        T4
+X- ;  Y=X1; MUL;T3=T // T3 = T3*X1         T2   T3   T4
+ADD(T1<T+T)          // T1 = T3+T3    T1   T2   T3   T4
+X=T2; Y=T2; MUL;T-   // X3 = T2*T2    T1   T2   T3   T4
+SUB(T<T-T1)          // X3 = X3-T1    T1   T2   T3   T4
+SUB(T<T-T4) X3:=T    // X3 = X3-T4         T2   T3   T4
+SUB(X<T3-T)          // T3 = T3-X3         T2   T3   T4
+X- ;  Y- ;  MUL;T3=T // T3 = T3*T2         T2   T3   T4
+X=T4; Y=Y1; MUL;T-   // T4 = T4*Y1              T3   T4
+SUB(T<T3-T) Y3:=T    // Y3 = T3-T4              T3   T4
+
+	*/
 TEXT ·p256PointAddAffineAsm(SB),NOSPLIT,$0
 	MOVD P3+0(FP),  P3ptr
 	MOVD P1+8(FP),  P1ptr
@@ -1868,10 +1914,6 @@ TEXT ·p256PointAddAffineAsm(SB),NOSPLIT,$0
 	// SUB(T<T3-T) Y3:=T     // Y3 = T3-T4              T3   T4  (T3 = Y3)
 		p256SubInternal(Y3H,Y3L,T3H,T3L,T1,T0)
 
-	//VL 64(P3ptr), Z3H
-	//VL 80(P3ptr), Z3L
-	// P3 = {x:{T1H||T1L},y:{T3H||T3L},z{Z3H||Z3L}}
-
 //	if (sel == 0) {
 //		copy(P3.x[:], X1)
 //		copy(P3.y[:], Y1)
@@ -1982,6 +2024,9 @@ TEXT ·p256PointAddAffineAsm(SB),NOSPLIT,$0
 
 
 // p256PointDoubleAsm(P3, P1 *p256Point)
+//http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl
+//http://www.hyperelliptic.org/EFD/g1p/auto-shortw.html
+//http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective-3.html
 #define P3ptr   R1
 #define P1ptr   R2
 #define CPOOL   R4
@@ -2028,6 +2073,37 @@ TEXT ·p256PointAddAffineAsm(SB),NOSPLIT,$0
 #define SEL1  V27
 #define CAR1  V28
 #define CAR2  V29
+	/*
+	 * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#doubling-dbl-2004-hmv
+	 * Cost: 4M + 4S + 1*half + 5add + 2*2 + 1*3.
+	 * Source: 2004 Hankerson–Menezes–Vanstone, page 91.
+	 * 	A  = 3(X₁-Z₁²)×(X₁+Z₁²)
+	 * 	B  = 2Y₁
+	 * 	Z₃ = B×Z₁
+	 * 	C  = B²
+	 * 	D  = C×X₁
+	 * 	X₃ = A²-2D
+	 * 	Y₃ = (D-X₃)×A-C²/2
+	 *
+	 * Three-operand formula:
+	 *       T1 = Z1²
+	 *       T2 = X1-T1
+	 *       T1 = X1+T1
+	 *       T2 = T2*T1
+	 *       T2 = 3*T2
+	 *       Y3 = 2*Y1
+	 *       Z3 = Y3*Z1
+	 *       Y3 = Y3²
+	 *       T3 = Y3*X1
+	 *       Y3 = Y3²
+	 *       Y3 = half*Y3
+	 *       X3 = T2²
+	 *       T1 = 2*T3
+	 *       X3 = X3-T1
+	 *       T1 = T3-X3
+	 *       T1 = T1*T2
+	 *       Y3 = T1-Y3
+	 */
 
 TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$0
 	MOVD P3+0(FP),  P3ptr
@@ -2196,15 +2272,6 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$0
 
 #define PL    V30
 #define PH    V31
-
-TEXT ·p256PointAddAsm(SB),NOSPLIT,$0
-	MOVD P3+0(FP),  P3ptr
-	MOVD P1+8(FP),  P1ptr
-	MOVD P2+16(FP), P2ptr
-
-	MOVD $p256mul<>+0x00(SB), CPOOL
-	VL	16(CPOOL), PL
-	VL	0(CPOOL),  PH
 	/*
 	 * https://choucroutage.com/Papers/SideChannelAttacks/ctrsa-2011-brown.pdf "Software Implementation of the NIST Elliptic Curves Over Prime Fields"
 	 *
@@ -2218,7 +2285,67 @@ TEXT ·p256PointAddAsm(SB),NOSPLIT,$0
 	 *
  	 * Three-operand formula (adopted): http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo-2
 	 * Temp storage: T1,T2,U1,H,Z3=X3=Y3,S1,R
-	 */
+	 *
+	 * T1 = Z1*Z1
+	 * T2 = Z2*Z2
+	 * U1 = X1*T2
+	 * H  = X2*T1
+	 * H  = H-U1
+	 * Z3 = Z1*Z2
+	 * Z3 = Z3*H << store-out Z3 result reg.. could override Z1, if slices have same backing array
+	 *
+	 * S1 = Z2*T2
+	 * S1 = Y1*S1
+	 * R  = Z1*T1
+	 * R  = Y2*R
+	 * R  = R-S1
+	 *
+	 * T1 = H*H
+	 * T2 = H*T1
+	 * U1 = U1*T1
+	 *
+	 * X3 = R*R
+	 * X3 = X3-T2
+	 * T1 = 2*U1
+	 * X3 = X3-T1 << store-out X3 result reg
+	 *
+	 * T2 = S1*T2
+	 * Y3 = U1-X3
+	 * Y3 = R*Y3
+	 * Y3 = Y3-T2 << store-out Y3 result reg
+
+ 	// X=Z1; Y=Z1; MUL; T-   // T1 = Z1*Z1
+	// X-  ; Y=T ; MUL; R=T  // R  = Z1*T1
+	// X=X2; Y-  ; MUL; H=T  // H  = X2*T1
+	// X=Z2; Y=Z2; MUL; T-   // T2 = Z2*Z2
+	// X-  ; Y=T ; MUL; S1=T // S1 = Z2*T2
+	// X=X1; Y-  ; MUL; U1=T // U1 = X1*T2
+	// SUB(H<H-T)            // H  = H-U1
+	// X=Z1; Y=Z2; MUL; T-   // Z3 = Z1*Z2
+	// X=T ; Y=H ; MUL; Z3:=T// Z3 = Z3*H << store-out Z3 result reg.. could override Z1, if slices have same backing array
+	// X=Y1; Y=S1; MUL; S1=T // S1 = Y1*S1
+	// X=Y2; Y=R ; MUL; T-   // R  = Y2*R
+	// SUB(R<T-S1)           // R  = R-S1
+	// X=H ; Y=H ; MUL; T-   // T1 = H*H
+	// X-  ; Y=T ; MUL; T2=T // T2 = H*T1
+	// X=U1; Y-  ; MUL; U1=T // U1 = U1*T1
+	// X=R ; Y=R ; MUL; T-   // X3 = R*R
+	// SUB(T<T-T2)           // X3 = X3-T2
+	// ADD(X<U1+U1)          // T1 = 2*U1
+	// SUB(T<T-X) X3:=T      // X3 = X3-T1 << store-out X3 result reg
+	// SUB(Y<U1-T)           // Y3 = U1-X3
+	// X=R ; Y-  ; MUL; U1=T // Y3 = R*Y3
+	// X=S1; Y=T2; MUL; T-   // T2 = S1*T2
+	// SUB(T<U1-T); Y3:=T    // Y3 = Y3-T2 << store-out Y3 result reg
+	*/
+TEXT ·p256PointAddAsm(SB),NOSPLIT,$0
+	MOVD P3+0(FP),  P3ptr
+	MOVD P1+8(FP),  P1ptr
+	MOVD P2+16(FP), P2ptr
+
+	MOVD $p256mul<>+0x00(SB), CPOOL
+	VL	16(CPOOL), PL
+	VL	0(CPOOL),  PH
 	// X=Z1; Y=Z1; MUL; T-   // T1 = Z1*Z1
 		VL	 64(P1ptr), X1  //Z1H
 		VL	 80(P1ptr), X0  //Z1L

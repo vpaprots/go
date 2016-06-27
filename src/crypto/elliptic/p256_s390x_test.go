@@ -12,6 +12,221 @@ import (
 	"testing"
 )
 
+/*============================================================
+  The following functions are equivalent implementations
+  to p256_asm_s390.s
+============================================================*/
+// Montgomery multiplication modulo P256
+func p256MulAsmBig(res, in1, in2 []byte) {
+	x1 := new(big.Int).SetBytes(in1)
+	x2 := new(big.Int).SetBytes(in2)
+	Rinv, _ := new(big.Int).SetString("fffffffe00000003fffffffd0000000200000001fffffffe0000000300000000", 16) //minv(2^256,p)
+	temp := new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv)
+	copy(res, fromBig(new(big.Int).Mod(temp, p256Params.P)))
+}
+
+// Montgomery multiplication by 1
+func p256FromMontBig(res, in []byte) {
+	x1 := new(big.Int).SetBytes(in)
+	Rinv, _ := new(big.Int).SetString("fffffffe00000003fffffffd0000000200000001fffffffe0000000300000000", 16) //minv(2^256,p)
+	temp := new(big.Int).Mul(x1, Rinv)
+
+	copy(res, fromBig(new(big.Int).Mod(temp, p256Params.P)))
+}
+
+// iff cond == 1  val <- -val
+func p256NegCondBig(val *p256Point, cond int) {
+	if cond == 1 {
+		copy(val.y[:], fromBig(new(big.Int).Mod(new(big.Int).Sub(p256Params.P, new(big.Int).SetBytes(val.y[:])), p256Params.P)))
+	}
+}
+
+// if cond == 0 res <- b; else res <- a
+func p256MovCondBig(res, a, b *p256Point, cond int) {
+	if cond == 0 {
+		copy(res.x[:], b.x[:])
+		copy(res.y[:], b.y[:])
+		copy(res.z[:], b.z[:])
+	} else {
+		copy(res.x[:], a.x[:])
+		copy(res.y[:], a.y[:])
+		copy(res.z[:], a.z[:])
+	}
+}
+
+// Constant time table access
+func p256SelectBig(point *p256Point, table []p256Point, idx int) {
+	if idx == 0 {
+		copy(point.x[:], make([]byte, 32))
+		copy(point.y[:], make([]byte, 32))
+		copy(point.z[:], make([]byte, 32))
+	} else {
+		copy(point.x[:], table[idx-1].x[:])
+		copy(point.y[:], table[idx-1].y[:])
+		copy(point.z[:], table[idx-1].z[:])
+	}
+}
+
+func p256SelectBaseBig(point *p256Point, table []p256Point, idx int) {
+	if idx == 0 {
+		copy(point.x[:], table[0].z[:])
+		copy(point.y[:], table[0].z[:])
+	} else {
+		copy(point.x[:], table[idx-1].x[:])
+		copy(point.y[:], table[idx-1].y[:])
+	}
+}
+
+// Montgomery multiplication modulo Ord(G)
+func p256OrdMulBig(res, in1, in2 []byte) {
+	x1 := new(big.Int).SetBytes(in1)
+	x2 := new(big.Int).SetBytes(in2)
+	Rinv, _ := new(big.Int).SetString("60d066334905c1e907f8b6041e607725badef3e243566fafce1bc8f79c197c79", 16) //minv(2^256,n)
+	temp := new(big.Int).Mul(new(big.Int).Mul(x1, x2), Rinv)
+	t := make([]byte, 32)
+	p256OrdMul(t, in1, in2)
+
+	copy(res, fromBig(new(big.Int).Mod(temp, p256Params.N)))
+
+	if !bytes.Equal(t, res) {
+		fmt.Printf("TEST in1 %s\n", new(big.Int).SetBytes(fromBig(x1)).Text(16))
+		fmt.Printf("TEST in2 %s\n", new(big.Int).SetBytes(fromBig(x2)).Text(16))
+		fmt.Printf("EXPECTED %s\n", new(big.Int).SetBytes(res).Text(16))
+		fmt.Printf("FOUND    %s\n", new(big.Int).SetBytes(t).Text(16))
+	} /*else {
+		fmt.Printf("+\n")
+	}*/
+}
+
+func p256OrdSqrBig(res, in []byte, n int) {
+	x := new(big.Int).SetBytes(in)
+	Rinv, _ := new(big.Int).SetString("60d066334905c1e907f8b6041e607725badef3e243566fafce1bc8f79c197c79", 16)
+	for i := 0; i < n; i += 1 {
+		x = new(big.Int).Mul(new(big.Int).Mul(x, x), Rinv)
+		x = new(big.Int).Mod(x, p256Params.N)
+	}
+	copy(res, fromBig(x))
+}
+
+/* Linux CALC tool verification history
+x=0xfef7163fe956730df28c999458d9c038a17b9500f51bd2f803cabdf9818bc253
+RR=0xa3ff46f14bce132cd59447e8378fe08999ca0e402b77090c7215405740ffd73b
+r0=x*mydigit(RR,0)
+r1=x*mydigit(RR,1)
+r2=x*mydigit(RR,2)
+r3=x*mydigit(RR,3)
+r4=x*mydigit(RR,4)
+r5=x*mydigit(RR,5)
+r6=x*mydigit(RR,6)
+r7=x*mydigit(RR,7)
+t0=(r0+mydigit(r0*k0,0)*n)>>32
+t1=(t0+r1+mydigit((t0+r1)*k0,0)*n)>>32
+t2=(t1+r2+mydigit((t1+r2)*k0,0)*n)>>32
+t3=(t2+r3+mydigit((t2+r3)*k0,0)*n)>>32
+t4=(t3+r4+mydigit((t3+r4)*k0,0)*n)>>32
+t5=(t4+r5+mydigit((t4+r5)*k0,0)*n)>>32
+t6=(t5+r6+mydigit((t5+r6)*k0,0)*n)>>32
+t7=(t6+r7+mydigit((t6+r7)*k0,0)*n)>>32
+t0
+t1
+t2
+t3
+t4
+t5
+t6
+t7
+
+x2=0x3ac62a6b166498176eb40d98a27587d8d7c97ac5f11ca1d8d851202b22c3f5c8
+y2=0x234aabe92636af27ea8edcd2392f97839c5a74b7ddea27bce94c2d270fb65157
+z2=0x57401fa8db8e8e1118a40621ce27d6842bc1e1cef6138faabaf37b85a2a774ea
+x1=0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296
+y1=0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5
+z1=1
+
+
+define mydigit(x,n) = (x>>(32*n))%2^32
+x=0xa007c8559316f82de3d5d9f28b8ffcdf5949bd551f7a1348b8acc00860e058
+RR=0x66e12d94f3d956202845b2392b6bec594699799c49bd6fa683244c95be79eea2
+r0=x*mydigit(RR,0)
+r1=x*mydigit(RR,1)
+r2=x*mydigit(RR,2)
+r3=x*mydigit(RR,3)
+r4=x*mydigit(RR,4)
+r5=x*mydigit(RR,5)
+r6=x*mydigit(RR,6)
+r7=x*mydigit(RR,7)
+t0=(r0+mydigit(r0*k0,0)*p)>>32
+t1=(t0+r1+mydigit((t0+r1)*k0,0)*p)>>32
+t2=(t1+r2+mydigit((t1+r2)*k0,0)*p)>>32
+t3=(t2+r3+mydigit((t2+r3)*k0,0)*p)>>32
+t4=(t3+r4+mydigit((t3+r4)*k0,0)*p)>>32
+t5=(t4+r5+mydigit((t4+r5)*k0,0)*p)>>32
+t6=(t5+r6+mydigit((t5+r6)*k0,0)*p)>>32
+t7=(t6+r7+mydigit((t6+r7)*k0,0)*p)>>32
+t0
+t1
+t2
+t3
+t4
+t5
+t6
+t7
+
+
+define mydigit(x,n) = (x>>(32*n))%2^32
+define mydigit2(x,n) = (x>>(64*n))%2^64
+x=0xa007c8559316f82de3d5d9f28b8ffcdf5949bd551f7a1348b8acc00860e058
+RR=0x66e12d94f3d956202845b2392b6bec594699799c49bd6fa683244c95be79eea2
+r0=x*mydigit(RR,0)
+r1=x*mydigit(RR,1)
+r2=x*mydigit(RR,2)
+r3=x*mydigit(RR,3)
+r4=x*mydigit(RR,4)
+r5=x*mydigit(RR,5)
+r6=x*mydigit(RR,6)
+r7=x*mydigit(RR,7)
+
+t0=r0+(r1<<32)
+red0=mydigit2(t0,0)*p+mydigit2(t0,0)
+t1=(t0>>64)+r2+(r3<<32)+(red0>>64)
+red1=mydigit2(t1,0)*p+mydigit2(t1,0)
+t2=(t1>>64)+r4+(r5<<32)+(red1>>64)
+red2=mydigit2(t2,0)*p+mydigit2(t2,0)
+t3=(t2>>64)+r6+(r7<<32)+(red2>>64)
+red3=mydigit2(t3,0)*p+mydigit2(t3,0)
+
+
+t0=(r0+mydigit(r0*k0,0)*p)>>32
+t1=(t0+r1+mydigit((t0+r1)*k0,0)*p)>>32
+t2=(t1+r2+mydigit((t1+r2)*k0,0)*p)>>32
+t3=(t2+r3+mydigit((t2+r3)*k0,0)*p)>>32
+t4=(t3+r4+mydigit((t3+r4)*k0,0)*p)>>32
+t5=(t4+r5+mydigit((t4+r5)*k0,0)*p)>>32
+t6=(t5+r6+mydigit((t5+r6)*k0,0)*p)>>32
+t7=(t6+r7+mydigit((t6+r7)*k0,0)*p)>>32
+t0
+t1
+t2
+t3
+t4
+t5
+t6
+t7
+
+define mydigit2(x,n) = (x>>(64*n))%2^64
+
+t0=0x18905f76a53755c679fb732b7762251075ba95fc5fedb60179e730d418a9143c
+red0=mydigit2(t0,0)*p+mydigit2(t0,0)
+t1=(t0>>64)+(red0>>64)
+red1=mydigit2(t1,0)*p+mydigit2(t1,0)
+t2=(t1>>64)+(red1>>64)
+red2=mydigit2(t2,0)*p+mydigit2(t2,0)
+t3=(t2>>64)+(red2>>64)
+red3=mydigit2(t3,0)*p+mydigit2(t3,0)
+t4=(t3>>64)+(red3>>64)
+
+*/
+
 /*
 X=Z1; Y=Z1; MUL;T-   // T1 = Z1²      T1
 X=T ; Y-  ; MUL;T2=T // T2 = T1*Z1    T1   T2
@@ -216,46 +431,46 @@ func p256PointDoubleAsmBig(P3, P1 *p256Point) {
 
 func p256PointAddAsmBig(P3, P1, P2 *p256Point) {
 	/*
-		 * https://choucroutage.com/Papers/SideChannelAttacks/ctrsa-2011-brown.pdf "Software Implementation of the NIST Elliptic Curves Over Prime Fields"
-		 *
-		 * A = X₁×Z₂²
-		 * B = Y₁×Z₂³
-		 * C = X₂×Z₁²-A
-		 * D = Y₂×Z₁³-B
-		 * X₃ = D² - 2A×C² - C³
-		 * Y₃ = D×(A×C² - X₃) - B×C³
-		 * Z₃ = Z₁×Z₂×C
-		 *
-	 	 * Three-operand formula (adopted): http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo-2
-		 * Temp storage: T1,T2,U1,H,Z3=X3=Y3,S1,R
-		 *
-		 * T1 = Z1*Z1
-		 * T2 = Z2*Z2
-		 * U1 = X1*T2
-		 * H  = X2*T1
-		 * H  = H-U1
-		 * Z3 = Z1*Z2
-		 * Z3 = Z3*H << store-out Z3 result reg.. could override Z1, if slices have same backing array
-		 *
-		 * S1 = Z2*T2
-		 * S1 = Y1*S1
-		 * R  = Z1*T1
-		 * R  = Y2*R
-		 * R  = R-S1
-		 *
-		 * T1 = H*H
-		 * T2 = H*T1
-		 * U1 = U1*T1
-		 *
-		 * X3 = R*R
-		 * X3 = X3-T2
-		 * T1 = 2*U1
-		 * X3 = X3-T1 << store-out X3 result reg
-		 *
-		 * T2 = S1*T2
-		 * Y3 = U1-X3
-		 * Y3 = R*Y3
-		 * Y3 = Y3-T2 << store-out Y3 result reg
+			 * https://choucroutage.com/Papers/SideChannelAttacks/ctrsa-2011-brown.pdf "Software Implementation of the NIST Elliptic Curves Over Prime Fields"
+			 *
+			 * A = X₁×Z₂²
+			 * B = Y₁×Z₂³
+			 * C = X₂×Z₁²-A
+			 * D = Y₂×Z₁³-B
+			 * X₃ = D² - 2A×C² - C³
+			 * Y₃ = D×(A×C² - X₃) - B×C³
+			 * Z₃ = Z₁×Z₂×C
+			 *
+		 	 * Three-operand formula (adopted): http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo-2
+			 * Temp storage: T1,T2,U1,H,Z3=X3=Y3,S1,R
+			 *
+			 * T1 = Z1*Z1
+			 * T2 = Z2*Z2
+			 * U1 = X1*T2
+			 * H  = X2*T1
+			 * H  = H-U1
+			 * Z3 = Z1*Z2
+			 * Z3 = Z3*H << store-out Z3 result reg.. could override Z1, if slices have same backing array
+			 *
+			 * S1 = Z2*T2
+			 * S1 = Y1*S1
+			 * R  = Z1*T1
+			 * R  = Y2*R
+			 * R  = R-S1
+			 *
+			 * T1 = H*H
+			 * T2 = H*T1
+			 * U1 = U1*T1
+			 *
+			 * X3 = R*R
+			 * X3 = X3-T2
+			 * T1 = 2*U1
+			 * X3 = X3-T1 << store-out X3 result reg
+			 *
+			 * T2 = S1*T2
+			 * Y3 = U1-X3
+			 * Y3 = R*Y3
+			 * Y3 = Y3-T2 << store-out Y3 result reg
 	*/
 
 	// Note: This test code was not meant to be pretty! It is written in this convoluted fashion to help debug the real assembly code
@@ -356,6 +571,77 @@ func p256PointAddAsmBig(P3, P1, P2 *p256Point) {
 	// X=S1; Y=T2; MUL; T-   // T2 = S1*T2
 	// SUB(T<U1-T); Y3:=T    // Y3 = Y3-T2 << store-out Y3 result reg
 }
+
+func (curve p256CurveFast) InverseBig(k *big.Int) *big.Int {
+	if k.Cmp(p256Params.N) >= 0 {
+		// This should never happen.
+		reducedK := new(big.Int).Mod(k, p256Params.N)
+		k = reducedK
+	}
+
+	// table will store precomputed powers of x. The 32 bytes at index
+	// i store x^(i+1).
+	var table [15][32]byte
+
+	x := fromBig(k)
+	// This code operates in the Montgomery domain where R = 2^256 mod n
+	// and n is the order of the scalar field. (See initP256 for the
+	// value.) Elements in the Montgomery domain take the form a×R and
+	// multiplication of x and y in the calculates (x × y × R^-1) mod n. RR
+	// is R×R mod n thus the Montgomery multiplication x and RR gives x×R,
+	// i.e. converts x into the Montgomery domain. Stored in BigEndian form
+	RR := []byte{0x66, 0xe1, 0x2d, 0x94, 0xf3, 0xd9, 0x56, 0x20, 0x28, 0x45, 0xb2, 0x39, 0x2b, 0x6b, 0xec, 0x59,
+		0x46, 0x99, 0x79, 0x9c, 0x49, 0xbd, 0x6f, 0xa6, 0x83, 0x24, 0x4c, 0x95, 0xbe, 0x79, 0xee, 0xa2}
+
+	p256OrdMulBig(table[0][:], x, RR)
+
+	// Prepare the table, no need in constant time access, because the
+	// power is not a secret. (Entry 0 is never used.)
+	for i := 2; i < 16; i += 2 {
+		p256OrdSqrBig(table[i-1][:], table[(i/2)-1][:], 1)
+		p256OrdMulBig(table[i][:], table[i-1][:], table[0][:])
+	}
+
+	copy(x, table[14][:]) // f
+
+	p256OrdSqrBig(x[0:32], x[0:32], 4)
+	p256OrdMulBig(x[0:32], x[0:32], table[14][:]) // ff
+	t := make([]byte, 32)
+	copy(t, x)
+
+	p256OrdSqrBig(x, x, 8)
+	p256OrdMulBig(x, x, t) // ffff
+	copy(t, x)
+
+	p256OrdSqrBig(x, x, 16)
+	p256OrdMulBig(x, x, t) // ffffffff
+	copy(t, x)
+
+	p256OrdSqrBig(x, x, 64) // ffffffff0000000000000000
+	p256OrdMulBig(x, x, t)  // ffffffff00000000ffffffff
+	p256OrdSqrBig(x, x, 32) // ffffffff00000000ffffffff00000000
+	p256OrdMulBig(x, x, t)  // ffffffff00000000ffffffffffffffff
+
+	// Remaining 32 windows
+	expLo := [32]byte{0xb, 0xc, 0xe, 0x6, 0xf, 0xa, 0xa, 0xd, 0xa, 0x7, 0x1, 0x7, 0x9, 0xe, 0x8, 0x4,
+		0xf, 0x3, 0xb, 0x9, 0xc, 0xa, 0xc, 0x2, 0xf, 0xc, 0x6, 0x3, 0x2, 0x5, 0x4, 0xf}
+	for i := 0; i < 32; i++ {
+		p256OrdSqrBig(x, x, 4)
+		p256OrdMulBig(x, x, table[expLo[i]-1][:])
+	}
+
+	// Multiplying by one in the Montgomery domain converts a Montgomery
+	// value out of the domain.
+	one := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	p256OrdMulBig(x, x, one)
+
+	return new(big.Int).SetBytes(x)
+}
+
+/*============================================================
+  Test Material here
+============================================================*/
 
 func Testp256MulAsm(t *testing.T) {
 	if testing.Short() {
@@ -486,6 +772,7 @@ func TestStressInverse(t *testing.T) {
 			fmt.Printf(".")
 		}
 	}
+	fmt.Printf("\n")
 }
 
 func BenchmarkInverse(b *testing.B) {
@@ -531,9 +818,9 @@ func TestInverse(t *testing.T) {
 	x, _ := new(big.Int).SetString("15792089210356248762697446949407573530086143415290314195533631308867097853951", 10)
 	xInvExp, _ := new(big.Int).SetString("78239946472340125005789637834181368510016866213607708536507216111758801279690", 10)
 
-	pp256, _ := P256().(p256CurveFast)
-	xInv := pp256.TestInv(x)
-
+	res := make([]byte, 32)
+	p256Inverse(res, fromBig(x))
+	xInv := new(big.Int).SetBytes(res)
 	if xInv.Cmp(xInvExp) != 0 {
 		fmt.Printf("EXPECTED: %s\nACTUAL:   %s\n", xInv.Text(16), xInv.Text(16))
 		t.Fail()
@@ -545,13 +832,21 @@ func TestDouble(t *testing.T) {
 		t.SkipNow()
 	}
 
-	pp256, _ := P256().(p256CurveFast)
-	z, _ := new(big.Int).SetString("1", 10)
-	x, y, z := pp256.TestDouble(p256Params.Gx, p256Params.Gy, z)
-
 	xExp, _ := new(big.Int).SetString("3ac62a6b166498176eb40d98a27587d8d7c97ac5f11ca1d8d851202b22c3f5c8", 16)
 	yExp, _ := new(big.Int).SetString("234aabe92636af27ea8edcd2392f97839c5a74b7ddea27bce94c2d270fb65157", 16)
 	zExp, _ := new(big.Int).SetString("57401fa8db8e8e1118a40621ce27d6842bc1e1cef6138faabaf37b85a2a774ea", 16)
+
+	res := new(p256Point)
+	in := new(p256Point)
+	z, _ := new(big.Int).SetString("1", 10)
+	copy(in.x[:], fromBig(p256Params.Gx))
+	copy(in.y[:], fromBig(p256Params.Gy))
+	copy(in.z[:], fromBig(z))
+	p256PointDoubleAsm(res, in)
+
+	x := new(big.Int).SetBytes(res.x[:])
+	y := new(big.Int).SetBytes(res.y[:])
+	z = new(big.Int).SetBytes(res.z[:])
 
 	if x.Cmp(xExp) != 0 || y.Cmp(yExp) != 0 || z.Cmp(zExp) != 0 {
 		fmt.Printf("EXPECTED: %s\nEXPECTED: %s\nEXPECTED: %s\n", x.Text(16), y.Text(16), z.Text(16))
@@ -1021,8 +1316,6 @@ func BenchmarkP256Double(b *testing.B) {
 }
 
 func TestDoubleFine2(t *testing.T) {
-	//t.SkipNow()
-
 	P256()
 
 	basePoint := p256Point{
@@ -1050,77 +1343,6 @@ func TestDoubleFine2(t *testing.T) {
 
 }
 
-//func TestLoopBooth(t *testing.T) {
-//	// (This is one, in the Montgomery domain.)
-//	scalar1 := [32]byte{0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-//			        0xff, 0xff, 0xff, 0xff, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01}
-//
-//	wvalue := (uint64(scalar1[31]) << 1) & 0xff
-//	sel, sign := boothW7(uint(wvalue))
-//	fmt.Printf("+sel %d, sign %d, wvalue %d\n", sel, sign, wvalue)
-//
-//	scalar2 := make([]uint64, 4)
-//	// (This is one, in the Montgomery domain.)
-//	scalar2[0] = 0x0807060504030201
-//	scalar2[1] = 0xffffffff0c0b0a09
-//	scalar2[2] = 0xffffffffffffffff
-//	scalar2[3] = 0x00000000fffffffe
-//
-//
-//	wvalue2 := (scalar2[0] << 1) & 0xff
-//	sel, sign = boothW7(uint(wvalue2))
-//	fmt.Printf("-sel %d, sign %d, wvalue %d\n\n", sel, sign, wvalue2)
-//
-//	index := uint(6)
-//	for i := 1; i < 37; i++ {
-//		if index < 247 {
-//			wvalue = ((uint64(scalar1[31-index/8]) >> (index % 8)) + (uint64(scalar1[31-index/8-1]) << (8 - (index % 8)))) & 0xff
-//		} else {
-//			wvalue = (uint64(scalar1[31-index/8]) >> (index % 8)) & 0xff
-//		}
-//		sel, sign = boothW7(uint(wvalue))
-//		fmt.Printf("+[%d] sel %d, sign %d, wvalue %d scalar1[%d]) >> (%d)) + ((scalar1[%d]) << (%d)\n", index, sel, sign, wvalue, 31-index/8-1, index % 8, 31-index/8,8 - (index % 8))
-//
-//
-//		if index < 192 {
-//			wvalue2 = ((scalar2[index/64] >> (index % 64)) + (scalar2[index/64+1] << (64 - (index % 64)))) & 0xff
-//			sel, sign = boothW7(uint(wvalue2))
-//			fmt.Printf("-[%d] sel %d, sign %d, wvalue %d   (scalar2[%d] >> (%d)) + (scalar2[%d] << (%d))\n\n", index, sel, sign, wvalue2, index/64, index % 64, index/64+1, 64 - (index % 64))
-//		} else {
-//			wvalue2 = (scalar2[index/64] >> (index % 64)) & 0xff
-//			sel, sign = boothW7(uint(wvalue2))
-//			fmt.Printf("-[%d] sel %d, sign %d, wvalue %d   scalar2[%d] >> (%d)\n\n", index, sel, sign, wvalue2, index/64, index % 64)
-//		}
-//		index += 7
-//	}
-//}
-
-//func TestBaseMult2(t *testing.T) {
-//	if testing.Short() {
-//        t.SkipNow()
-//    }
-//	pp256, _ := P256().(p256Curve)
-//
-//	k, _ := new(big.Int).SetString("a544fc8b9b4e66fb3f7e28e7822754d67c47431d67b9c376b5098d22b457a054", 16)
-//	x, y := pp256.ScalarBaseMult(k.Bytes())
-//	fmt.Printf("x %s\ny %s\n", x.Text(16), y.Text(16))
-//}
-
-//func TestMult2(t *testing.T) {
-//	if testing.Short() {
-//        t.SkipNow()
-//    }
-//	pp256, _ := P256().(p256Curve)
-//
-//	xExp, _ := new(big.Int).SetString("b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21", 16)
-//	yExp, _ := new(big.Int).SetString("bd376388b5f723fb4c22dfe6cd4375a05a07476444d5819985007e34", 16)
-//
-//	//k, _ := new(big.Int).SetString("a544fc8b9b4e66fb3f7e28e7822754d67c47431d67b9c376b5098d22b457a054", 16)
-//	k, _ := new(big.Int).SetString("2", 16)
-//	x, y := pp256.ScalarMult(xExp, yExp, k.Bytes())
-//	fmt.Printf("x %s\ny %s\n", x.Text(16), y.Text(16))
-//}
-
 func TestInitTable(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
@@ -1139,12 +1361,4 @@ func TestInitTable(t *testing.T) {
 		PrintPoint("res", &p256PreFast[36][63])
 		t.Fail()
 	}
-
-	//	for j := 0; j < 64; j++ {
-	//		for i := 0; i < 37; i++ {
-	//			fmt.Printf("INPUT %d|%d.x:    %s\nINPUT %d|%d.y:    %s\n\n", i, j, new(big.Int).SetBytes(p256Precomputed[i][j].x[:]).Text(16),
-	//				                                                         i, j, new(big.Int).SetBytes(p256Precomputed[i][j].y[:]).Text(16))
-	//		}
-	//		fmt.Printf("=================================================\n")
-	//	}
 }
