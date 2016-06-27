@@ -18,6 +18,8 @@ DATA p256<>+0x20(SB)/8, $0x0c0d0e0f1c1d1e1f // SEL d1 d0 d1 d0
 DATA p256<>+0x28(SB)/8, $0x0c0d0e0f1c1d1e1f // SEL d1 d0 d1 d0
 DATA p256<>+0x30(SB)/8, $0x0000000010111213 // SEL 0  d1 d0  0
 DATA p256<>+0x38(SB)/8, $0x1415161700000000 // SEL 0  d1 d0  0
+DATA p256<>+0x40(SB)/8, $0x18191a1b1c1d1e1f // SEL d1 d0 d1 d0
+DATA p256<>+0x48(SB)/8, $0x18191a1b1c1d1e1f // SEL d1 d0 d1 d0
 DATA p256mul<>+0x00(SB)/8, $0xffffffff00000001 //P256
 DATA p256mul<>+0x08(SB)/8, $0x0000000000000000 //P256
 DATA p256mul<>+0x10(SB)/8, $0x00000000ffffffff //P256
@@ -40,7 +42,7 @@ DATA p256mul<>+0x90(SB)/8, $0xffffffff00000000 // (1*2^256)%P256
 DATA p256mul<>+0x98(SB)/8, $0x0000000000000001 // (1*2^256)%P256
 GLOBL p256ordK0<>(SB), 8, $4
 GLOBL p256ord<>(SB), 8, $32
-GLOBL p256<>(SB), 8, $64
+GLOBL p256<>(SB), 8, $80
 GLOBL p256mul<>(SB), 8, $160
 
 // func hasVectorFacility() bool
@@ -379,6 +381,132 @@ loop_select:
 #undef SEL1
 #undef SEL2
 
+/* ---------------------------------------*/
+// func p256FromMont(res, in []byte)
+#define res_ptr R1
+#define x_ptr   R2
+#define CPOOL   R4
+
+#define T0   V0
+#define T1   V1
+#define T2   V2
+#define TT0  V3
+#define TT1  V4
+
+#define ZER   V6
+#define SEL1  V7
+#define SEL2  V8
+#define CAR1  V9
+#define CAR2  V10
+#define RED1  V11
+#define RED2  V12
+#define PL    V13
+#define PH    V14
+
+TEXT ·p256FromMont(SB),NOSPLIT,$0
+	MOVD res+0(FP), res_ptr
+	MOVD in+24(FP), x_ptr
+
+	VZERO T2
+	VZERO ZER
+	MOVD $p256<>+0x00(SB), CPOOL
+	VL	16(CPOOL), PL
+	VL	0(CPOOL),  PH
+	VL	48(CPOOL), SEL2
+	VL	64(CPOOL), SEL1
+
+	VL (1*16)(x_ptr), T0
+	VL (0*16)(x_ptr), T1
+
+	// First round
+	VPERM  T1,    T0, SEL1, RED2   // d1 d0 d1 d0
+	VPERM ZER,  RED2, SEL2, RED1   // 0  d1 d0  0
+	VSQ   RED1, RED2, RED2         // Guaranteed not to underflow
+
+	VSLDB  $8, T1, T0, T0
+	VSLDB  $8, T2, T1, T1
+
+	VACCQ  T0, RED1,CAR1
+	VAQ    T0, RED1,T0
+	VACCCQ T1, RED2,CAR1, CAR2
+	VACQ   T1, RED2,CAR1, T1
+	VAQ    T2, CAR2,T2
+
+	// Second round
+	VPERM  T1,    T0, SEL1, RED2   // d1 d0 d1 d0
+	VPERM ZER,  RED2, SEL2, RED1   // 0  d1 d0  0
+	VSQ   RED1, RED2, RED2         // Guaranteed not to underflow
+
+	VSLDB  $8, T1, T0, T0
+	VSLDB  $8, T2, T1, T1
+
+	VACCQ  T0, RED1,CAR1
+	VAQ    T0, RED1,T0
+	VACCCQ T1, RED2,CAR1, CAR2
+	VACQ   T1, RED2,CAR1, T1
+	VAQ    T2, CAR2,T2
+
+	// Third round
+	VPERM  T1,    T0, SEL1, RED2   // d1 d0 d1 d0
+	VPERM ZER,  RED2, SEL2, RED1   // 0  d1 d0  0
+	VSQ   RED1, RED2, RED2         // Guaranteed not to underflow
+
+	VSLDB  $8, T1, T0, T0
+	VSLDB  $8, T2, T1, T1
+
+	VACCQ  T0, RED1,CAR1
+	VAQ    T0, RED1,T0
+	VACCCQ T1, RED2,CAR1, CAR2
+	VACQ   T1, RED2,CAR1, T1
+	VAQ    T2, CAR2,T2
+
+	// Last round
+	VPERM  T1,    T0, SEL1, RED2   // d1 d0 d1 d0
+	VPERM ZER,  RED2, SEL2, RED1   // 0  d1 d0  0
+	VSQ   RED1, RED2, RED2         // Guaranteed not to underflow
+
+	VSLDB  $8, T1, T0, T0
+	VSLDB  $8, T2, T1, T1
+
+	VACCQ  T0, RED1,CAR1
+	VAQ    T0, RED1,T0
+	VACCCQ T1, RED2,CAR1, CAR2
+	VACQ   T1, RED2,CAR1, T1
+	VAQ    T2, CAR2,T2
+
+	//---------------------------------------------------
+
+	VSCBIQ  PL,T0, CAR1
+	VSQ     PL,T0, TT0
+	VSBCBIQ T1,PH, CAR1, CAR2
+	VSBIQ   T1,PH, CAR1, TT1
+	VSBIQ   T2,ZER,CAR2, T2
+
+	//what output to use, TT1||TT0 or T1||T0?
+	VSEL    T0,TT0,T2, T0
+	VSEL    T1,TT1,T2, T1
+
+	VST T0, (1*16)(res_ptr)
+	VST T1, (0*16)(res_ptr)
+	RET
+
+#undef res_ptr
+#undef x_ptr
+#undef CPOOL
+#undef T0
+#undef T1
+#undef T2
+#undef TT0
+#undef TT1
+#undef ZER
+#undef SEL1
+#undef SEL2
+#undef CAR1
+#undef CAR2
+#undef RED1
+#undef RED2
+#undef PL
+#undef PH
 
 /* ---------------------------------------*/
 // func p256OrdMul(res, in1, in2 []byte)

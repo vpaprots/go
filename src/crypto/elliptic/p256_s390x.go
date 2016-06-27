@@ -108,7 +108,8 @@ func p256Sqr(res, in []byte) {
 }
 
 // Montgomery multiplication by 1
-func p256FromMont(res, in []byte) {
+func p256FromMont(res, in []byte)
+func p256FromMontBig(res, in []byte) {
 	x1 := new(big.Int).SetBytes(in)
 	Rinv, _ := new(big.Int).SetString("fffffffe00000003fffffffd0000000200000001fffffffe0000000300000000", 16) //minv(2^256,p)
 	temp := new(big.Int).Mul(x1, Rinv)
@@ -303,6 +304,18 @@ t4
 t5
 t6
 t7
+
+define mydigit2(x,n) = (x>>(64*n))%2^64
+
+t0=0x18905f76a53755c679fb732b7762251075ba95fc5fedb60179e730d418a9143c
+red0=mydigit2(t0,0)*p+mydigit2(t0,0)
+t1=(t0>>64)+(red0>>64)
+red1=mydigit2(t1,0)*p+mydigit2(t1,0)
+t2=(t1>>64)+(red1>>64)
+red2=mydigit2(t2,0)*p+mydigit2(t2,0)
+t3=(t2>>64)+(red2>>64)
+red3=mydigit2(t3,0)*p+mydigit2(t3,0)
+t4=(t3>>64)+(red3>>64)
 
 */
 // Montgomery square modulo Ord(G), repeated n times
@@ -558,14 +571,14 @@ func (curve p256CurveFast) ScalarMult(bigX, bigY *big.Int, scalar []byte) (x, y 
 func (p *p256Point) p256PointToAffine() (x, y *big.Int) {
 	zInv := make([]byte, 32)
 	zInvSq := make([]byte, 32)
+
 	p256Inverse(zInv, p.z[:])
-	//fmt.Printf("zInv %s\n", new(big.Int).SetBytes(zInv).Text(16))
 	p256Sqr(zInvSq, zInv)
 	p256MulAsm(zInv, zInv, zInvSq)
 
 	p256MulAsm(zInvSq, p.x[:], zInvSq)
 	p256MulAsm(zInv, p.y[:], zInv)
-
+	
 	p256FromMont(zInvSq, zInvSq)
 	p256FromMont(zInv, zInv)
 
