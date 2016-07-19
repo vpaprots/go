@@ -244,6 +244,36 @@ func (curve p256CurveFast) ScalarMult(bigX, bigY *big.Int, scalar []byte) (x, y 
 	return r.p256PointToAffine()
 }
 
+func (curve p256CurveFast) affineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int) {
+	var r p256Point
+	copy(r.x[:], fromBig(maybeReduceModP(x)))
+	copy(r.y[:], fromBig(maybeReduceModP(y)))
+	copy(r.z[:], fromBig(maybeReduceModP(z)))
+	return r.p256PointToAffine()
+	return new(big.Int).SetBytes(r.x[:]), new(big.Int).SetBytes(r.y[:])
+}
+
+func (curve p256CurveFast) doubleJacobian(x, y, z *big.Int) (*big.Int, *big.Int, *big.Int) {
+	var r, in1 p256Point
+	copy(in1.x[:], fromBig(maybeReduceModP(x)))
+	copy(in1.y[:], fromBig(maybeReduceModP(y)))
+	copy(in1.z[:], fromBig(maybeReduceModP(z)))
+	p256PointDoubleAsm(&in1, &r)
+	return new(big.Int).SetBytes(r.x[:]), new(big.Int).SetBytes(r.y[:]), new(big.Int).SetBytes(r.z[:])
+}
+
+func (curve p256CurveFast) addJacobian(x1, y1, z1, x2, y2, z2 *big.Int) (*big.Int, *big.Int, *big.Int) {
+	var r, in1, in2 p256Point
+	copy(in1.x[:], fromBig(maybeReduceModP(x1)))
+	copy(in1.y[:], fromBig(maybeReduceModP(y1)))
+	copy(in1.z[:], fromBig(maybeReduceModP(z1)))
+	copy(in2.x[:], fromBig(maybeReduceModP(x2)))
+	copy(in2.y[:], fromBig(maybeReduceModP(y2)))
+	copy(in2.z[:], fromBig(maybeReduceModP(z2)))
+	p256PointAddAsm(&in1, &in2, &r)
+	return new(big.Int).SetBytes(r.x[:]), new(big.Int).SetBytes(r.y[:]), new(big.Int).SetBytes(r.z[:])
+}
+
 func (p *p256Point) p256PointToAffine() (x, y *big.Int) {
 	zInv := make([]byte, 32)
 	zInvSq := make([]byte, 32)
